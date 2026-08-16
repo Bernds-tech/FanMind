@@ -342,6 +342,8 @@ export default function ContactsScreen() {
   }
 
   const offlineReadOnly = usingCache || contactTransportUnavailable;
+  const memberReadOnly = workspace?.role !== "owner";
+  const mutationReadOnly = offlineReadOnly || memberReadOnly;
 
   return (
     <Screen
@@ -354,7 +356,7 @@ export default function ContactsScreen() {
       scroll={false}
       right={
         <SecondaryButton
-          disabled={offlineReadOnly}
+          disabled={mutationReadOnly}
           onPress={() => router.push("/(app)/contacts/new")}
         >
           Neu
@@ -376,6 +378,14 @@ export default function ContactsScreen() {
           <Text style={mobileStyles.muted}>
             Es ist kein gültiger gespeicherter Kontaktstand verfügbar. Stelle eine Verbindung
             her, um die Kontaktübersicht zu laden. Änderungen bleiben bis dahin gesperrt.
+          </Text>
+        </View>
+      ) : memberReadOnly ? (
+        <View style={styles.offlineBanner}>
+          <StatusPill tone="warning">Teamzugang · nur lesen</StatusPill>
+          <Text style={mobileStyles.muted}>
+            Kontakte und Kontaktwissen bleiben sichtbar. Anlegen und Bearbeiten
+            sind bis zu einem atomaren Datenbankvertrag deaktiviert.
           </Text>
         </View>
       ) : null}

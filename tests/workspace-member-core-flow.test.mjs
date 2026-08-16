@@ -54,7 +54,7 @@ test("regular CRM pages resolve an owner or workspace member without widening ac
   }
   assert.match(
     preActivation,
-    /workspace\.role !== "owner"[\s\S]*evaluateWorkspaceProcessingEntitlement\(workspace\)\.allowed[\s\S]*\/workspace\/access-paused/u,
+    /workspace\.role && workspace\.role !== "owner"[\s\S]*member_safe_projection === true[\s\S]*member_processing_allowed === true[\s\S]*\/workspace\/access-paused/u,
   );
   assert.match(pausedPage, /Nur der Workspace-Owner/u);
   assert.doesNotMatch(
@@ -63,46 +63,51 @@ test("regular CRM pages resolve an owner or workspace member without widening ac
   );
 });
 
-test("member CRM mutations stay contact-scoped while channel operations remain owner-only", async () => {
-  const [actions, contextActions, analysisActions, aiRoute] = await Promise.all([
+test("member CRM mutations stay disabled while owner processing remains contact-scoped", async () => {
+  const [actions, contextActions, analysisActions, aiRoute, inboxActions] = await Promise.all([
     source("src/app/fans/actions.ts"),
     source("src/app/fans/[id]/contextActions.ts"),
     source("src/app/fans/[id]/analysisActions.ts"),
     source("src/app/api/ai/reply-suggestions/route.ts"),
+    source("src/app/inbox/actions.ts"),
   ]);
 
   assert.match(
     actions,
-    /async function getCurrentWorkspaceOrThrow\(\)[\s\S]*requireActiveAuthorizedWorkspaceMember\(\)/u,
+    /async function getCurrentWorkspaceOrThrow\(\)[\s\S]*requireActiveAuthorizedWorkspace\(\)/u,
   );
   assert.match(
     await source("src/lib/workspaceAuthorization.ts"),
-    /requireActiveAuthorizedWorkspaceMember[\s\S]*evaluateWorkspaceProcessingEntitlement\([\s\S]*context\.workspace[\s\S]*if \(!processing\.allowed\)/u,
+    /requireActiveAuthorizedWorkspaceMember[\s\S]*workspace\.role\.trim\(\)\.toLowerCase\(\) !== "owner"[\s\S]*workspace_member_mutations_disabled[\s\S]*evaluateWorkspaceProcessingEntitlement\([\s\S]*context\.workspace[\s\S]*if \(!processing\.allowed\)/u,
   );
   assert.match(
     actions,
-    /async function ensureContactInWorkspace[\s\S]*requireContactInActiveAuthorizedWorkspaceMember\(contactId\)/u,
+    /async function ensureContactInWorkspace[\s\S]*requireContactInActiveAuthorizedWorkspace\(contactId\)/u,
   );
   assert.match(
     contextActions,
-    /requireContactInActiveAuthorizedWorkspaceMember\(contactId\)/u,
+    /requireContactInActiveAuthorizedWorkspace\(contactId\)/u,
   );
-  assert.match(analysisActions, /requireContactInAuthorizedWorkspace\(contactId\)/u);
-  assert.doesNotMatch(analysisActions, /requireContactInAuthorizedWorkspaceMember/u);
+  assert.match(
+    analysisActions,
+    /analyzeFanCommunication[\s\S]*requireContactInActiveAuthorizedWorkspace\(contactId\)/u,
+  );
+  assert.match(
+    analysisActions,
+    /deleteFanCommunicationProfile[\s\S]*requireContactInAuthorizedWorkspace\(contactId\)/u,
+  );
   assert.match(
     aiRoute,
-    /requireContactInActiveAuthorizedWorkspaceMember\([\s\S]*contactId,[\s\S]*accessToken/u,
+    /requireContactInActiveAuthorizedWorkspace\([\s\S]*contactId,[\s\S]*accessToken/u,
   );
 
-  for (const ownerOnlyAction of [
-    "saveFacebookReplyTarget",
-  ]) {
+  for (const ownerOnlyAction of ["saveFacebookReplyTarget"]) {
     const start = actions.indexOf(`export async function ${ownerOnlyAction}`);
     const end = actions.indexOf("\nexport async function ", start + 1);
     assert.notEqual(start, -1);
     assert.match(
       actions.slice(start, end === -1 ? undefined : end),
-      /requireAuthorizedWorkspace\(\)/u,
+      /requireContactInActiveAuthorizedWorkspace\(contactId\)/u,
     );
   }
   const manualReplyStart = actions.indexOf(
@@ -114,14 +119,21 @@ test("member CRM mutations stay contact-scoped while channel operations remain o
   );
   assert.match(
     actions.slice(manualReplyStart, manualReplyEnd),
-    /requireActiveAuthorizedWorkspaceMember\(\)/u,
+    /requireActiveAuthorizedWorkspace\(\)/u,
   );
   assert.match(
     actions,
-    /syncFacebookChatForContact[\s\S]*requireContactInAuthorizedWorkspace\(contactId\)/u,
+    /syncFacebookChatForContact[\s\S]*requireContactInActiveAuthorizedWorkspace\(contactId\)/u,
   );
   assert.match(
     actions,
-    /syncInstagramChatForContact[\s\S]*requireContactInAuthorizedWorkspace\(contactId\)/u,
+    /syncInstagramChatForContact[\s\S]*requireContactInActiveAuthorizedWorkspace\(contactId\)/u,
   );
+  assert.match(inboxActions, /requireActiveAuthorizedWorkspace\(\)/u);
+  for (const mutationSource of [actions, contextActions, aiRoute, inboxActions]) {
+    assert.doesNotMatch(
+      mutationSource,
+      /requireActiveAuthorizedWorkspaceMember|requireContactInActiveAuthorizedWorkspaceMember/u,
+    );
+  }
 });

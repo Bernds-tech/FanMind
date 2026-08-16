@@ -19,7 +19,7 @@ const migrationPath = new URL(
 test("inbox handoff stays authenticated and workspace-bound", async () => {
   const actions = await readFile(actionsPath, "utf8");
 
-  assert.match(actions, /requireAuthorizedWorkspaceMember\(\)/u);
+  assert.match(actions, /requireActiveAuthorizedWorkspace\(\)/u);
   assert.match(actions, /getWorkspaceConversations\(workspace\.id\)/u);
   assert.match(actions, /workspaceId: workspace\.id/u);
   assert.match(actions, /assignedUserId: user\.id/u);
@@ -71,6 +71,8 @@ test("inbox exposes claim and release controls only when assignment is supported
   assert.match(page, /inboxText\(locale, "Freigeben"\)/u);
   assert.match(page, /item\.assignedUserId === userId/u);
   assert.match(page, /getNoticeMessage\(notice, locale\)/u);
+  assert.match(page, /readOnly=\{memberReadOnly\}/u);
+  assert.match(page, /!readOnly && item\.conversationId/u);
 });
 
 test("English inbox navigation preserves locale and renders localized workspace copy", async () => {
@@ -84,7 +86,10 @@ test("English inbox navigation preserves locale and renders localized workspace 
   assert.match(navigation, /localizedWorkspaceHref\("\/inbox", locale\)/u);
   assert.match(navigation, /url\.searchParams\.set\("lang", "en"\)/u);
   assert.match(page, /resolveWorkspaceLocale\(\{[\s\S]*lang: params\?\.lang,[\s\S]*user,/u);
-  assert.match(page, /getWorkspaceNavigationForUser\("inbox", userEmail, locale\)/u);
+  assert.match(
+    page,
+    /getWorkspaceNavigationForUser\([\s\S]*"inbox",[\s\S]*userEmail,[\s\S]*locale,[\s\S]*workspace\.role/u,
+  );
   assert.match(page, /locale=\{locale\}/u);
   assert.match(page, /Prioritized work queue for incoming messages/u);
   assert.match(page, /Never send replies automatically/u);

@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { revalidatePath } from "next/cache";
 import { areDemoConnectionsDisabled } from "@/lib/demoMode";
@@ -61,10 +61,6 @@ export async function syncInstagramMessengerHistory(input?: {
     syncedAt,
     revalidate: input?.revalidate ?? true,
   });
-}
-
-export async function syncInstagramMessengerHistoryFromChannelPage(): Promise<void> {
-  await syncInstagramMessengerHistory({ revalidate: true });
 }
 
 export async function syncInstagramMessengerConversationForContact(input: {

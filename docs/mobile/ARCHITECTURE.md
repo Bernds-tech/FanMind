@@ -40,7 +40,7 @@ Neither surface may import UI code from the other. Backend contracts are shared 
 
 1. Mobile signs in directly against Supabase Auth using the public anon key.
 2. The session is stored with a chunked `expo-secure-store` adapter.
-3. Contact, memory and follow-up access uses the user JWT and Supabase RLS.
+3. Contact, memory and follow-up access uses the user JWT and Supabase RLS; mutations are Owner-only and Member sessions remain read-only.
 4. The AI endpoint receives the same user JWT in a strict `Authorization: Bearer` header.
 5. The server validates the JWT with Supabase, resolves the authorized workspace and confirms contact ownership.
 6. The server loads the workspace company prompt and the active default reply profile after authorization. Mobile never receives or transmits raw workspace prompt text; a future selector may send only a stored profile ID.
@@ -81,14 +81,14 @@ Never allowed in the compiled app:
 
 Mobile uses direct Supabase queries only for tables already protected by RLS:
 
-- `workspaces` / `workspace_members`;
+- the parameterless member-safe Workspace RPC / `workspace_members`; only an Owner lookup reads the base `workspaces` table;
 - `contacts`;
 - `memories`;
 - `followups`.
 
 All queries include the current `workspace_id` even though RLS remains the final authorization layer.
 
-Contact create and update additionally:
+Owner contact create and update additionally:
 
 - validate and normalize every field before the request;
 - insert `workspace_id` explicitly;
@@ -144,7 +144,7 @@ Upgrades probe the former colon-delimited v1 SecureStore namespace through a rea
 
 - FanMind is an assistant, not an autonomous bot.
 - Reply options are prepared, never sent automatically.
-- Saving contact knowledge or a follow-up requires a user action.
+- Saving contact knowledge or a follow-up requires an Owner action; Members can view but not save or complete.
 - Coming-Soon integrations are not shown as active.
 - Mobile does not execute billing, referral or social-channel write automation.
 - A source/platform field on a contact is metadata, not an active external integration.

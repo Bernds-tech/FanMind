@@ -192,6 +192,11 @@ test("OAuth flow requires an explicit server-validated Facebook page selection",
   );
   assert.match(selectionRoute, /selectedPageId/u);
   assert.match(selectionPage, /name="page_id"/u);
+  assert.match(selectionPage, /requireActiveAuthorizedWorkspace\(\)/u);
+  assert.ok(
+    selectionPage.indexOf("requireActiveAuthorizedWorkspace()") <
+      selectionPage.indexOf("fetchFacebookPages(pending.userAccessToken)"),
+  );
   assert.doesNotMatch(
     selectionPage,
     /name="userAccessToken"|value=\{pending\.userAccessToken\}/u,
@@ -259,11 +264,13 @@ test("Instagram Business Login is workspace-bound and subscribes only authorized
   );
   assert.match(integration, /Authorization: `Bearer \$\{accessToken\}`/u);
   assert.match(pagingPolicy, /url\.host !== "graph\.instagram\.com"/u);
-  assert.match(start, /workspaceId: workspaceResult\.workspace\.id/u);
+  assert.match(start, /requireActiveAuthorizedWorkspace\(\)/u);
+  assert.match(start, /workspaceId: workspace\.id/u);
   assert.match(start, /userId: data\.user\.id/u);
   assert.match(start, /canManageMetaConnections/u);
   assert.match(callback, /state\.userId !== data\.user\.id/u);
-  assert.match(callback, /workspaceResult\.workspace\.id !== state\.workspaceId/u);
+  assert.match(callback, /requireActiveAuthorizedWorkspace\(\)/u);
+  assert.match(callback, /workspace\.id !== state\.workspaceId/u);
   assert.match(callback, /areDemoConnectionsDisabled/u);
   assert.match(callback, /encryptToken\(token\.accessToken\)/u);
   assert.match(callback, /webhookSubscribed:\s*false/u);

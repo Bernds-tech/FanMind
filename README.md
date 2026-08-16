@@ -22,7 +22,7 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   Postflight sind getrennt vom Web-Deploy; Meta-Verbindungen und Analysen
   bleiben deaktiviert. Ablauf:
   `docs/operations/META_CONTENT_STAGING_MIGRATION.md`.
-- Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Kontaktanlage/-bearbeitung, Kontaktwissen, KI-Antwortvorschlägen, kopierbarer und nativ teilbarer Antwort, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
+- Mobile-App: eigenständiger React-Native-/Expo-Kern für Android und iOS mit Login, Passwort-Recovery, Dashboard, Owner-Kontaktanlage/-bearbeitung, Member-Nur-Lesezugang, Kontaktwissen, KI-Antwortvorschlägen, kopierbarer und nativ teilbarer Antwort, Follow-ups, verschlüsselter Offline-Kontaktübersicht und sicherem lokalen Daten-Purge; signierte interne Builds und Store-Verteilung bleiben separat abzunehmen.
 - Mobile-Signing-Gate: ein manueller `main`-gebundener Ablauf kann nach
   erfolgreichem Ressourcencheck genau einen credential-frozen internen
   Development-/Preview-Build einreihen und dessen EAS-Endstatus read-only bis
@@ -283,12 +283,12 @@ Bereits vorhanden:
 - native E-Mail-/Passwort-Anmeldung und sichere Gerätesitzung;
 - PKCE-basierte Passwort-Recovery über `fanmind://reset-password` mit strikter Callback-Validierung;
 - Dashboard, Kontaktliste, Suche und Kontaktdetail;
-- Kontakte in Mobile anlegen und bearbeiten, jeweils mit Workspace-Filter und RLS;
+- Kontakte als Workspace-Owner in Mobile anlegen und bearbeiten, jeweils mit Workspace-Filter und RLS; Teammitglieder bleiben im CRM-Nur-Lese-Modus;
 - Kontaktwissen und serverseitige KI-Antwortvorschläge;
 - Antwort kopieren oder ausschließlich den ausgewählten Antworttext über die
   native Android-/iOS-Teilen-Auswahl weitergeben; FanMind wählt weder Ziel noch
   Empfänger und sendet nicht selbst;
-- offene Follow-ups anzeigen und als `completed` abschließen; Altdaten mit `done` bleiben kompatibel;
+- offene Follow-ups anzeigen und als Owner mit `completed` abschließen; Teammitglieder lesen nur, Altdaten mit `done` bleiben kompatibel;
 - verschlüsselte, höchstens 24 Stunden alte Offline-Übersicht mit maximal 50 Kontakten; nur Name, Handle, Plattform, Status und Änderungszeit, ausschließlich lesbar;
 - sicherer lokaler Logout mit Purge aller registrierten FanMind-SecureStore-Schlüssel und des Workspace-Zustands;
 - native Push-Grundlage mit validierter Follow-up-Navigation, sicherem
@@ -420,6 +420,19 @@ Die aktuelle Datenbankwahrheit steht in:
 - `src/lib/supabase/server.ts`
 
 Workspace-scoped Daten müssen per RLS und serverseitiger Autorisierung geschützt sein. Vor echten Kundendaten ist `docs/SECURITY_RLS_SECRETS_CHECK.md` abzuarbeiten.
+
+Die vorbereitete Member-Datengrenze liegt checksum-gebunden unter
+`supabase/controlled/20260816120000_workspace_member_data_boundary.sql` und
+steht auf `CHECKED_NOT_APPLIED`. Der App-/Renderer-Stand gibt Membern nur das
+Safe-DTO und hält Web- und Mobile-Mutationen Owner-only. Die direkte
+PostgREST-/JWT-Grenze ersetzt den Zugriff auf die volle Workspace-Zeile,
+härtet CRM-/AI-/Content-Writes auf aktive Owner und reduziert
+`social_connections` jedoch erst nach dem isoliert nachgewiesenen Control-
+Apply. Bis Apply plus Postflight belegt sind, bleibt diese direkte DB-Grenze
+ein Go-live- und Member-Aktivierungsblocker. Auch danach aktiviert sie keine
+Member-Schreibrechte; dafür wäre ein separat geprüfter atomarer DB-RPC-Vertrag
+nötig. Runbook:
+`docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md`.
 
 Die Härtung serververwalteter Workspace-Felder wird deploy-before-migrate als
 Expand-/Contract-Rollout ausgerollt: Der App-Brückenstand fällt ausschließlich

@@ -6,8 +6,10 @@ import { ComingSoonMark } from "@/components/ComingSoonMark";
 import { PlatformLogo } from "@/components/PlatformLogo";
 import styles from "./channels.module.css";
 import { type TelegramWebhookStatus } from "@/lib/telegramStatus";
-import { syncFacebookMessengerHistoryFromChannelPage } from "./facebookWebhookActions";
-import { syncInstagramMessengerHistoryFromChannelPage } from "./instagramWebhookActions";
+import {
+  syncFacebookMessengerHistoryFromChannelPage,
+  syncInstagramMessengerHistoryFromChannelPage,
+} from "./metaSyncActions";
 
 type ChannelStatus =
   | "Live / manuell nutzbar"

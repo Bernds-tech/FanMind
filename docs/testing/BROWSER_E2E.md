@@ -259,9 +259,19 @@ synthetischen Staging-Workspace. Danach prüft er zusammenhängend:
   Abnahmedaten danach.
 
 Vor dem Browserlauf prüft der Workflow `/api/version`, den gemeinsamen
-read-only Datenbank-Rollout-State, TLS und das private Passwortfile. Ein
-`always()`-Cleanup läuft auch nach Browser- oder Verifikationsfehlern. Es gibt
-keine Screenshots, Videos, Traces oder hochgeladenen Browserartefakte.
+read-only Datenbank-Rollout-State, TLS und das private Passwortfile. Den
+kanonischen, ausschließlich driftrelevanten Rollout-State hält er als private
+Baseline fest. Ein `always()`-Cleanup läuft auch nach Browser- oder
+Verifikationsfehlern. Nach einem erfolgreichen Browserlauf und nachgewiesenem
+Cleanup wiederholt der Workflow den read-only Datenbank-Postflight, verlangt
+die unveränderte kanonische Baseline und prüft unmittelbar vor dem einzigen
+Acceptance-PASS erneut den exakten Release-Commit sowie
+`runtimeEnvironment=staging`. Ein Deploy-Wechsel oder eine dauerhaft
+abweichende kontrollierte Datenbank-Rollout-Lage während der Abnahme kann
+damit keinen grünen Nachweis erzeugen. Andere Staging-Writer sollen trotzdem
+nicht absichtlich parallel gestartet werden; der Postflight ist ein
+Integritätsnachweis und kein globales Workflow-Lock. Es gibt keine
+Screenshots, Videos, Traces oder hochgeladenen Browserartefakte.
 
 Zusätzlich zu den Werten des read-only Laufs benötigt das Environment
 `staging`:

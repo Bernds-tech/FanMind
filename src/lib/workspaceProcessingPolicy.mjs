@@ -12,6 +12,8 @@ const TERMINAL_BILLING_STATUSES = new Set([
 const TEMPORARY_ACCESS_FLAG = "temporary_processing_access";
 const TEMPORARY_ACCESS_EXPIRY_FLAG =
   "temporary_processing_access_expires_at";
+const FIXED_DEMO_SEED_VERSION_FLAG = "fixed_demo_seed_version";
+const FIXED_DEMO_SEED_VERSION = "2026-07-26-v1";
 
 function clean(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -78,6 +80,15 @@ export function evaluateWorkspaceProcessingEntitlement(
       return { allowed: false, reason: "temporary_access_expired" };
     }
     return { allowed: true, reason: "temporary_access" };
+  }
+
+  // `test_access_flags` is server-owned after the controlled Workspace field
+  // boundary. A bare demo_free status is intentionally insufficient.
+  if (
+    billingStatus === "demo_free" &&
+    flags[FIXED_DEMO_SEED_VERSION_FLAG] === FIXED_DEMO_SEED_VERSION
+  ) {
+    return { allowed: true, reason: "trusted_demo" };
   }
 
   if (workspace.billing_manual_override === true) {

@@ -234,8 +234,12 @@ export async function createStripeCheckoutSession(input: {
     `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
   );
   params.set("cancel_url", `${appUrl}/billing/cancel`);
-  // Stripe's Dashboard configuration dynamically selects the eligible
-  // payment methods for every Checkout Session.
+  // Stripe's Dashboard configuration dynamically selects eligible methods
+  // for normal Starter sessions. The isolated 1-EUR/day acceptance contract
+  // is intentionally narrower and must remain card-only.
+  if (input.plan.commercialOption === "internal_daily_test") {
+    params.append("payment_method_types[]", "card");
+  }
   if (input.workspaceId) {
     params.set("client_reference_id", input.workspaceId);
   }
@@ -354,6 +358,7 @@ export async function findWorkspaceIdByStripeReferences(
   if (!serviceKey) return { status: "retryable_error" };
 
   const matchedWorkspaceIds = new Set<string>();
+  let missingReferenceCount = 0;
   for (const [column, value] of lookups) {
     try {
       const url = `${getSupabaseRestUrl("workspaces")}?select=id&${column}=eq.${encodeURIComponent(value)}&limit=2`;
@@ -377,7 +382,10 @@ export async function findWorkspaceIdByStripeReferences(
         return { status: "retryable_error" };
       }
       if (!Array.isArray(payload)) return { status: "retryable_error" };
-      if (payload.length === 0) continue;
+      if (payload.length === 0) {
+        missingReferenceCount += 1;
+        continue;
+      }
       if (payload.length !== 1) return { status: "retryable_error" };
       const id = (payload[0] as { id?: unknown } | undefined)?.id;
       if (typeof id !== "string" || !id) {
@@ -395,6 +403,11 @@ export async function findWorkspaceIdByStripeReferences(
       );
       return { status: "retryable_error" };
     }
+  }
+  if (missingReferenceCount > 0) {
+    return matchedWorkspaceIds.size === 0
+      ? { status: "not_found" }
+      : { status: "retryable_error" };
   }
   const [workspaceId] = matchedWorkspaceIds;
   if (matchedWorkspaceIds.size === 1 && workspaceId) {

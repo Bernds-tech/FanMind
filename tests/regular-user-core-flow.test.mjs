@@ -125,7 +125,7 @@ test("AI uses the authorized contact, bounded structured output and human-contro
   requiresAll(
     route,
     [
-      /requireContactInActiveAuthorizedWorkspaceMember\(/u,
+      /requireContactInActiveAuthorizedWorkspace\(/u,
       /readBoundedJsonRequest\(/u,
       /consumeSharedRateLimit\(/u,
       /store: false/u,

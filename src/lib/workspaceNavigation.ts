@@ -35,12 +35,14 @@ export function getWorkspaceNavigationForUser(
   email: string | null | undefined,
   locale: FanMindLanguage = "de",
   dueFollowupCount = 0,
+  workspaceRole: string | null | undefined = "owner",
 ) {
   return getWorkspaceNavigation(
     activeRoute,
     locale,
     dueFollowupCount,
     isPlatformAdminEmail(email),
+    workspaceRole,
   );
 }
 
@@ -49,11 +51,13 @@ export function getWorkspaceNavigation(
   locale: FanMindLanguage = "de",
   dueFollowupCount = 0,
   showAdminArea = false,
+  workspaceRole: string | null | undefined = "owner",
 ): {
   mainNavigation: WorkspaceNavLink[];
   settingsNavigation: WorkspaceNavLink[];
   savedViews: WorkspaceNavLink[];
 } {
+  const showOwnerArea = workspaceRole?.trim().toLowerCase() === "owner";
   return {
     mainNavigation: [
       {
@@ -81,27 +85,36 @@ export function getWorkspaceNavigation(
         active: activeRoute === "followups",
         badge: dueFollowupCount > 0 ? String(dueFollowupCount) : undefined,
       },
-      {
-        label: wt(locale, "Onboarding"),
-        href: "/onboarding",
-        icon: "roadmap",
-        active: activeRoute === "onboarding",
-      },
-      {
-        label: wt(locale, "Kanäle"),
-        href: "/channels",
-        icon: "channels",
-        active: activeRoute === "channels",
-        badge: "Sync",
-      },
+      ...(showOwnerArea
+        ? [
+            {
+              label: wt(locale, "Onboarding"),
+              href: "/onboarding",
+              icon: "roadmap" as const,
+              active: activeRoute === "onboarding",
+            },
+            {
+              label: wt(locale, "Kanäle"),
+              href: "/channels",
+              icon: "channels" as const,
+              active: activeRoute === "channels",
+              badge: "Sync",
+            },
+          ]
+        : []),
     ],
     settingsNavigation: [
-      {
-        label: locale === "en" ? "Profile & account" : "Profil & Konto",
-        href: "/settings/profile",
-        icon: "profile",
-        active: activeRoute === "settings",
-      },
+      ...(showOwnerArea
+        ? [
+            {
+              label:
+                locale === "en" ? "Profile & account" : "Profil & Konto",
+              href: "/settings/profile",
+              icon: "profile" as const,
+              active: activeRoute === "settings",
+            },
+          ]
+        : []),
       ...(showAdminArea
         ? [
             {
@@ -113,19 +126,21 @@ export function getWorkspaceNavigation(
           ]
         : []),
     ],
-    savedViews: [
-      {
-        label: wt(locale, "Top Fans"),
-        href: "/top-fans",
-        icon: "topFans",
-        active: activeRoute === "top-fans",
-      },
-      {
-        label: wt(locale, "Reaktivierung"),
-        href: "/reactivation",
-        icon: "reactivation",
-        active: activeRoute === "reactivation",
-      },
-    ],
+    savedViews: showOwnerArea
+      ? [
+          {
+            label: wt(locale, "Top Fans"),
+            href: "/top-fans",
+            icon: "topFans",
+            active: activeRoute === "top-fans",
+          },
+          {
+            label: wt(locale, "Reaktivierung"),
+            href: "/reactivation",
+            icon: "reactivation",
+            active: activeRoute === "reactivation",
+          },
+        ]
+      : [],
   };
 }

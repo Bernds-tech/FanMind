@@ -45,6 +45,9 @@ jobs:
     env:
       FANMIND_RUNTIME_ENVIRONMENT: staging
       NEXT_PUBLIC_APP_URL: ${{ vars.FANMIND_STAGING_APP_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.FANMIND_STAGING_SUPABASE_URL }}
+      FANMIND_TARGET_API_ORIGIN: ${{ vars.FANMIND_STAGING_APP_URL }}
+      FANMIND_PRODUCTION_API_ORIGIN: https://fanmind.ch
       FANMIND_TARGET_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_STAGING_SUPABASE_PROJECT_REF }}
       FANMIND_PRODUCTION_SUPABASE_PROJECT_REF: ${{ vars.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF }}
       FANMIND_STAGING_CORE_REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
@@ -57,6 +60,7 @@ jobs:
       FANMIND_STAGING_E2E_SECONDARY_CONTACT_ID: ${{ vars.FANMIND_STAGING_E2E_SECONDARY_CONTACT_ID }}
       PGHOST: ${{ secrets.FANMIND_STAGING_DB_HOST }}
       FANMIND_TARGET_DB_HOST: ${{ secrets.FANMIND_STAGING_DB_HOST }}
+      FANMIND_PRODUCTION_DB_HOST: ${{ format('db.{0}.supabase.co', vars.FANMIND_PRODUCTION_SUPABASE_PROJECT_REF) }}
       PGPORT: '5432'
       PGDATABASE: ${{ vars.FANMIND_STAGING_DB_NAME }}
       PGUSER: ${{ format('postgres.{0}', vars.FANMIND_STAGING_SUPABASE_PROJECT_REF) }}
@@ -117,18 +121,25 @@ jobs:
             "$PGHOST" "$PGPORT" "$PGDATABASE" "$PGUSER" "$ESCAPED" > "$PGPASSFILE"
           chmod 600 "$PGPASSFILE"
 
-      - name: Require shared read-only database rollout state
+      - name: Capture shared read-only database rollout baseline
+        id: rollout_baseline
         env:
           PGPASSFILE: ${{ runner.temp }}/fanmind-staging-core-csv.pgpass
+          FANMIND_STAGING_ROLLOUT_BASELINE: ${{ runner.temp }}/fanmind-staging-core-csv-rollout.baseline
           FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'
           FANMIND_NON_PRODUCTION_WRITE_ACK: ''
           FANMIND_STAGING_DATABASE_ROLLOUT_REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
           FANMIND_STAGING_DATABASE_ROLLOUT_STATE_CONFIRM: verify-staging-database-rollout-state
         run: |
           set -euo pipefail
+          umask 077
           ROLLOUT_STATE="$(npm run db:staging-rollout-state:run)"
           printf '%s\n' "$ROLLOUT_STATE"
           grep -Fxq 'STAGING_DATABASE_ROLLOUT_STATE=PASS' <<< "$ROLLOUT_STATE"
+          printf '%s\n' "$ROLLOUT_STATE" \
+            | node scripts/operations/canonicalize-staging-rollout-evidence.mjs \
+            > "$FANMIND_STAGING_ROLLOUT_BASELINE"
+          [[ "$(stat -c '%a' "$FANMIND_STAGING_ROLLOUT_BASELINE")" == '600' ]]
 
       - name: Prepare isolated synthetic core records
         env: &acceptance_database_environment
@@ -170,12 +181,62 @@ jobs:
         run: npm run staging:core-csv:verify
 
       - name: Remove all acceptance records and prove zero residue
+        id: cleanup
         if: ${{ always() && steps.passfile.outcome == 'success' }}
         env: *acceptance_database_environment
         run: npm run staging:core-csv:cleanup
 
-      - name: Remove dedicated private database password file
+      - name: Recheck database postflight and exact deployed release
+        if: >-
+          ${{
+            success() &&
+            steps.passfile.outcome == 'success' &&
+            steps.rollout_baseline.outcome == 'success' &&
+            steps.cleanup.outcome == 'success'
+          }}
+        env:
+          PGPASSFILE: ${{ runner.temp }}/fanmind-staging-core-csv.pgpass
+          FANMIND_STAGING_ROLLOUT_BASELINE: ${{ runner.temp }}/fanmind-staging-core-csv-rollout.baseline
+          FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'
+          FANMIND_NON_PRODUCTION_WRITE_ACK: ''
+          FANMIND_STAGING_DATABASE_ROLLOUT_REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+          FANMIND_STAGING_DATABASE_ROLLOUT_STATE_CONFIRM: verify-staging-database-rollout-state
+          FANMIND_DEPLOYED_VERSION_URL: ${{ format('{0}/api/version', vars.FANMIND_STAGING_APP_URL) }}
+          FANMIND_EXPECTED_RELEASE_COMMIT: ${{ inputs.reviewed_commit }}
+        run: |
+          set -euo pipefail
+          CURRENT_ROLLOUT="$(mktemp "$RUNNER_TEMP/fanmind-staging-core-csv-rollout.current.XXXXXX")"
+          trap 'rm -f -- "$CURRENT_ROLLOUT"' EXIT
+
+          ROLLOUT_STATE="$(npm run db:staging-rollout-state:run)"
+          printf '%s\n' "$ROLLOUT_STATE"
+          grep -Fxq 'STAGING_DATABASE_ROLLOUT_STATE=PASS' <<< "$ROLLOUT_STATE"
+          printf '%s\n' "$ROLLOUT_STATE" \
+            | node scripts/operations/canonicalize-staging-rollout-evidence.mjs \
+            > "$CURRENT_ROLLOUT"
+          if ! cmp --silent -- "$FANMIND_STAGING_ROLLOUT_BASELINE" "$CURRENT_ROLLOUT"; then
+            echo 'Staging database rollout state changed during acceptance.' >&2
+            exit 1
+          fi
+
+          VERSION_JSON="$(curl --fail --silent --show-error --max-time 20 "$FANMIND_DEPLOYED_VERSION_URL")"
+          VERSION_JSON="$VERSION_JSON" node <<'NODE'
+          const payload = JSON.parse(process.env.VERSION_JSON || '{}');
+          if (
+            payload.releaseCommit !== process.env.FANMIND_EXPECTED_RELEASE_COMMIT ||
+            payload.runtimeEnvironment !== 'staging'
+          ) {
+            throw new Error('staging_final_deployed_release_mismatch');
+          }
+          NODE
+
+          echo 'STAGING_CORE_CSV_DATABASE_POSTFLIGHT=PASS'
+          echo 'STAGING_CORE_CSV_FINAL_RELEASE=PASS'
+          echo 'STAGING_CORE_CSV_ACCEPTANCE=PASS'
+
+      - name: Remove dedicated private evidence files
         if: ${{ always() }}
         env:
           PGPASSFILE: ${{ runner.temp }}/fanmind-staging-core-csv.pgpass
-        run: rm -f -- "$PGPASSFILE"
+          FANMIND_STAGING_ROLLOUT_BASELINE: ${{ runner.temp }}/fanmind-staging-core-csv-rollout.baseline
+        run: rm -f -- "$PGPASSFILE" "$FANMIND_STAGING_ROLLOUT_BASELINE"

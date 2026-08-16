@@ -42,6 +42,26 @@ export function resolveStripeWebhookWorkspaceCandidates(input: {
   allowDirectBootstrap?: boolean;
 }): StripeWorkspaceResolution;
 
+export function stripeWebhookReferenceContractDecision(input: {
+  eventType?: string;
+  customerId?: string;
+  subscriptionId?: string;
+  paymentIntentId?: string;
+}): StripeBillingWorkspaceDecision;
+
+export function stripeWebhookReferenceLookupValues(input: {
+  eventType?: string;
+  customerId?: string;
+  subscriptionId?: string;
+  paymentIntentId?: string;
+}):
+  | {
+      customerId?: string;
+      subscriptionId?: string;
+      paymentIntentId?: string;
+    }
+  | null;
+
 export function stripeSubscriptionWorkspaceBindingDecision(input: {
   responseOk: boolean;
   bodyParsed: boolean;

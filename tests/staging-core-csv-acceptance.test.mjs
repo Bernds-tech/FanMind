@@ -13,6 +13,7 @@ import {
   deriveStagingCoreCsvAcceptanceIds,
   evaluateStagingCoreCsvAcceptanceEnvironment,
 } from "../src/lib/stagingCoreCsvAcceptancePolicy.mjs";
+import { canonicalizeStagingRolloutEvidence } from "../scripts/operations/canonicalize-staging-rollout-evidence.mjs";
 
 const PRIMARY_WORKSPACE_ID = "11111111-1111-4111-8111-111111111111";
 const PRIMARY_CONTACT_ID = "33333333-3333-4333-8333-333333333333";
@@ -146,6 +147,10 @@ test("manual workflow binds deployed commit, real browser flow and always cleanu
   assert.match(workflow, /run-staging-core-csv-acceptance/u);
   assert.match(workflow, /environment: staging/u);
   assert.match(workflow, /persist-credentials: false/u);
+  assert.match(workflow, /NEXT_PUBLIC_SUPABASE_URL: \$\{\{ secrets\.FANMIND_STAGING_SUPABASE_URL \}\}/u);
+  assert.match(workflow, /FANMIND_TARGET_API_ORIGIN: \$\{\{ vars\.FANMIND_STAGING_APP_URL \}\}/u);
+  assert.match(workflow, /FANMIND_PRODUCTION_API_ORIGIN: https:\/\/fanmind\.ch/u);
+  assert.match(workflow, /FANMIND_PRODUCTION_DB_HOST:/u);
   assert.match(workflow, /\/api\/version/u);
   assert.match(workflow, /payload\.releaseCommit !== process\.env\.FANMIND_EXPECTED_RELEASE_COMMIT/u);
   assert.match(workflow, /staging:core-csv:prepare/u);
@@ -153,6 +158,27 @@ test("manual workflow binds deployed commit, real browser flow and always cleanu
   assert.match(workflow, /staging:core-csv:verify/u);
   assert.match(workflow, /if: \$\{\{ always\(\) && steps\.passfile\.outcome == 'success' \}\}/u);
   assert.match(workflow, /staging:core-csv:cleanup/u);
+  assert.match(
+    workflow,
+    /staging:core-csv:cleanup[\s\S]*Recheck database postflight and exact deployed release/u,
+  );
+  assert.match(workflow, /steps\.cleanup\.outcome == 'success'/u);
+  assert.match(workflow, /steps\.rollout_baseline\.outcome == 'success'/u);
+  assert.match(workflow, /canonicalize-staging-rollout-evidence\.mjs/u);
+  assert.match(workflow, /cmp --silent --/u);
+  assert.match(workflow, /staging_final_deployed_release_mismatch/u);
+  assert.match(workflow, /STAGING_CORE_CSV_DATABASE_POSTFLIGHT=PASS/u);
+  assert.match(workflow, /STAGING_CORE_CSV_FINAL_RELEASE=PASS/u);
+  assert.match(workflow, /STAGING_CORE_CSV_ACCEPTANCE=PASS/u);
+  assert.equal((workflow.match(/\/api\/version/gu) ?? []).length, 2);
+  assert.ok(
+    workflow.lastIndexOf("staging_final_deployed_release_mismatch") >
+      workflow.indexOf("staging:core-csv:cleanup"),
+  );
+  assert.ok(
+    workflow.lastIndexOf("STAGING_CORE_CSV_ACCEPTANCE=PASS") >
+      workflow.lastIndexOf("staging_final_deployed_release_mismatch"),
+  );
   assert.doesNotMatch(workflow, /pull_request:|push:|upload-artifact/u);
 
   assert.match(config, /fanmind-staging-core-csv-write/u);
@@ -174,6 +200,49 @@ test("manual workflow binds deployed commit, real browser flow and always cleanu
   assert.match(spec, /TURNSTILE_SCRIPT_PATH/u);
   assert.match(spec, /test\.afterEach[\s\S]*auth\/v1\/logout/u);
   assert.match(spec, /await logout\(page, secondarySession\)/u);
+});
+
+test("database rollout evidence is canonical, complete and fail-closed", () => {
+  const output = [
+    "> fanmind-temp@0.1.0 db:staging-rollout-state:run",
+    "STAGING_DATABASE_ROLLOUT_STATE=PASS",
+    "STAGING_DATABASE_ROLLOUT_META_CONTENT=apply",
+    "STAGING_DATABASE_ROLLOUT_AI_TIER=verify",
+    "STAGING_DATABASE_ROLLOUT_GENERIC_MIGRATION=disabled",
+    "STAGING_DATABASE_ROLLOUT_TRIGGER_HARDENING=skip",
+    "STAGING_DATABASE_ROLLOUT_META_CONTINUATION=verify",
+    "STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=apply",
+    "STAGING_DATABASE_ROLLOUT_META_CATCHUP=skip",
+    "SECRETS_WURDEN_NICHT_AUSGEGEBEN=true",
+  ].join("\n");
+
+  assert.equal(
+    canonicalizeStagingRolloutEvidence(output),
+    [
+      "STAGING_DATABASE_ROLLOUT_AI_TIER=verify",
+      "STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=apply",
+      "STAGING_DATABASE_ROLLOUT_META_CONTENT=apply",
+      "STAGING_DATABASE_ROLLOUT_META_CATCHUP=skip",
+      "STAGING_DATABASE_ROLLOUT_META_CONTINUATION=verify",
+      "STAGING_DATABASE_ROLLOUT_TRIGGER_HARDENING=skip",
+      "STAGING_DATABASE_ROLLOUT_GENERIC_MIGRATION=disabled",
+      "STAGING_DATABASE_ROLLOUT_STATE=PASS",
+      "",
+    ].join("\n"),
+  );
+
+  for (const invalid of [
+    output.replace("STAGING_DATABASE_ROLLOUT_META_CATCHUP=skip\n", ""),
+    `${output}\nSTAGING_DATABASE_ROLLOUT_META_CATCHUP=skip`,
+    output.replace("STAGING_DATABASE_ROLLOUT_STATE=PASS", "STAGING_DATABASE_ROLLOUT_STATE=BLOCKED"),
+    output.replace("STAGING_DATABASE_ROLLOUT_AI_TIER=verify", "STAGING_DATABASE_ROLLOUT_AI_TIER=unknown"),
+    output.replace("STAGING_DATABASE_ROLLOUT_GENERIC_MIGRATION=disabled", "STAGING_DATABASE_ROLLOUT_GENERIC_MIGRATION=enabled"),
+  ]) {
+    assert.throws(
+      () => canonicalizeStagingRolloutEvidence(invalid),
+      /invalid_rollout_evidence/u,
+    );
+  }
 });
 
 test("offline acceptance contract is credential-free", () => {

@@ -28,7 +28,7 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 - geschützte App-Navigation;
 - Dashboard mit Kontakt- und Follow-up-Kennzahlen;
 - Kontaktliste und Suche;
-- Kontakt in Mobile anlegen und bearbeiten;
+- Kontakt als Workspace-Owner in Mobile anlegen und bearbeiten; Teammitglieder sehen CRM-Daten nur lesend;
 - Kontaktdetail mit Profil und Kontaktwissen;
 - KI-Antwortvorschläge über Bearer-authentifizierte FanMind-API;
 - gespeicherter Gesprächsverlauf ausschließlich serverseitig aus dem
@@ -40,8 +40,8 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
   bewusst weitergeben; ausschließlich der ausgewählte Antworttext wird
   übergeben, Zielwahl und finaler Versand bleiben beim Menschen;
 - Kontaktwissen aus KI-Vorschlag speichern;
-- Follow-up aus KI-Vorschlag speichern;
-- offene Follow-ups anzeigen und abschließen;
+- Follow-up als Owner aus KI-Vorschlag speichern;
+- offene Follow-ups anzeigen und als Owner abschließen; Teammitglieder bleiben read-only;
 - verschlüsselte, maximal 24 Stunden alte Offline-Kontaktübersicht mit höchstens 50 Einträgen im Nur-Lesen-Modus;
 - native Push-Grundlage mit streng validierter Navigation zu Follow-ups sowie
   ausdrücklichem Opt-in für eine verschlüsselte, kontogebundene
@@ -80,7 +80,7 @@ Verboten in App, EAS-Update und Repository:
 - Production-Backup-Schlüssel;
 - externe Social-Login-Daten.
 
-Die Datenzugriffe laufen direkt über Supabase und müssen durch RLS auf den angemeldeten Nutzer beziehungsweise dessen Workspace begrenzt sein. KI-Aufrufe gehen ausschließlich an den FanMind-Server; der OpenAI-Key bleibt serverseitig.
+Die Datenzugriffe laufen direkt über Supabase und müssen durch RLS auf den angemeldeten Nutzer beziehungsweise dessen Workspace begrenzt sein. Member laden den Workspace über die minimale Safe-RPC-Projektion und besitzen keine Mobile-CRM-Mutationscontrols. KI-Aufrufe gehen ausschließlich an den FanMind-Server; der OpenAI-Key bleibt serverseitig.
 
 Recovery-Codes, Zugriffstokens, Refresh-Tokens und vollständige Callback-URLs dürfen weder protokolliert noch in Tickets oder Screenshots übernommen werden.
 

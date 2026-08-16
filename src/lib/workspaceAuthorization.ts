@@ -133,6 +133,28 @@ export async function requireActiveAuthorizedWorkspaceMember(
   accessToken?: string,
 ): Promise<AuthorizedWorkspaceContext> {
   const context = await requireAuthorizedWorkspaceMember(accessToken);
+  if (context.workspace.role.trim().toLowerCase() !== "owner") {
+    throw new WorkspaceAuthorizationError(
+      "Schreibaktionen für Teammitglieder bleiben bis zu einem atomaren Datenbankvertrag deaktiviert.",
+      "workspace_member_mutations_disabled",
+    );
+  }
+  const processing = evaluateWorkspaceProcessingEntitlement(
+    context.workspace,
+  );
+  if (!processing.allowed) {
+    throw new WorkspaceAuthorizationError(
+      "Der Workspace ist derzeit nur lesbar oder für Verarbeitung pausiert.",
+      "workspace_inactive",
+    );
+  }
+  return context;
+}
+
+export async function requireActiveAuthorizedWorkspace(
+  accessToken?: string,
+): Promise<AuthorizedWorkspaceContext> {
+  const context = await requireAuthorizedWorkspace(accessToken);
   const processing = evaluateWorkspaceProcessingEntitlement(
     context.workspace,
   );
@@ -150,6 +172,26 @@ export async function requireContactInAuthorizedWorkspace(
   accessToken?: string,
 ): Promise<AuthorizedWorkspaceContext & { contact: ContactRow }> {
   const context = await requireAuthorizedWorkspace(accessToken);
+  const contactResult = await getWorkspaceContact(
+    context.workspace.id,
+    contactId,
+    accessToken,
+  );
+  if (contactResult.error) {
+    throw new WorkspaceAuthorizationError(
+      "Kontakt konnte nicht autorisiert geladen werden.",
+      "resource_forbidden",
+    );
+  }
+  assertResourceInWorkspace(contactResult.contact, context.workspace.id, "Kontakt");
+  return { ...context, contact: contactResult.contact as ContactRow };
+}
+
+export async function requireContactInActiveAuthorizedWorkspace(
+  contactId: string,
+  accessToken?: string,
+): Promise<AuthorizedWorkspaceContext & { contact: ContactRow }> {
+  const context = await requireActiveAuthorizedWorkspace(accessToken);
   const contactResult = await getWorkspaceContact(
     context.workspace.id,
     contactId,

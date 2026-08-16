@@ -20,7 +20,10 @@ import {
   deleteContactAnalysisProfiles,
   upsertFanAnalysisReport,
 } from "@/lib/supabase/server";
-import { requireContactInAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
+import {
+  requireContactInActiveAuthorizedWorkspace,
+  requireContactInAuthorizedWorkspace,
+} from "@/lib/workspaceAuthorization";
 import { getResolvedWorkspaceAiTier } from "@/lib/workspaceAiTierEntitlements";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
@@ -303,7 +306,7 @@ export async function analyzeFanCommunication(
   }
 
   const { workspace, user, contact } =
-    await requireContactInAuthorizedWorkspace(contactId);
+    await requireContactInActiveAuthorizedWorkspace(contactId);
   // Lifecycle guard only. Billing authorization requires server-owned
   // entitlement state before Standard/Plus/Ultra can be activated.
   if (isWorkspaceArchivedAfterSubscriptionEnd(workspace)) {

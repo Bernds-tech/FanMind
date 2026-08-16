@@ -246,9 +246,30 @@ async function importedRows(page: Page, session: Session) {
   >;
 }
 
+async function memberIdempotentContactMutationRows(
+  page: Page,
+  session: Session,
+) {
+  const url = new URL("/rest/v1/contacts", SUPABASE_ORIGIN);
+  url.searchParams.set("id", `eq.${CONTACT_ID}`);
+  url.searchParams.set("select", "id");
+  const response = await page.request.patch(url.toString(), {
+    headers: {
+      apikey: session.anonKey,
+      Authorization: `Bearer ${session.accessToken}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    data: { display_name: CONTACT_NAME },
+  });
+  expect(response.ok()).toBe(true);
+  return response.json() as Promise<Array<{ id: string }>>;
+}
+
 test.beforeEach(() => requireFixtureContract());
 
-test("owner and member complete the isolated Staging core and CSV acceptance", async ({
+test("owner completes writes while member proves read-only Staging core and CSV access", async ({
   context,
   page,
 }) => {
@@ -370,14 +391,29 @@ test("owner and member complete the isolated Staging core and CSV acceptance", a
   await page.goto("/fans");
   await expect(page.getByText(CONTACT_NAME).first()).toBeVisible();
   await expect(page.getByText(IMPORTED_NAME).first()).toBeVisible();
+  await expect(
+    page.getByText(/Teamzugang im Nur-Lese-Modus: Fans/u),
+  ).toBeVisible();
+  await expect(page.getByText("+ Neuer Fan", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("CSV importieren", { exact: true })).toHaveCount(0);
   await page.goto(`/fans/${CONTACT_ID}`);
   await expect(
     page.getByRole("heading", { name: CONTACT_NAME }).first(),
   ).toBeVisible();
+  await expect(
+    page.getByText("Teamzugang im Nur-Lese-Modus.", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Top Fan/u })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "KI-Vorschläge erzeugen" }),
+  ).toHaveCount(0);
   await page.getByRole("tab", { name: "Kontaktwissen" }).click();
   await expect(
     page.getByRole("tabpanel").getByText(memoryContent, { exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("tabpanel").getByText("+ Kontaktwissen hinzufügen"),
+  ).toHaveCount(0);
   await page.getByRole("tab", { name: "Follow-ups" }).click();
   await expect(
     page.getByRole("tabpanel").getByText(followupReason, { exact: true }),
@@ -389,23 +425,25 @@ test("owner and member complete the isolated Staging core and CSV acceptance", a
     .filter({ hasText: CONTACT_NAME })
     .filter({ hasText: followupReason });
   await expect(followupRow).toBeVisible();
-  page.once("dialog", (dialog) => dialog.accept());
-  await followupRow
-    .getByRole("button", { name: "Als erledigt markieren" })
-    .click();
   await expect(
-    page.getByText("Follow-up wurde als erledigt markiert."),
+    page.getByText("Teamzugang im Nur-Lese-Modus.", { exact: true }),
   ).toBeVisible();
-  const completedFollowupRow = page
-    .locator("tr")
-    .filter({ hasText: CONTACT_NAME })
-    .filter({ hasText: followupReason });
-  await completedFollowupRow
-    .getByRole("button", { name: "Wieder öffnen" })
-    .click();
+  await expect(followupRow.getByText("Nur Lesen", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("Follow-up wurde wieder geöffnet."),
+    followupRow.getByRole("button", { name: "Als erledigt markieren" }),
+  ).toHaveCount(0);
+
+  await page.goto("/fans/import");
+  await expect(
+    page.getByRole("heading", {
+      name: "CSV-Import ist dem Workspace-Owner vorbehalten.",
+    }),
   ).toBeVisible();
+  await expect(page.getByLabel("CSV-Text")).toHaveCount(0);
+
+  expect(
+    await memberIdempotentContactMutationRows(page, memberSession),
+  ).toEqual([]);
   expect(
     await contactRows(page, memberSession, [
       CONTACT_ID,

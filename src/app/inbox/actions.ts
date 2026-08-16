@@ -7,7 +7,7 @@ import {
   getWorkspaceConversations,
   releaseConversationAssignment,
 } from "@/lib/supabase/server";
-import { requireAuthorizedWorkspaceMember } from "@/lib/workspaceAuthorization";
+import { requireActiveAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
 
 export async function claimConversation(formData: FormData) {
   await updateAssignment(formData, "claim");
@@ -22,7 +22,7 @@ async function updateAssignment(formData: FormData, mode: "claim" | "release") {
   const conversationId = formValue(formData, "conversation_id");
   if (!conversationId) redirect(inboxNoticePath("conversation_missing", locale));
 
-  const { user, workspace } = await requireAuthorizedWorkspaceMember();
+  const { user, workspace } = await requireActiveAuthorizedWorkspace();
   const conversations = await getWorkspaceConversations(workspace.id);
   const conversation = conversations.conversations.find(
     (candidate) => candidate.id === conversationId,

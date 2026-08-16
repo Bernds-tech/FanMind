@@ -110,7 +110,13 @@ Wichtige Felder laut aktuellem Code:
 RLS-Erwartung:
 
 - Owner darf eigenen Workspace lesen.
-- Workspace-Mitglieder dürfen ihren Workspace lesen.
+- Workspace-Mitglieder dürfen nach dem kontrollierten Member-Boundary-Apply
+  nicht die Basiszeile lesen, sondern nur die parameterlose Safe-RPC-Projektion
+  aus ID, Name, Plan, normalisierter Member-Rolle und Processing-Bool. Der
+  checksum-gebundene Control ist derzeit `CHECKED_NOT_APPLIED`.
+- `workspace_analysis_settings` enthält administrative Legal-, AVV-,
+  Retention- und Bestätigerfelder und wird erst nach nachgewiesenem Apply
+  desselben Controls für direkte Browser-Reads auf den Owner begrenzt.
 - Owner darf ausschließlich Name, Organisations-/Adress- und Steuerstammdaten
   direkt mutieren.
 - Neue öffentliche Starter-Workspaces und die Owner-Membership entstehen
@@ -165,6 +171,11 @@ RLS-Erwartung:
 
 - Nutzer sieht eigene Memberships.
 - Owner darf Membership für eigenen Workspace vorbereiten, soweit MVP benötigt.
+- Member-Mutationen sind im App-Vertrag deaktiviert. Die direkte JWT-/RLS-
+  Grenze ist bis zum nachgewiesenen Apply noch offen; danach erzwingt der
+  vorbereitete Control für zwölf Tabellen aktive Workspace-Ownership, während
+  bestehende Member-Reads erhalten bleiben. Details:
+  `docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md`.
 
 ## 3. CRM-Kern
 
@@ -722,9 +733,14 @@ Wichtige Felder:
 
 RLS-Erwartung:
 
-- Nur eigener Workspace oder Admin; normale Browserzugriffe sind read-only.
-- `page_access_token_encrypted` ist verschlüsselt und nur über Service Role
-  les-/schreibbar; Browser erhalten ausschließlich sichere Statusspalten.
+- Nach dem kontrollierten Member-Boundary-Apply dürfen nur Workspace-Owner
+  oder Admins `social_connections` lesen; normale Member-Browserzugriffe
+  erhalten dann keine Connector-Zeile. Owner-Browserzugriffe sind anschließend
+  auf die dokumentierten nicht geheimen Statusspalten read-only begrenzt.
+- Nach demselben Apply ist `page_access_token_encrypted` verschlüsselt und nur
+  über Service Role les-/schreibbar; Browser erhalten dann ausschließlich
+  sichere Statusspalten. Bis zum Apply bleibt diese direkte Browser-ACL-Grenze
+  ein dokumentierter Go-live-Blocker.
 - `messenger_sync_continuation_after` und
   `messenger_sync_continuation_started_at` bilden einen server-only
   Fortsetzungszustand: beide sind gemeinsam leer oder gesetzt und besitzen

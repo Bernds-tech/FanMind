@@ -20,6 +20,8 @@ import {
   STRIPE_BILLING_ALLOWED,
   STRIPE_BILLING_RETRYABLE_ERROR,
   resolveStripeWebhookWorkspaceCandidates,
+  stripeWebhookReferenceContractDecision,
+  stripeWebhookReferenceLookupValues,
   stripeSubscriptionWorkspaceBindingDecision,
 } from "../src/lib/stripeWorkspacePolicy.mjs";
 import fs from "node:fs";
@@ -45,13 +47,17 @@ test("Stripe Tax readiness is fail-closed until mode and registration are confir
   assert.equal(AUSTRIAN_STANDARD_VAT_PERCENT, 20);
 });
 
-test("Starter checkout delegates methods to Stripe and enables tax collection", () => {
+test("Starter delegates methods while the internal daily test stays card-only", () => {
   const stripeBillingSource = fs.readFileSync("src/lib/stripeBilling.ts", "utf8");
   const billingSource = fs.readFileSync("src/lib/billing.ts", "utf8");
 
-  assert.doesNotMatch(
+  assert.match(
     stripeBillingSource,
-    /payment_method_types|paymentMethodTypes/u,
+    /commercialOption === "internal_daily_test"\)[\s\S]*params\.append\("payment_method_types\[\]", "card"\)/u,
+  );
+  assert.equal(
+    [...stripeBillingSource.matchAll(/payment_method_types\[\]/gu)].length,
+    1,
   );
   assert.match(stripeBillingSource, /billing_address_collection", "required"/u);
   assert.match(stripeBillingSource, /tax_id_collection\[enabled\]", "true"/u);
@@ -121,6 +127,134 @@ test("Stripe webhook Workspace candidates must be UUID-valid and agree with stor
   );
 });
 
+test("every mutating Stripe event requires its complete typed reference set", () => {
+  const exact = {
+    customerId: "cus_SyntheticReferenceContract",
+    subscriptionId: "sub_SyntheticReferenceContract",
+    paymentIntentId: "pi_SyntheticReferenceContract",
+  };
+  for (const eventType of [
+    "checkout.session.completed",
+    "checkout.session.async_payment_succeeded",
+    "checkout.session.async_payment_failed",
+    "payment_intent.processing",
+    "payment_intent.succeeded",
+    "payment_intent.payment_failed",
+    "invoice.paid",
+    "invoice.updated",
+    "invoice.payment_failed",
+    "customer.subscription.created",
+    "customer.subscription.updated",
+    "customer.subscription.resumed",
+    "customer.subscription.paused",
+    "customer.subscription.deleted",
+    "charge.refunded",
+    "refund.created",
+    "refund.updated",
+    "refund.failed",
+    "charge.dispute.created",
+    "customer.tax_id.created",
+    "customer.tax_id.updated",
+    "customer.tax_id.deleted",
+  ]) {
+    assert.equal(
+      stripeWebhookReferenceContractDecision({ eventType, ...exact }),
+      STRIPE_BILLING_ALLOWED,
+      eventType,
+    );
+  }
+
+  for (const [eventType, missingField] of [
+    ["checkout.session.completed", "customerId"],
+    ["payment_intent.succeeded", "customerId"],
+    ["payment_intent.succeeded", "paymentIntentId"],
+    ["invoice.paid", "customerId"],
+    ["invoice.paid", "subscriptionId"],
+    ["customer.subscription.updated", "customerId"],
+    ["customer.subscription.updated", "subscriptionId"],
+    ["refund.updated", "paymentIntentId"],
+    ["customer.tax_id.updated", "customerId"],
+  ]) {
+    assert.equal(
+      stripeWebhookReferenceContractDecision({
+        eventType,
+        ...exact,
+        [missingField]: undefined,
+      }),
+      STRIPE_BILLING_RETRYABLE_ERROR,
+      `${eventType}:${missingField}`,
+    );
+  }
+  assert.equal(
+    stripeWebhookReferenceContractDecision({
+      eventType: "invoice.paid",
+      ...exact,
+      subscriptionId: "not-a-subscription",
+    }),
+    STRIPE_BILLING_RETRYABLE_ERROR,
+  );
+
+  assert.deepEqual(
+    stripeWebhookReferenceLookupValues({
+      eventType: "checkout.session.completed",
+      ...exact,
+    }),
+    { customerId: exact.customerId },
+  );
+  assert.deepEqual(
+    stripeWebhookReferenceLookupValues({
+      eventType: "invoice.paid",
+      ...exact,
+    }),
+    {
+      customerId: exact.customerId,
+      subscriptionId: exact.subscriptionId,
+    },
+  );
+  assert.deepEqual(
+    stripeWebhookReferenceLookupValues({
+      eventType: "payment_intent.succeeded",
+      ...exact,
+    }),
+    { customerId: exact.customerId },
+  );
+  assert.deepEqual(
+    stripeWebhookReferenceLookupValues({
+      eventType: "refund.updated",
+      ...exact,
+    }),
+    { customerId: exact.customerId },
+  );
+  assert.deepEqual(
+    stripeWebhookReferenceLookupValues({
+      eventType: "refund.updated",
+      ...exact,
+      customerId: undefined,
+    }),
+    { paymentIntentId: exact.paymentIntentId },
+  );
+  assert.deepEqual(
+    stripeWebhookReferenceLookupValues({
+      eventType: "customer.tax_id.updated",
+      ...exact,
+    }),
+    { customerId: exact.customerId },
+  );
+  assert.equal(
+    stripeWebhookReferenceLookupValues({ eventType: "unknown.event", ...exact }),
+    null,
+  );
+
+  const stripeBillingSource = fs.readFileSync(
+    "src/lib/stripeBilling.ts",
+    "utf8",
+  );
+  assert.match(
+    stripeBillingSource,
+    /missingReferenceCount \+= 1[\s\S]*missingReferenceCount > 0[\s\S]*matchedWorkspaceIds\.size === 0[\s\S]*status: "not_found"[\s\S]*status: "retryable_error"/u,
+  );
+});
+
 test("subscription events require the exact stored customer and base subscription", () => {
   const workspaceId = "11111111-1111-4111-8111-111111111111";
   const input = {
@@ -170,7 +304,11 @@ test("subscription binding is checked before any Workspace billing mutation", ()
   assert.ok(binding >= 0 && billingWrite > binding);
   assert.match(
     webhookSource,
-    /workspaceIdCandidatesFromObject\(object\)[\s\S]*allowDirectBootstrap: eventType\?\.startsWith\("checkout\.session\."\) === true/u,
+    /stripeWebhookReferenceLookupValues\([\s\S]*findWorkspaceIdByStripeReferences\(lookupReferences\)[\s\S]*workspaceIdCandidatesFromObject\(object\)/u,
+  );
+  assert.match(
+    webhookSource,
+    /resolution\.status === "not_found"[\s\S]*status: "retryable_error"/u,
   );
   assert.match(
     webhookSource,

@@ -37,10 +37,12 @@ function FollowupRow({
   item,
   onComplete,
   busy,
+  readOnly,
 }: {
   item: Followup;
   onComplete: () => void;
   busy: boolean;
+  readOnly: boolean;
 }) {
   const due = dueLabel(item.due_date);
   return (
@@ -55,17 +57,21 @@ function FollowupRow({
       <Text style={mobileStyles.body}>{item.reason}</Text>
       <View style={styles.rowFooter}>
         <StatusPill>{item.priority || "normal"}</StatusPill>
-        <Pressable
-          onPress={onComplete}
-          disabled={busy}
-          style={({ pressed }) => [
-            styles.completeButton,
-            pressed && { opacity: 0.7 },
-            busy && { opacity: 0.45 },
-          ]}
-        >
-          <Text style={styles.completeText}>{busy ? "Speichert…" : "Erledigt"}</Text>
-        </Pressable>
+        {readOnly ? (
+          <StatusPill tone="warning">Nur lesen</StatusPill>
+        ) : (
+          <Pressable
+            onPress={onComplete}
+            disabled={busy}
+            style={({ pressed }) => [
+              styles.completeButton,
+              pressed && { opacity: 0.7 },
+              busy && { opacity: 0.45 },
+            ]}
+          >
+            <Text style={styles.completeText}>{busy ? "Speichert…" : "Erledigt"}</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -108,9 +114,9 @@ export default function FollowupsScreen() {
   }, [load]);
 
   async function complete(item: Followup) {
-    if (!workspace?.id) return;
+    if (!workspace?.id || workspace.role !== "owner") return;
     setBusyId(item.id);
-    const result = await completeFollowup(workspace.id, item.id);
+    const result = await completeFollowup(workspace.id, item.id, workspace.role);
     setError(result);
     if (!result) await load();
     setBusyId(null);
@@ -163,6 +169,7 @@ export default function FollowupsScreen() {
           <FollowupRow
             item={item}
             busy={busyId === item.id}
+            readOnly={workspace.role !== "owner"}
             onComplete={() => void complete(item)}
           />
         )}

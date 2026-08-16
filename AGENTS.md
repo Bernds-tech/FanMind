@@ -262,7 +262,7 @@ Build FanMind as a real CRM core, not as a slide/demo shell. The active product 
 - Never turn the Mobile app into a WebView wrapper or import Next.js routes, Website CSS or Website UI components.
 - Mobile may contain only public Supabase configuration and the FanMind API base URL; service-role, OpenAI, Stripe, webhook and backup secrets remain server-only.
 - Mobile password recovery accepts only `fanmind://reset-password`, must validate PKCE/token callbacks fail-closed and must never log recovery codes, tokens or complete callback URLs.
-- Mobile contact create/update must include the current `workspace_id`, rely on RLS as final authorization and never use a service-role key.
+- Mobile contact create/update is Owner-only, must include the current `workspace_id`, rely on RLS as final authorization and never use a service-role key. Member sessions remain read-only until a separately reviewed atomic DB-RPC contract exists.
 - Local logout must stop and drain cache writes, purge every registered FanMind SecureStore key and clear session, recovery and workspace state.
 - The Mobile offline cache is read-only, account/workspace-bound, limited to 50 contacts and 24 hours, and may retain only workspace name plus contact identity/list metadata. It must never retain summaries, contact knowledge, messages, AI content, internal notes, follow-ups or credentials, and may be shown only for transport failures—not auth, RLS or server errors.
 - Mobile push registration is explicit opt-in only, accepts one active device
@@ -337,6 +337,11 @@ Social integrations, analytics, campaign logic, referral automation and automati
 - Supabase anon key may be public; Supabase service-role key must stay server-only.
 - `FANMIND_ADMIN_EMAILS` is the only admin source. No hardcoded real admin email fallback.
 - RLS must be enabled and verified for workspace-scoped tables before any pilot customer data is used.
+- Member JWTs must never receive the full `workspaces` row or
+  `social_connections` secrets. Keep the parameterless member-safe Workspace
+  RPC, exact safe DTO and Owner-only active-processing mutation boundary in
+  `docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md`. A successful RLS
+  postflight alone must never enable Member writes.
 - Normal Workspace-Owner may directly update only the ten documented
   organization/address/tax master-data columns. Workspace creation and
   commercial fields must follow the two-phase RPC/privilege rollout in

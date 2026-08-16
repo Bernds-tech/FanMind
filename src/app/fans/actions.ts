@@ -26,10 +26,8 @@ import {
   type ContactUpdateResult,
 } from "@/lib/supabase/server";
 import {
-  requireAuthorizedWorkspace,
-  requireContactInAuthorizedWorkspace,
-  requireActiveAuthorizedWorkspaceMember,
-  requireContactInActiveAuthorizedWorkspaceMember,
+  requireActiveAuthorizedWorkspace,
+  requireContactInActiveAuthorizedWorkspace,
 } from "@/lib/workspaceAuthorization";
 import { areDemoConnectionsDisabled } from "@/lib/demoMode";
 import {
@@ -70,7 +68,7 @@ export async function updateTopFanMark(formData: FormData) {
   let workspaceId: string;
   try {
     const { workspace, contact } =
-      await requireContactInActiveAuthorizedWorkspaceMember(contactId);
+      await requireContactInActiveAuthorizedWorkspace(contactId);
     workspaceId = workspace.id;
     if (contact.workspace_id !== workspace.id) {
       redirect(`${returnTo}?notice=top_fan_forbidden`);
@@ -200,12 +198,12 @@ export async function importCsvContacts(
 }
 
 export async function saveFacebookReplyTarget(formData: FormData) {
-  const { user, workspace } = await requireAuthorizedWorkspace();
   const contactId = formValue(formData, "contact_id");
+  const { user, workspace } =
+    await requireContactInActiveAuthorizedWorkspace(contactId);
   if (areDemoConnectionsDisabled(user, workspace)) {
     redirect(`/fans/${contactId}?notice=demo_external_actions_disabled`);
   }
-  await ensureContactInWorkspace(workspace.id, contactId);
 
   const url = formValue(formData, "reply_target_url");
   if (!isAllowedManualFacebookThreadUrl(url)) {
@@ -447,7 +445,7 @@ export async function saveInboundMessage(formData: FormData) {
 }
 
 export async function saveManualSentReply(formData: FormData) {
-  const { workspace, user } = await requireActiveAuthorizedWorkspaceMember();
+  const { workspace, user } = await requireActiveAuthorizedWorkspace();
   const contactId = formValue(formData, "contact_id");
   await ensureContactInWorkspace(workspace.id, contactId);
   const conversation = await getExistingOrNewConversation(
@@ -1069,7 +1067,7 @@ function parseTags(value: string): string[] {
 
 async function getCurrentWorkspaceOrThrow() {
   try {
-    const { workspace } = await requireActiveAuthorizedWorkspaceMember();
+    const { workspace } = await requireActiveAuthorizedWorkspace();
     return workspace;
   } catch (error) {
     if (error instanceof Error && error.message.includes("User-Session")) {
@@ -1084,7 +1082,7 @@ async function ensureContactInWorkspace(
   contactId: string,
 ) {
   const authorized =
-    await requireContactInActiveAuthorizedWorkspaceMember(contactId);
+    await requireContactInActiveAuthorizedWorkspace(contactId);
   if (authorized.workspace.id !== workspaceId) {
     throw new Error("Kontakt wurde im aktuellen Workspace nicht gefunden.");
   }
@@ -1103,7 +1101,7 @@ function getDueDate(inDays: number | null | undefined): string | null {
 
 export async function syncFacebookChatForContact(contactId: string) {
   const { user, workspace } =
-    await requireContactInAuthorizedWorkspace(contactId);
+    await requireContactInActiveAuthorizedWorkspace(contactId);
   if (areDemoConnectionsDisabled(user, workspace)) {
     redirect(`/fans/${contactId}?notice=demo_external_actions_disabled`);
   }
@@ -1126,7 +1124,7 @@ export async function syncFacebookChatForContact(contactId: string) {
 
 export async function syncInstagramChatForContact(contactId: string) {
   const { user, workspace } =
-    await requireContactInAuthorizedWorkspace(contactId);
+    await requireContactInActiveAuthorizedWorkspace(contactId);
   if (areDemoConnectionsDisabled(user, workspace)) {
     redirect(`/fans/${contactId}?notice=demo_external_actions_disabled`);
   }

@@ -30,6 +30,29 @@ const checkedFiles = [
   "tests/regular-user-core-flow-fixture.test.mjs",
   "tests/staging-core-csv-acceptance.test.mjs",
   "tests/workspace-member-core-flow.test.mjs",
+  "tests/workspace-member-data-boundary.test.mjs",
+  "scripts/operations/workspace-member-data-boundary-runner.mjs",
+  "supabase/controlled/20260816120000_workspace_member_data_boundary.sql",
+  "docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md",
+  "docs/operations/WEBSITE_CHAT_FOUNDATION.md",
+  "src/lib/supabase/server.ts",
+  "src/lib/workspaceAuthorization.ts",
+  "src/lib/workspaceProcessingPolicy.mjs",
+  "src/app/fans/actions.ts",
+  "src/app/fans/[id]/contextActions.ts",
+  "src/app/inbox/actions.ts",
+  "src/app/api/ai/reply-suggestions/route.ts",
+  "src/app/channels/facebookWebhookActions.ts",
+  "src/app/channels/instagramWebhookActions.ts",
+  "src/app/channels/metaSyncActions.ts",
+  "src/app/channels/facebook/select/page.tsx",
+  "src/app/api/integrations/facebook/start/route.ts",
+  "src/app/api/integrations/facebook/callback/route.ts",
+  "src/app/api/integrations/facebook/select/route.ts",
+  "src/app/api/integrations/instagram/start/route.ts",
+  "src/app/api/integrations/instagram/callback/route.ts",
+  "src/app/api/webhooks/meta/self-test/route.ts",
+  "apps/mobile/src/lib/data.ts",
   "tests/csv-import-parser.test.mjs",
   "tests/csv-import-atomicity.test.mjs",
   "tests/test-suite-coverage.test.mjs",
@@ -37,6 +60,7 @@ const checkedFiles = [
   "docs/operations/ROADMAP_1_7_COMPLETION.md",
   "docs/operations/STAGING_SYNTHETIC_FIXTURES.md",
   "scripts/operations/staging-core-csv-acceptance.mjs",
+  "scripts/operations/canonicalize-staging-rollout-evidence.mjs",
   "scripts/operations/staging-synthetic-fixtures.mjs",
   "src/lib/stagingCoreCsvAcceptancePolicy.mjs",
   "src/lib/stagingSyntheticFixturePolicy.mjs",
@@ -100,6 +124,7 @@ const checkedFiles = [
   "src/lib/plans.ts",
   "src/lib/billing.ts",
   "src/lib/stripeBilling.ts",
+  "src/lib/stripeWorkspacePolicy.mjs",
   "src/app/api/stripe/webhook/route.ts",
   "src/lib/referrals.ts",
   "src/lib/referralPolicy.mjs",
@@ -228,6 +253,16 @@ for (const file of [
   );
 }
 requireText(
+  "src/app/api/ai/prompt-settings/route.ts",
+  "assertActivePromptManagement(context);",
+  "KI-Prompt-Mutationen müssen auch für Owner und Admin bei pausierter Verarbeitung fail-closed bleiben.",
+);
+requireText(
+  "src/lib/supabase/server.ts",
+  "isServerBoundTemporaryDemoWorkspace(workspaceRow)",
+  "Temporäre Demo-Abläufe müssen auch nach Manipulation client-editierbarer Auth-Metadaten serverseitig erkannt werden.",
+);
+requireText(
   ".github/workflows/browser-e2e.yml",
   "npm run test:e2e:core-flow",
   "Browser E2E muss den lokalen regulären Core-Flow in CI ausführen.",
@@ -247,6 +282,37 @@ requireText(
   "run-staging-core-csv-acceptance",
   "Die reale Staging-Kernabnahme muss explizit und commitgebunden bestätigt werden.",
 );
+for (const field of [
+  "STAGING_DATABASE_ROLLOUT_AI_TIER",
+  "STAGING_DATABASE_ROLLOUT_MOBILE_PUSH",
+  "STAGING_DATABASE_ROLLOUT_META_CONTENT",
+  "STAGING_DATABASE_ROLLOUT_META_CATCHUP",
+  "STAGING_DATABASE_ROLLOUT_META_CONTINUATION",
+  "STAGING_DATABASE_ROLLOUT_TRIGGER_HARDENING",
+  "STAGING_DATABASE_ROLLOUT_GENERIC_MIGRATION",
+  "STAGING_DATABASE_ROLLOUT_STATE",
+]) {
+  requireText(
+    "scripts/operations/canonicalize-staging-rollout-evidence.mjs",
+    `"${field}"`,
+    `Der Staging-Rollout-Beleg muss das kanonische Feld ${field} vollständig binden.`,
+  );
+}
+requireText(
+  "scripts/operations/canonicalize-staging-rollout-evidence.mjs",
+  'values.get("STAGING_DATABASE_ROLLOUT_GENERIC_MIGRATION") !== "disabled"',
+  "Der kanonische Staging-Rollout-Beleg muss generische Migrationen fail-closed deaktiviert verlangen.",
+);
+requireText(
+  "scripts/operations/canonicalize-staging-rollout-evidence.mjs",
+  'values.get("STAGING_DATABASE_ROLLOUT_STATE") !== "PASS"',
+  "Der kanonische Staging-Rollout-Beleg darf ausschließlich einen vollständigen PASS-Zustand akzeptieren.",
+);
+requireText(
+  ".github/workflows/browser-e2e-staging-write.yml",
+  "STAGING_CORE_CSV_FINAL_RELEASE=PASS",
+  "Die reale Staging-Kernabnahme muss Release und Runtime nach Cleanup erneut binden.",
+);
 requireText(
   "e2e-staging-write/core-csv.spec.ts",
   'page.goto("/fans/import")',
@@ -259,8 +325,124 @@ requireText(
 );
 forbidIn(
   ".github/workflows/browser-e2e-staging-write.yml",
-  /https:\/\/(?:www\.)?fanmind\.ch|FANMIND_RUNTIME_ENVIRONMENT:\s*production/iu,
+  /(?<!FANMIND_PRODUCTION_API_ORIGIN: )https:\/\/(?:www\.)?fanmind\.ch|FANMIND_RUNTIME_ENVIRONMENT:\s*production/iu,
   "Die schreibende Browser-Abnahme darf kein Production-Ziel enthalten.",
+);
+
+// Member data boundary is check-only until the isolated controlled rollout.
+requireText(
+  "package.json",
+  '"db:workspace-member-data-boundary:check": "node scripts/operations/workspace-member-data-boundary-runner.mjs --check"',
+  "Die Member-Datengrenze muss einen checksum-gebundenen Check-only-Befehl besitzen.",
+);
+requireText(
+  "docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md",
+  "Status: `CHECKED_NOT_APPLIED`.",
+  "Der Member-Control darf ohne externen Apply-/Postflight-Beleg nicht als angewendet gelten.",
+);
+for (const file of ["README.md", "docs/SOURCE_OF_TRUTH.md"]) {
+  requireText(
+    file,
+    "Go-live- und Member-Aktivierungsblocker",
+    `Die direkte Member-JWT-/RLS-Grenze muss in ${file} bis zum Apply ausdrücklich offen bleiben.`,
+  );
+}
+requireText(
+  "scripts/operations/workspace-member-data-boundary-runner.mjs",
+  "WORKSPACE_MEMBER_DATA_BOUNDARY_DATABASE_WRITE=not_performed",
+  "Der Offline-Runner muss ausdrücklich bestätigen, dass er keine Datenbank schreibt.",
+);
+for (const table of [
+  "contacts",
+  "memories",
+  "followups",
+  "conversations",
+  "conversation_messages",
+  "conversation_summaries",
+  "contact_reply_targets",
+  "ai_usage_events",
+  "content_sources",
+  "fan_analysis_reports",
+  "contact_ai_profiles",
+  "workspace_voice_profiles",
+]) {
+  requireText(
+    "scripts/operations/workspace-member-data-boundary-runner.mjs",
+    `"${table}"`,
+    `Der Member-Control muss die direkte Schreibgrenze für ${table} festschreiben.`,
+  );
+}
+requireText(
+  "supabase/controlled/20260816120000_workspace_member_data_boundary.sql",
+  "get_current_workspace_member_safe_dashboard()",
+  "Member müssen eine minimale parameterlose Workspace-Projektion verwenden.",
+);
+requireText(
+  "supabase/controlled/20260816120000_workspace_member_data_boundary.sql",
+  "workspace_analysis_settings_select_requires_workspace_owner",
+  "Member dürfen keine administrativen Legal-, DPA-, Retention- oder Bestätigerfelder lesen.",
+);
+for (const file of [
+  "src/app/fans/actions.ts",
+  "src/app/fans/[id]/contextActions.ts",
+  "src/app/inbox/actions.ts",
+  "src/app/api/ai/reply-suggestions/route.ts",
+]) {
+  forbidIn(
+    file,
+    /requireActiveAuthorizedWorkspaceMember|requireContactInActiveAuthorizedWorkspaceMember/u,
+    `Member-Schreib- und KI-Pfade müssen in ${file} explizit Owner-only bleiben.`,
+  );
+}
+for (const file of [
+  "src/app/channels/facebookWebhookActions.ts",
+  "src/app/channels/instagramWebhookActions.ts",
+]) {
+  requireText(
+    file,
+    'import "server-only";',
+    `Low-Level-Meta-Sync in ${file} darf keine browseraufrufbare Server Action sein.`,
+  );
+}
+requireText(
+  "src/app/channels/metaSyncActions.ts",
+  "requireActiveAuthorizedWorkspace();",
+  "Die einzige clientimportierte Meta-Sync-Action muss Owner und aktive Verarbeitung erneut prüfen.",
+);
+for (const file of [
+  "src/app/channels/facebook/select/page.tsx",
+  "src/app/api/integrations/facebook/start/route.ts",
+  "src/app/api/integrations/facebook/callback/route.ts",
+  "src/app/api/integrations/facebook/select/route.ts",
+  "src/app/api/integrations/instagram/start/route.ts",
+  "src/app/api/integrations/instagram/callback/route.ts",
+  "src/app/api/webhooks/meta/self-test/route.ts",
+]) {
+  requireText(
+    file,
+    "requireActiveAuthorizedWorkspace();",
+    `Meta-OAuth, Auswahl und Synthetic Writes müssen in ${file} Owner und aktive Verarbeitung erneut prüfen.`,
+  );
+}
+requireText(
+  "e2e-staging-write/core-csv.spec.ts",
+  "memberIdempotentContactMutationRows",
+  "Die reale Staging-Abnahme muss eine direkte Member-JWT-Mutation fail-closed prüfen.",
+);
+requireText(
+  "e2e-staging-write/core-csv.spec.ts",
+  "Teamzugang im Nur-Lese-Modus.",
+  "Die reale Staging-Abnahme muss den sichtbaren Member-Nur-Lese-Vertrag prüfen.",
+);
+forbidIn(
+  "e2e-staging-write/core-csv.spec.ts",
+  /getByRole\("button", \{ name: "Als erledigt markieren" \}\)\s*\.click\(\)/u,
+  "Die echte Staging-Abnahme darf keine Member-Follow-up-Mutation mehr ausführen.",
+);
+requireText(
+  "docs/operations/WEBSITE_CHAT_FOUNDATION.md",
+  "noch keinen atomaren\n  Processing-Entitlement-Check",
+  "Website Chat muss bis zum atomaren DB-Processing-Gate ausdrücklich deaktiviert bleiben.",
 );
 
 // Alte oder widersprüchliche öffentliche Wahrheit.
@@ -866,6 +1048,31 @@ requireText(
   "src/app/api/stripe/webhook/route.ts",
   "syncWorkspaceAiTierStripeEntitlement",
   "Der echte Stripe-Webhook muss die fail-closed KI-Add-on-Brücke aufrufen.",
+);
+requireText(
+  "src/lib/stripeWorkspacePolicy.mjs",
+  "stripeWebhookReferenceContractDecision",
+  "Mutierende Stripe-Events müssen ihre vollständige typisierte Referenzmenge fail-closed nachweisen.",
+);
+requireText(
+  "src/lib/stripeBilling.ts",
+  "missingReferenceCount",
+  "Ein Stripe-Workspace-Teiltreffer darf nicht als vollständige Tenant-Bindung gelten.",
+);
+requireText(
+  "src/app/api/stripe/webhook/route.ts",
+  "stripeWebhookReferenceLookupValues",
+  "Stripe-Workspace-Lookups müssen je Eventtyp ausschließlich die erforderliche vollständige Referenzmenge verwenden.",
+);
+requireText(
+  "src/app/api/stripe/webhook/route.ts",
+  "findWorkspaceIdByStripeReferences(lookupReferences)",
+  "Die typisierte Stripe-Referenzmenge muss vor jeder Workspace-Auflösung vollständig geprüft werden.",
+);
+requireText(
+  "docs/SOURCE_OF_TRUTH.md",
+  "allgemeine Billing-Webhook besitzt noch kein gemeinsames",
+  "Der fehlende allgemeine Stripe-Event-Ledger muss als Aktivierungsblocker dokumentiert bleiben.",
 );
 requireText(
   "package.json",

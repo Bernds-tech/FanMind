@@ -53,8 +53,9 @@ function CsvImportWorkspace({
   userEmail: string | null | undefined;
   contactsError?: string;
 }) {
+  const memberReadOnly = workspace.role.trim().toLowerCase() !== "owner";
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigationForUser("fans", userEmail);
+    getWorkspaceNavigationForUser("fans", userEmail, "de", 0, workspace.role);
   const userLabel = userDisplayName || workspace.name || "Nutzer";
 
   return (
@@ -84,7 +85,19 @@ function CsvImportWorkspace({
           <span>{contactsError}</span>
         </p>
       ) : null}
-      <CsvImportClient />
+      {memberReadOnly ? (
+        <section className={dashboardStyles.moduleCard} role="status">
+          <p className={dashboardStyles.eyebrow}>Nur-Lese-Teamzugang</p>
+          <h2>CSV-Import ist dem Workspace-Owner vorbehalten.</h2>
+          <p>
+            Teammitglieder können vorhandene Fans ansehen. Import und andere
+            CRM-Änderungen bleiben bis zu einem atomaren Datenbankvertrag
+            deaktiviert.
+          </p>
+        </section>
+      ) : (
+        <CsvImportClient />
+      )}
     </WorkspaceShell>
   );
 }

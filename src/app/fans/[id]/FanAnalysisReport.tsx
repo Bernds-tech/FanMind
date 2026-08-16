@@ -27,6 +27,7 @@ type Props = {
   locale?: FanMindLanguage;
   hasNewMessages?: boolean;
   storedMessageCount?: number;
+  readOnly?: boolean;
 };
 
 type ReportSection = { title: string; content: string };
@@ -41,6 +42,7 @@ export function FanAnalysisReport({
   locale = "de",
   hasNewMessages = false,
   storedMessageCount = 0,
+  readOnly = false,
 }: Props) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(
@@ -83,7 +85,8 @@ export function FanAnalysisReport({
         </div>
       </div>
 
-      <form action={formAction} className={polishStyles.analysisForm}>
+      {readOnly ? null : (
+        <form action={formAction} className={polishStyles.analysisForm}>
         <input name="contact_id" type="hidden" value={contactId} />
         <input name="locale" type="hidden" value={locale} />
         <div className={polishStyles.analysisControlRow}>
@@ -129,7 +132,8 @@ export function FanAnalysisReport({
                 ? "Create overview"
                 : "Übersicht erstellen"}
         </button>
-      </form>
+        </form>
+      )}
 
       <div aria-live="polite">
         {pending ? (
@@ -155,7 +159,7 @@ export function FanAnalysisReport({
         ) : null}
       </div>
 
-      {report ? (
+      {report && !readOnly ? (
         <form action={deleteAction} className={polishStyles.analysisForm}>
           <input name="contact_id" type="hidden" value={contactId} />
           <input name="locale" type="hidden" value={locale} />

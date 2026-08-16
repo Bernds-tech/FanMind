@@ -6,7 +6,7 @@ import {
   getSupabaseHeaders,
   getSupabaseRestUrl,
 } from "@/lib/supabase/config";
-import { requireContactInActiveAuthorizedWorkspaceMember } from "@/lib/workspaceAuthorization";
+import { requireContactInActiveAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
 
 const MEMORY_TYPES = new Set(["note", "preference", "promise"]);
 const IMPORTANCE_LEVELS = new Set(["low", "normal", "high"]);
@@ -127,7 +127,7 @@ export async function updateManualMemory(formData: FormData) {
   }
 
   const { workspace } =
-    await requireContactInActiveAuthorizedWorkspaceMember(contactId);
+    await requireContactInActiveAuthorizedWorkspace(contactId);
   const importance = IMPORTANCE_LEVELS.has(rawImportance)
     ? rawImportance
     : "normal";
@@ -161,7 +161,7 @@ export async function deleteManualMemory(formData: FormData) {
   }
 
   const { workspace } =
-    await requireContactInActiveAuthorizedWorkspaceMember(contactId);
+    await requireContactInActiveAuthorizedWorkspace(contactId);
   const result = await mutateWorkspaceScopedEntry({
     table: "memories",
     entryId: memoryId,
@@ -210,7 +210,7 @@ export async function updateManualFollowupStatus(formData: FormData) {
   }
 
   const { workspace } =
-    await requireContactInActiveAuthorizedWorkspaceMember(contactId);
+    await requireContactInActiveAuthorizedWorkspace(contactId);
   const result = await mutateWorkspaceScopedEntry({
     table: "followups",
     entryId: followupId,
@@ -243,7 +243,7 @@ export async function deleteManualFollowup(formData: FormData) {
   }
 
   const { workspace } =
-    await requireContactInActiveAuthorizedWorkspaceMember(contactId);
+    await requireContactInActiveAuthorizedWorkspace(contactId);
   const result = await mutateWorkspaceScopedEntry({
     table: "followups",
     entryId: followupId,

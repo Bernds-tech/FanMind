@@ -98,6 +98,20 @@ function formatEuro(cents: number): string {
 function getWorkspaceDisplay(
   workspace: WorkspaceDashboardRow,
 ): WorkspaceDisplay {
+  if (workspace.member_safe_projection === true) {
+    return {
+      packageName: "Teamzugang",
+      commercialOptionName: "Mitglied · CRM-Lesezugriff",
+      setupFeeLabel: "Nicht freigegeben",
+      monthlyFeeLabel: "Nicht freigegeben",
+      commitmentLabel: "Nur für den Workspace-Owner sichtbar",
+      planHint: "Sicherer Teamzugang",
+      packageSummary:
+        "Teammitglieder sehen nur die für den CRM-Arbeitsfluss freigegebene Workspace-Projektion.",
+      contractNote:
+        "Vertrags-, Rechnungs-, Stripe-, Steuer-, Adress- und Testzugangsdaten bleiben dem Workspace-Owner vorbehalten.",
+    };
+  }
   const setupFee = formatEuro(workspace.setup_fee_cents);
   const monthlyFee = formatEuro(workspace.monthly_fee_cents);
 
@@ -398,6 +412,7 @@ function WorkspaceDetails({
       locale,
       dueFollowupCount,
       showAdminArea,
+      workspace.role,
     );
   const workInboxItems = getWorkInboxItems(contacts, followups);
   const newMessageItems = getNewMessageItems(contacts, unseenMessages);

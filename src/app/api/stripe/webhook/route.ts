@@ -20,6 +20,7 @@ import {
   STRIPE_BILLING_RETRYABLE_ERROR,
   STRIPE_BILLING_UPDATED,
   resolveStripeWebhookWorkspaceCandidates,
+  stripeWebhookReferenceLookupValues,
 } from "@/lib/stripeWorkspacePolicy.mjs";
 import { isHandledStripeWebhookEventType } from "@/lib/stripeWebhookEventPolicy.mjs";
 
@@ -139,6 +140,14 @@ function stripeId(value: unknown): string | undefined {
     : stringField(value as StripeObject | undefined, "id");
 }
 
+function stripeIdWithPrefix(
+  value: unknown,
+  prefix: "cus_" | "sub_" | "pi_",
+): string | undefined {
+  const id = stripeId(value);
+  return id?.startsWith(prefix) ? id : undefined;
+}
+
 function objectIdWithPrefix(
   object: StripeObject,
   prefix: string,
@@ -171,19 +180,48 @@ async function resolveWorkspaceId(
   object: StripeObject,
   eventType: string | undefined,
 ): Promise<StripeWorkspaceResolution> {
-  const referenceResolution = await findWorkspaceIdByStripeReferences({
-    customerId:
-      stripeId(object.customer) ?? objectIdWithPrefix(object, "cus_"),
-    subscriptionId:
-      stripeId(object.subscription) ?? objectIdWithPrefix(object, "sub_"),
-    paymentIntentId:
-      stripeId(object.payment_intent) ?? objectIdWithPrefix(object, "pi_"),
+  const customerId =
+    stripeIdWithPrefix(object.customer, "cus_") ??
+    objectIdWithPrefix(object, "cus_");
+  const subscriptionId =
+    stripeIdWithPrefix(object.subscription, "sub_") ??
+    stripeIdWithPrefix(
+      objectField(object, "subscription_details")?.subscription,
+      "sub_",
+    ) ??
+    stripeIdWithPrefix(
+      objectField(objectField(object, "parent"), "subscription_details")
+        ?.subscription,
+      "sub_",
+    ) ??
+    objectIdWithPrefix(object, "sub_");
+  const paymentIntentId =
+    stripeIdWithPrefix(object.payment_intent, "pi_") ??
+    objectIdWithPrefix(object, "pi_");
+  const lookupReferences = stripeWebhookReferenceLookupValues({
+    eventType,
+    customerId,
+    subscriptionId,
+    paymentIntentId,
   });
-  return resolveStripeWebhookWorkspaceCandidates({
+  if (!lookupReferences) {
+    return { status: "retryable_error" };
+  }
+  const allowDirectBootstrap =
+    eventType?.startsWith("checkout.session.") === true;
+  const referenceResolution =
+    await findWorkspaceIdByStripeReferences(lookupReferences);
+  const resolution = resolveStripeWebhookWorkspaceCandidates({
     directCandidates: workspaceIdCandidatesFromObject(object),
     referenceResolution,
-    allowDirectBootstrap: eventType?.startsWith("checkout.session.") === true,
+    allowDirectBootstrap,
   });
+  // A handled, signed mutation must never be acknowledged merely because an
+  // out-of-order tenant binding is not visible yet. Checkout succeeds through
+  // its immutable server metadata; every unresolved event requests a retry.
+  return resolution.status === "not_found"
+    ? { status: "retryable_error" }
+    : resolution;
 }
 
 async function updateOrWarn(input: {

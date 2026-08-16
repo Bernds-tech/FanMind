@@ -6,7 +6,7 @@ import {
   readBoundedJsonRequest,
 } from "@/lib/httpMutationPolicy.mjs";
 import {
-  requireContactInAuthorizedWorkspace,
+  requireContactInActiveAuthorizedWorkspace,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorization";
 
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 
   let authorized;
   try {
-    authorized = await requireContactInAuthorizedWorkspace(contactId);
+    authorized = await requireContactInActiveAuthorizedWorkspace(contactId);
   } catch (error) {
     const status =
       error instanceof WorkspaceAuthorizationError &&

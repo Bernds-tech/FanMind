@@ -191,7 +191,13 @@ function OnboardingWorkspace({
   userEmail,
 }: OnboardingWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigationForUser("onboarding", userEmail);
+    getWorkspaceNavigationForUser(
+      "onboarding",
+      userEmail,
+      "de",
+      0,
+      workspace.role,
+    );
   const planLabel = getPlanLabel(workspace);
   const planStatus = getPlanStatus(workspace);
   const steps = getOnboardingSteps({ workspace, contacts });

@@ -34,7 +34,7 @@ test("cancelling the confirmation prevents the delete form submission", async ()
 test("foreign-workspace follow-ups are rejected by workspace and contact filters", async () => {
   const actions = await readFile(actionsPath, "utf8");
 
-  assert.match(actions, /requireContactInActiveAuthorizedWorkspaceMember\(contactId\)/u);
+  assert.match(actions, /requireContactInActiveAuthorizedWorkspace\(contactId\)/u);
   assert.match(actions, /url\.searchParams\.set\("workspace_id", `eq\.\$\{input\.workspaceId\}`\)/u);
   assert.match(actions, /url\.searchParams\.set\("contact_id", `eq\.\$\{input\.contactId\}`\)/u);
   assert.match(actions, /table: "followups"/u);

@@ -1,12 +1,35 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import test, { after } from "node:test";
+import { pathToFileURL } from "node:url";
+import ts from "typescript";
 
-import {
+const sourcePath = new URL("../src/app/fans/import/csv.ts", import.meta.url);
+const source = await readFile(sourcePath, "utf8");
+const transpiled = ts.transpileModule(source, {
+  compilerOptions: {
+    module: ts.ModuleKind.ES2022,
+    target: ts.ScriptTarget.ES2022,
+    strict: true,
+  },
+  fileName: sourcePath.pathname,
+}).outputText;
+const temporaryDirectory = await mkdtemp(
+  join(tmpdir(), "fanmind-csv-import-parser-"),
+);
+const modulePath = join(temporaryDirectory, "csv.mjs");
+await writeFile(modulePath, transpiled, "utf8");
+
+after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+
+const {
   CSV_IMPORT_LIMITS,
   csvHasPlatformColumn,
   parseCsvContacts,
   withDefaultSourcePlatform,
-} from "../src/app/fans/import/csv.ts";
+} = await import(`${pathToFileURL(modulePath).href}?v=${Date.now()}`);
 
 test("CSV parser accepts quoted fields, aliases, and normalized allowed values", () => {
   const result = parseCsvContacts(

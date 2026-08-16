@@ -17,10 +17,10 @@ import {
 import { canManageMetaConnections } from "@/lib/metaIntegrationPolicy.mjs";
 import {
   getSupabaseServerUser,
-  getUserWorkspaceDashboard,
   updateInstagramWebhookSubscribed,
   upsertInstagramSocialConnection,
 } from "@/lib/supabase/server";
+import { requireActiveAuthorizedWorkspace } from "@/lib/workspaceAuthorization";
 
 export const dynamic = "force-dynamic";
 
@@ -36,17 +36,23 @@ export async function GET(request: Request) {
     return redirectToChannels(appOrigin, "instagram_error=oauth");
   }
 
-  const workspaceResult = await getUserWorkspaceDashboard(data.user);
+  let activeContext;
+  try {
+    activeContext = await requireActiveAuthorizedWorkspace();
+  } catch {
+    return redirectToChannels(appOrigin, "instagram_error=workspace_inactive");
+  }
+  const workspace = activeContext.workspace;
   if (
-    !workspaceResult.workspace ||
-    workspaceResult.workspace.id !== state.workspaceId
+    activeContext.user.id !== data.user.id ||
+    workspace.id !== state.workspaceId
   ) {
     return redirectToChannels(appOrigin, "instagram_error=workspace");
   }
-  if (!canManageMetaConnections(workspaceResult.workspace.role)) {
+  if (!canManageMetaConnections(workspace.role)) {
     return redirectToChannels(appOrigin, "instagram_error=role");
   }
-  if (areDemoConnectionsDisabled(data.user, workspaceResult.workspace)) {
+  if (areDemoConnectionsDisabled(data.user, workspace)) {
     return redirectToChannels(appOrigin, "instagram_error=demo_disabled");
   }
 

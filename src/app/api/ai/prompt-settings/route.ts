@@ -11,6 +11,7 @@ import {
   requireAuthorizedWorkspaceMember,
   WorkspaceAuthorizationError,
 } from "@/lib/workspaceAuthorization";
+import { evaluateWorkspaceProcessingEntitlement } from "@/lib/workspaceProcessingPolicy.mjs";
 import { readBoundedJsonRequest } from "@/lib/httpMutationPolicy.mjs";
 import {
   getWorkspaceAiPromptSettings,
@@ -100,6 +101,18 @@ function canManage(context: Awaited<ReturnType<typeof authenticate>>) {
   );
 }
 
+function assertActivePromptManagement(
+  context: Awaited<ReturnType<typeof authenticate>>,
+) {
+  const processing = evaluateWorkspaceProcessingEntitlement(context.workspace);
+  if (!processing.allowed) {
+    throw new WorkspaceAuthorizationError(
+      "KI-Prompt-Einstellungen dürfen nur in einem aktiv verarbeitenden Workspace geändert werden.",
+      "workspace_inactive",
+    );
+  }
+}
+
 type PromptSettingsPayload = {
   companyPrompt: string;
   profiles: unknown[];
@@ -139,6 +152,20 @@ function mapError(error: unknown) {
     return response(
       { ok: false, code: "unauthenticated", error: "Bitte melde dich erneut an." },
       401,
+    );
+  }
+  if (
+    error instanceof WorkspaceAuthorizationError &&
+    error.code === "workspace_inactive"
+  ) {
+    return response(
+      {
+        ok: false,
+        code: "workspace_inactive",
+        error:
+          "KI-Prompt-Einstellungen können in einem pausierten Workspace nicht geändert werden.",
+      },
+      403,
     );
   }
   if (
@@ -203,6 +230,7 @@ export async function PUT(request: Request) {
         403,
       );
     }
+    assertActivePromptManagement(context);
 
     const parsedBody = await readBoundedJsonRequest(
       request,

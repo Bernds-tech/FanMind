@@ -175,7 +175,13 @@ function ReachWorkspace({
   userEmail,
 }: ReachWorkspaceProps) {
   const { mainNavigation, settingsNavigation, savedViews } =
-    getWorkspaceNavigationForUser("reach", userEmail, "de", openFollowupCount);
+    getWorkspaceNavigationForUser(
+      "reach",
+      userEmail,
+      "de",
+      openFollowupCount,
+      workspace.role,
+    );
   const userLabel = userDisplayName || workspace.name || "Nutzer";
   const totals = getReachTotals(REACH_CHANNELS);
   const topChannel = [...REACH_CHANNELS].sort((left, right) => right.reach - left.reach)[0];

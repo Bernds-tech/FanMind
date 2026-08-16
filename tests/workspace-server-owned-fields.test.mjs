@@ -771,8 +771,9 @@ test("fixed Sandra demo normalization is service-role-only and unconditional", a
 });
 
 test("temporary demo identity is server-owned across activation and cleanup", async () => {
-  const [server, cleanupRoute, rpcMigration] = await Promise.all([
+  const [server, startRoute, cleanupRoute, rpcMigration] = await Promise.all([
     readFile(serverPath, "utf8"),
+    readFile("src/app/api/demo/start/route.ts", "utf8"),
     readFile("src/app/api/demo/cleanup/route.ts", "utf8"),
     readFile(rpcMigrationPath, "utf8"),
   ]);
@@ -792,11 +793,20 @@ test("temporary demo identity is server-owned across activation and cleanup", as
   assert.ok(cleanup, "temporary demo cleanup missing");
   assert.match(
     creator[0],
-    /temporaryDemoCanonicalValues\(input\.userId\)/u,
+    /expiresAt: Date[\s\S]*temporaryDemoCanonicalValues\(input\.userId, input\.expiresAt\)/u,
   );
   assert.match(
     normalizer[0],
-    /demo_start_sessions[\s\S]*auth_user_id[\s\S]*workspace_id[\s\S]*temporaryDemoCanonicalValues/u,
+    /!isServerBoundTemporaryDemoWorkspace\(workspace\)[\s\S]*demo_start_sessions[\s\S]*"id,status,expires_at,auth_user_id,workspace_id"[\s\S]*\["auth_user_id", user\.id\][\s\S]*\["workspace_id", workspace\.id\][\s\S]*session\?\.status === "active"[\s\S]*TEMPORARY_DEMO_EXPIRED_ERROR[\s\S]*sessionExpiry\.getTime\(\) > now \+ TEMPORARY_DEMO_MAX_FUTURE_EXPIRY_MS[\s\S]*temporaryDemoCanonicalValues\(user\.id, sessionExpiry\)/u,
+  );
+  assert.doesNotMatch(
+    normalizer[0],
+    /user_metadata|demo_expires_at|getTemporaryDemoExpiryState/u,
+    "client-editable auth metadata must never become a database entitlement",
+  );
+  assert.match(
+    startRoute,
+    /const expiresAt = new Date\([\s\S]*createTemporaryDemoWorkspace\([\s\S]*expiresAt/u,
   );
   assert.match(
     server,
@@ -821,7 +831,7 @@ test("temporary demo identity is server-owned across activation and cleanup", as
   assert.match(server, /TEMPORARY_DEMO_ACCESS_FLAG = "temporary_demo"/u);
   assert.match(
     server,
-    /demoProtectedCanonicalValues\(userId, \{\s*\[TEMPORARY_DEMO_ACCESS_FLAG\]: true,\s*\}\)/u,
+    /demoProtectedCanonicalValues\(userId, \{[\s\S]*\[TEMPORARY_DEMO_ACCESS_FLAG\]: true,[\s\S]*\[TEMPORARY_PROCESSING_ACCESS_FLAG\]: true,[\s\S]*\[TEMPORARY_PROCESSING_ACCESS_EXPIRY_FLAG\]: expiresAt\.toISOString\(\)/u,
   );
   assert.doesNotMatch(
     server.match(

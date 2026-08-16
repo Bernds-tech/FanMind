@@ -428,6 +428,7 @@ export async function POST(request: NextRequest) {
   const workspaceResult = await createTemporaryDemoWorkspace({
     userId,
     userEmail: email,
+    expiresAt,
     locale,
   });
 

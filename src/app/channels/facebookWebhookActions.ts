@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { revalidatePath } from "next/cache";
 import {
@@ -356,10 +356,6 @@ export async function syncFacebookMessengerHistory(input?: {
     syncedAt,
     revalidate: input?.revalidate ?? true,
   });
-}
-
-export async function syncFacebookMessengerHistoryFromChannelPage(): Promise<void> {
-  await syncFacebookMessengerHistory({ revalidate: true });
 }
 
 export async function syncFacebookMessengerConversationForContact(input: {

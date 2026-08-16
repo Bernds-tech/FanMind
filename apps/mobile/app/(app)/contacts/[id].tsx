@@ -133,10 +133,16 @@ export default function ContactDetailScreen() {
   }
 
   async function saveMemory() {
-    if (!workspace?.id || !contact || !suggestions?.suggested_memory.content) return;
+    if (
+      !workspace?.id ||
+      workspace.role !== "owner" ||
+      !contact ||
+      !suggestions?.suggested_memory.content
+    ) return;
     setMemoryBusy(true);
     const result = await createContactMemory({
       workspaceId: workspace.id,
+      workspaceRole: workspace.role,
       contactId: contact.id,
       content: suggestions.suggested_memory.content,
       importance: suggestions.suggested_memory.importance,
@@ -150,11 +156,17 @@ export default function ContactDetailScreen() {
   }
 
   async function saveFollowup() {
-    if (!workspace?.id || !contact || !suggestions?.suggested_followup.recommended) return;
+    if (
+      !workspace?.id ||
+      workspace.role !== "owner" ||
+      !contact ||
+      !suggestions?.suggested_followup.recommended
+    ) return;
     const days = suggestions.suggested_followup.in_days ?? 3;
     setFollowupBusy(true);
     const result = await createFollowup({
       workspaceId: workspace.id,
+      workspaceRole: workspace.role,
       contactId: contact.id,
       dueDate: addLocalDaysDate(days),
       reason: suggestions.suggested_followup.reason || "Kontakt erneut ansprechen",
@@ -218,11 +230,13 @@ export default function ContactDetailScreen() {
       subtitle={`${contact.handle || "ohne Handle"} · ${contact.source_platform || "manuell"}`}
       right={
         <View style={styles.headerActions}>
-          <SecondaryButton
-            onPress={() => router.push(`/(app)/contacts/${contact.id}/edit`)}
-          >
-            Bearbeiten
-          </SecondaryButton>
+          {workspace.role === "owner" ? (
+            <SecondaryButton
+              onPress={() => router.push(`/(app)/contacts/${contact.id}/edit`)}
+            >
+              Bearbeiten
+            </SecondaryButton>
+          ) : null}
           <SecondaryButton onPress={() => router.back()}>Zurück</SecondaryButton>
         </View>
       }
@@ -263,37 +277,47 @@ export default function ContactDetailScreen() {
 
       <Card>
         <SectionTitle eyebrow="Neue Nachricht">Antworten vorbereiten</SectionTitle>
-        <TextInput
-          value={incomingMessage}
-          onChangeText={setIncomingMessage}
-          placeholder="Füge die neue Nachricht des Kontakts ein…"
-          placeholderTextColor={colors.textMuted}
-          multiline
-          maxLength={4000}
-          style={[mobileStyles.input, mobileStyles.textArea]}
-          accessibilityLabel="Neue eingehende Nachricht"
-        />
-        <Text style={mobileStyles.muted}>
-          Der gespeicherte Gesprächsverlauf wird serverseitig automatisch und
-          passend zur freigegebenen KI-Stufe berücksichtigt.
-        </Text>
-        <TextInput
-          value={instruction}
-          onChangeText={setInstruction}
-          placeholder="Optional: z. B. kurz, direkt und ohne Verkaufsdruck"
-          placeholderTextColor={colors.textMuted}
-          maxLength={1000}
-          style={mobileStyles.input}
-          accessibilityLabel="Optionale Antwortanweisung"
-        />
-        {error ? <Text style={mobileStyles.error}>{error}</Text> : null}
-        {notice ? <Text style={mobileStyles.success}>{notice}</Text> : null}
-        <PrimaryButton busy={aiBusy} onPress={() => void generateSuggestions()}>
-          Drei Antworten vorbereiten
-        </PrimaryButton>
-        <Text style={styles.safety}>
-          Mensch prüft und sendet final selbst. Keine automatische Sendefunktion.
-        </Text>
+        {workspace.role === "owner" ? (
+          <>
+            <TextInput
+              value={incomingMessage}
+              onChangeText={setIncomingMessage}
+              placeholder="Füge die neue Nachricht des Kontakts ein…"
+              placeholderTextColor={colors.textMuted}
+              multiline
+              maxLength={4000}
+              style={[mobileStyles.input, mobileStyles.textArea]}
+              accessibilityLabel="Neue eingehende Nachricht"
+            />
+            <Text style={mobileStyles.muted}>
+              Der gespeicherte Gesprächsverlauf wird serverseitig automatisch und
+              passend zur freigegebenen KI-Stufe berücksichtigt.
+            </Text>
+            <TextInput
+              value={instruction}
+              onChangeText={setInstruction}
+              placeholder="Optional: z. B. kurz, direkt und ohne Verkaufsdruck"
+              placeholderTextColor={colors.textMuted}
+              maxLength={1000}
+              style={mobileStyles.input}
+              accessibilityLabel="Optionale Antwortanweisung"
+            />
+            {error ? <Text style={mobileStyles.error}>{error}</Text> : null}
+            {notice ? <Text style={mobileStyles.success}>{notice}</Text> : null}
+            <PrimaryButton busy={aiBusy} onPress={() => void generateSuggestions()}>
+              Drei Antworten vorbereiten
+            </PrimaryButton>
+            <Text style={styles.safety}>
+              Mensch prüft und sendet final selbst. Keine automatische Sendefunktion.
+            </Text>
+          </>
+        ) : (
+          <Text style={mobileStyles.muted}>
+            Die KI-Verarbeitung ist für Teamzugänge bis zum atomaren
+            Datenbankvertrag deaktiviert. Vorhandene Kontaktinformationen
+            bleiben lesbar.
+          </Text>
+        )}
       </Card>
 
       {suggestions ? (
@@ -322,7 +346,7 @@ export default function ContactDetailScreen() {
             ))}
           </Card>
 
-          {suggestions.suggested_memory.content ? (
+          {workspace.role === "owner" && suggestions.suggested_memory.content ? (
             <Card>
               <SectionTitle eyebrow="Vorschlag">Kontaktwissen speichern?</SectionTitle>
               <Text style={mobileStyles.body}>{suggestions.suggested_memory.content}</Text>
@@ -332,7 +356,7 @@ export default function ContactDetailScreen() {
             </Card>
           ) : null}
 
-          {suggestions.suggested_followup.recommended ? (
+          {workspace.role === "owner" && suggestions.suggested_followup.recommended ? (
             <Card>
               <SectionTitle eyebrow="Vorschlag">Follow-up einplanen?</SectionTitle>
               <Text style={mobileStyles.body}>

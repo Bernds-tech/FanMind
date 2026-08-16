@@ -32,7 +32,7 @@ import { getPublicDailyTestPlanEnabled } from "@/lib/runtimeProductSettings";
 import { getStripeConfigStatus } from "@/lib/stripeBilling";
 import { isInternalDailyTestStripeReady } from "@/lib/internalDailyTestReadinessPolicy.mjs";
 import { evaluateWorkspaceProcessingEntitlement } from "@/lib/workspaceProcessingPolicy.mjs";
-import { getTemporaryDemoExpiryState, isTemporaryDemoUser, TEMPORARY_DEMO_WORKSPACE_NAME } from "@/lib/demoMode";
+import { isTemporaryDemoUser, TEMPORARY_DEMO_WORKSPACE_NAME } from "@/lib/demoMode";
 import {
   DEMO_CLEANUP_DELETE_STEPS,
   type DemoCleanupDeleteErrorCode,
@@ -153,6 +153,8 @@ type WorkspaceProcessingRow = Pick<
 
 export type WorkspaceDashboardRow = WorkspaceBackfillRow & {
   role: string;
+  member_safe_projection?: true;
+  member_processing_allowed?: boolean;
 };
 
 type WorkspaceMemberRow = {
@@ -160,6 +162,64 @@ type WorkspaceMemberRow = {
   workspace_id: string;
   role: string;
 };
+
+type WorkspaceMemberCompatibilityProcessingRow = Pick<
+  WorkspaceBackfillRow,
+  | "id"
+  | "name"
+  | "plan_id"
+  | "billing_status"
+  | "billing_suspended_at"
+  | "billing_manual_override"
+  | "billing_grace_until"
+  | "subscription_effective_end_at"
+  | "workspace_access_mode"
+  | "test_access_flags"
+>;
+
+export type WorkspaceMemberSafeDashboardRow = {
+  workspace_id: string;
+  workspace_name: string;
+  plan_id: PlanId;
+  membership_role: "member";
+  member_processing_allowed: boolean;
+};
+
+const WORKSPACE_MEMBER_SAFE_DASHBOARD_RPC =
+  "get_current_workspace_member_safe_dashboard";
+
+function isMissingWorkspaceMemberSafeDashboardRpc(
+  error: Error | null,
+): boolean {
+  const message = error?.message.trim().toLowerCase() ?? "";
+  return (
+    message.includes(WORKSPACE_MEMBER_SAFE_DASHBOARD_RPC) &&
+    message.includes("could not find the function") &&
+    message.includes("schema cache")
+  );
+}
+
+function memberSafeProjectionCompatibilityEnvelope(
+  workspace: WorkspaceMemberSafeDashboardRow,
+): WorkspaceDashboardRow {
+  // The member RPC intentionally has its own minimal DTO. These placeholders
+  // only satisfy the legacy dashboard carrier until it is fully split; every
+  // policy/renderer must discriminate member_safe_projection before reading
+  // any commercial field from this envelope.
+  return {
+    id: workspace.workspace_id,
+    name: workspace.workspace_name,
+    owner_user_id: "",
+    plan_id: workspace.plan_id,
+    commercial_option: "starter_no_setup_commitment",
+    setup_fee_cents: 0,
+    monthly_fee_cents: 0,
+    commitment_months: 0,
+    role: "member",
+    member_safe_projection: true,
+    member_processing_allowed: workspace.member_processing_allowed,
+  };
+}
 
 export type ContactRow = {
   id: string;
@@ -729,8 +789,33 @@ const DEMO_EMAIL = "sandra.m@fanmind.ch";
 const DEMO_WORKSPACE_NAME = "Sandra M. Demo Workspace";
 const DEMO_CONTACT_HANDLE = "@sandra-demo";
 const TEMPORARY_DEMO_ACCESS_FLAG = "temporary_demo";
+const TEMPORARY_PROCESSING_ACCESS_FLAG = "temporary_processing_access";
+const TEMPORARY_PROCESSING_ACCESS_EXPIRY_FLAG =
+  "temporary_processing_access_expires_at";
 const FIXED_DEMO_SEED_VERSION_FLAG = "fixed_demo_seed_version";
 const FIXED_DEMO_SEED_VERSION = "2026-07-26-v1";
+const TEMPORARY_DEMO_MAX_FUTURE_EXPIRY_MS = 65 * 60 * 1000;
+const TEMPORARY_DEMO_EXPIRED_ERROR = "TEMPORARY_DEMO_EXPIRED";
+
+type DemoStartSessionEntitlementRow = {
+  id: string;
+  status: string;
+  expires_at: string;
+  auth_user_id: string | null;
+  workspace_id: string | null;
+};
+
+function isServerBoundTemporaryDemoWorkspace(
+  workspace: Pick<
+    WorkspaceBackfillRow,
+    "billing_status" | "test_access_flags"
+  >,
+): boolean {
+  return (
+    workspace.billing_status === "demo_free" &&
+    workspace.test_access_flags?.[TEMPORARY_DEMO_ACCESS_FLAG] === true
+  );
+}
 
 function deterministicServerUuid(scope: string): string {
   const digest = createHash("sha256")
@@ -802,7 +887,15 @@ function demoProtectedCanonicalValues(
   };
 }
 
-function temporaryDemoCanonicalValues(userId: string) {
+function temporaryDemoCanonicalValues(userId: string, expiresAt: Date) {
+  const now = Date.now();
+  if (
+    !Number.isFinite(expiresAt.getTime()) ||
+    expiresAt.getTime() <= now ||
+    expiresAt.getTime() > now + TEMPORARY_DEMO_MAX_FUTURE_EXPIRY_MS
+  ) {
+    throw new Error("temporary_demo_expiry_invalid");
+  }
   return {
     name: TEMPORARY_DEMO_WORKSPACE_NAME,
     plan_id: "pilot",
@@ -812,6 +905,8 @@ function temporaryDemoCanonicalValues(userId: string) {
     commitment_months: 0,
     ...demoProtectedCanonicalValues(userId, {
       [TEMPORARY_DEMO_ACCESS_FLAG]: true,
+      [TEMPORARY_PROCESSING_ACCESS_FLAG]: true,
+      [TEMPORARY_PROCESSING_ACCESS_EXPIRY_FLAG]: expiresAt.toISOString(),
     }),
   };
 }
@@ -1130,11 +1225,32 @@ export async function getUserWorkspaceDashboard(
 
   if (ownerWorkspaceResult.data) {
     let workspaceRow = ownerWorkspaceResult.data;
-    if (isTemporaryDemoUser(user)) {
+    if (
+      isServerBoundTemporaryDemoWorkspace(workspaceRow) ||
+      isTemporaryDemoUser(user)
+    ) {
       const normalizedDemo = await normalizeTemporaryDemoWorkspace(
         user,
         workspaceRow,
       );
+      if (
+        normalizedDemo.error?.message === TEMPORARY_DEMO_EXPIRED_ERROR
+      ) {
+        const deleted = await deleteExpiredTemporaryDemo(
+          user,
+          { ...workspaceRow, role: "owner" },
+          {
+            authUserId: user.id,
+            workspaceId: workspaceRow.id,
+          },
+        );
+        if (deleted.error) {
+          console.error("Temporary demo cleanup failed", {
+            code: deleted.errorCode ?? "temporary_demo_cleanup_failed",
+          });
+        }
+        return workspaceDashboardError("TEMPORARY_DEMO_DELETED");
+      }
       if (normalizedDemo.error || !normalizedDemo.workspace) {
         return workspaceDashboardError(
           "Temporärer Demo-Workspace konnte nicht sicher geladen werden.",
@@ -1144,19 +1260,6 @@ export async function getUserWorkspaceDashboard(
     }
 
     const workspace = { ...workspaceRow, role: "owner" };
-    const expiryState = getTemporaryDemoExpiryState(user);
-    if (expiryState.isTemporaryDemo && expiryState.isExpired) {
-      const deleted = await deleteExpiredTemporaryDemo(user, workspace, {
-        authUserId: user.id,
-        workspaceId: workspace.id,
-      });
-      if (deleted.error) {
-        console.error("Temporary demo cleanup failed", {
-          code: deleted.errorCode ?? "temporary_demo_cleanup_failed",
-        });
-      }
-      return workspaceDashboardError("TEMPORARY_DEMO_DELETED");
-    }
     return { workspace, error: null };
   }
 
@@ -1204,26 +1307,82 @@ export async function getUserWorkspaceMembershipDashboard(
   }
   const [membership] = membershipResult.data;
 
-  const workspaceResult = await postgrestSelect<WorkspaceBackfillRow>(
-    "workspaces",
-    accessToken,
-    WORKSPACE_COLUMNS,
-    [["id", membership.workspace_id]],
-    1,
-    true,
-  );
+  const workspaceResult =
+    await postgrestRequest<WorkspaceMemberSafeDashboardRow>(
+      `rpc/${WORKSPACE_MEMBER_SAFE_DASHBOARD_RPC}`,
+      "POST",
+      {},
+      accessToken,
+      {
+        select:
+          "workspace_id,workspace_name,plan_id,membership_role,member_processing_allowed",
+        single: true,
+      },
+    );
 
-  if (workspaceResult.error || !workspaceResult.data) {
+  let safeWorkspace = workspaceResult.data;
+  if (
+    workspaceResult.error &&
+    !isMissingWorkspaceMemberSafeDashboardRpc(workspaceResult.error)
+  ) {
     return workspaceDashboardError(
-      "Workspace konnte nicht geladen werden.",
+      "Sichere Workspace-Mitgliederansicht ist noch nicht verifiziert.",
+    );
+  }
+  if (
+    workspaceResult.error &&
+    isMissingWorkspaceMemberSafeDashboardRpc(workspaceResult.error)
+  ) {
+    const serviceAccessToken = getServiceAccessToken();
+    if (!serviceAccessToken) {
+      return workspaceDashboardError(
+        "Sichere Workspace-Mitgliederansicht ist noch nicht verifiziert.",
+      );
+    }
+    const compatibilityResult =
+      await postgrestSelect<WorkspaceMemberCompatibilityProcessingRow>(
+        "workspaces",
+        serviceAccessToken,
+        "id,name,plan_id,billing_status,billing_suspended_at,billing_manual_override,billing_grace_until,subscription_effective_end_at,workspace_access_mode,test_access_flags",
+        [["id", membership.workspace_id]],
+        1,
+        true,
+      );
+    if (
+      compatibilityResult.error ||
+      !compatibilityResult.data ||
+      compatibilityResult.data.id !== membership.workspace_id ||
+      !isPlanId(compatibilityResult.data.plan_id)
+    ) {
+      return workspaceDashboardError(
+        "Sichere Workspace-Mitgliederansicht ist noch nicht verifiziert.",
+      );
+    }
+    safeWorkspace = {
+      workspace_id: compatibilityResult.data.id,
+      workspace_name: compatibilityResult.data.name,
+      plan_id: compatibilityResult.data.plan_id,
+      membership_role: "member",
+      member_processing_allowed:
+        evaluateWorkspaceProcessingEntitlement(compatibilityResult.data)
+          .allowed,
+    };
+  }
+  if (
+    !safeWorkspace ||
+    safeWorkspace.workspace_id !== membership.workspace_id ||
+    membership.role.trim().toLowerCase() === "owner" ||
+    safeWorkspace.membership_role !== "member" ||
+    !isPlanId(safeWorkspace.plan_id) ||
+    typeof safeWorkspace.member_processing_allowed !== "boolean"
+  ) {
+    return workspaceDashboardError(
+      "Sichere Workspace-Mitgliederansicht ist noch nicht verifiziert.",
     );
   }
 
   return {
-    workspace: {
-      ...workspaceResult.data,
-      role: membership.role,
-    },
+    workspace: memberSafeProjectionCompatibilityEnvelope(safeWorkspace),
     error: null,
   };
 }
@@ -1985,6 +2144,18 @@ export async function findTelegramWebhookWorkspaceId(): Promise<{
         workspaceId: null,
         error: new Error(
           "Der konfigurierte Telegram-Test-Workspace wurde nicht gefunden. Kein Kontakt und keine Nachricht wurde angelegt.",
+        ),
+      };
+    }
+
+    const processing = evaluateWorkspaceProcessingEntitlement(
+      workspaceResult.data,
+    );
+    if (!processing.allowed) {
+      return {
+        workspaceId: null,
+        error: new Error(
+          "Der konfigurierte Telegram-Test-Workspace ist nicht für Verarbeitung freigegeben. Kein Kontakt und keine Nachricht wurde angelegt.",
         ),
       };
     }
@@ -5687,6 +5858,7 @@ export async function getWorkspaceFollowups(
 export async function createTemporaryDemoWorkspace(input: {
   userId: string;
   userEmail: string;
+  expiresAt: Date;
   locale?: FanMindLanguage;
 }): Promise<WorkspaceBackfillResult> {
   const locale = input.locale ?? "de";
@@ -5697,7 +5869,7 @@ export async function createTemporaryDemoWorkspace(input: {
     "workspaces",
     "POST",
     {
-      ...temporaryDemoCanonicalValues(input.userId),
+      ...temporaryDemoCanonicalValues(input.userId, input.expiresAt),
       owner_user_id: input.userId,
     },
     accessToken,
@@ -5757,35 +5929,51 @@ async function normalizeTemporaryDemoWorkspace(
   }
 
   if (
-    !isTemporaryDemoUser(user) ||
-    workspace.owner_user_id !== user.id
+    workspace.owner_user_id !== user.id ||
+    !isServerBoundTemporaryDemoWorkspace(workspace)
   ) {
     return workspaceBackfillError(
       "Temporärer Demo-Workspace konnte nicht eindeutig zugeordnet werden.",
     );
   }
 
-  const sessionResult = await postgrestSelect<Array<{ id: string }>>(
+  const sessionResult = await postgrestSelect<DemoStartSessionEntitlementRow[]>(
     "demo_start_sessions",
     serviceAccessToken,
-    "id",
+    "id,status,expires_at,auth_user_id,workspace_id",
     [
       ["auth_user_id", user.id],
       ["workspace_id", workspace.id],
     ],
-    1,
+    2,
     false,
   );
-  if (sessionResult.error || !sessionResult.data?.[0]?.id) {
+  const session = sessionResult.data?.[0];
+  const sessionExpiry = new Date(session?.expires_at ?? "");
+  const now = Date.now();
+  const sessionIdentityMatches =
+    !sessionResult.error &&
+    sessionResult.data?.length === 1 &&
+    session?.status === "active" &&
+    session.auth_user_id === user.id &&
+    session.workspace_id === workspace.id &&
+    Number.isFinite(sessionExpiry.getTime());
+  if (sessionIdentityMatches && sessionExpiry.getTime() <= now) {
+    return workspaceBackfillError(TEMPORARY_DEMO_EXPIRED_ERROR);
+  }
+  if (
+    !sessionIdentityMatches ||
+    sessionExpiry.getTime() > now + TEMPORARY_DEMO_MAX_FUTURE_EXPIRY_MS
+  ) {
     return workspaceBackfillError(
       sessionResult.error?.message ??
-        "Temporärer Demo-Workspace besitzt keine serverseitige Start-Zuordnung.",
+        "Temporärer Demo-Workspace besitzt keine aktive serverseitige Start-Zuordnung.",
     );
   }
 
   const workspaceUpdate = await postgrestUpdate<WorkspaceBackfillRow>(
     "workspaces",
-    temporaryDemoCanonicalValues(user.id),
+    temporaryDemoCanonicalValues(user.id, sessionExpiry),
     serviceAccessToken,
     [["id", workspace.id]],
     { select: WORKSPACE_COLUMNS, single: true },
@@ -6420,7 +6608,11 @@ export async function ensureUserWorkspace(
   let workspace = ownerWorkspaceResult.data;
   let created = false;
 
-  if (workspace && isTemporaryDemoUser(user)) {
+  if (
+    workspace &&
+    (isServerBoundTemporaryDemoWorkspace(workspace) ||
+      isTemporaryDemoUser(user))
+  ) {
     const normalizedDemo = await normalizeTemporaryDemoWorkspace(
       user,
       workspace,

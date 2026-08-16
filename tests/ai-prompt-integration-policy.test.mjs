@@ -62,6 +62,14 @@ test("only owner/admin can save bounded prompts from a trusted mutation origin",
     /workspace\.owner_user_id === context\.user\.id/u,
   );
   assert.match(source.settingsRoute, /isPlatformAdminEmail/u);
+  assert.match(
+    source.settingsRoute,
+    /function assertActivePromptManagement\([\s\S]*evaluateWorkspaceProcessingEntitlement\(context\.workspace\)/u,
+  );
+  assert.match(
+    source.settingsRoute,
+    /if \(!canManage\(context\)\)[\s\S]*assertActivePromptManagement\(context\)[\s\S]*saveWorkspaceAiPromptSettings/u,
+  );
   assert.match(source.settingsRoute, /assertTrustedMutationOrigin/u);
   assert.match(source.settingsRoute, /invalid_request_origin/u);
   assert.match(source.policy, /AI_COMPANY_PROMPT_MAX_CHARS = 3_000/u);
@@ -87,7 +95,7 @@ test("workspace members can read prompt settings without receiving mutation righ
   );
   assert.match(
     source.supabaseServer,
-    /membershipResult\.data\.length !== 1[\s\S]*const \[membership\] = membershipResult\.data[\s\S]*postgrestSelect<WorkspaceBackfillRow>\(\s*"workspaces"[\s\S]*\[\["id", membership\.workspace_id\]\]/u,
+    /membershipResult\.data\.length !== 1[\s\S]*const \[membership\] = membershipResult\.data[\s\S]*postgrestRequest<WorkspaceMemberSafeDashboardRow>[\s\S]*rpc\/\$\{WORKSPACE_MEMBER_SAFE_DASHBOARD_RPC\}[\s\S]*isMissingWorkspaceMemberSafeDashboardRpc\(workspaceResult\.error\)[\s\S]*postgrestSelect<WorkspaceMemberCompatibilityProcessingRow>\(\s*"workspaces"[\s\S]*\[\["id", membership\.workspace_id\]\]/u,
   );
   assert.match(
     source.settingsRoute,
