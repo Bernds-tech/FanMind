@@ -251,6 +251,15 @@ zwingende externe Freigabe noch fehlt.
   den Rolling-Rollback aus. Die einmalige Fork-zu-Cluster-Umstellung bleibt
   ein kontrollierter Übergang.
 - Produktions- und Testdaten-Trennung: Fail-closed-Policy, Preflight, Staging-Vorlage und ein ausschließlich manuell auslösbarer, commit-genauer Deploy-Workflow für einen getrennten `fanmind-staging`-Runner sind implementiert.
+- Staging-E-Mail bleibt in der öffentlich erreichbaren App absichtlich
+  unkonfiguriert (`email_config=unknown`). Ein separater, geschützter
+  Provider-Control ist vorbereitet: Er prüft den exakt deployten Main-Commit,
+  GitHub-Environment-Schutz, feste SPF-/MX-/DKIM-Evidenz und einen
+  `sending_access`-Key und darf ausschließlich ein idempotentes synthetisches
+  Resend-Ereignis an `delivered+fanmind-staging@resend.dev` auslösen. Der
+  Control wurde noch nicht ausgeführt; Domain, Key-Scope und Environment sind
+  externe Blocker. Er ersetzt keine reale Signup-, Reset- oder App-Mail-
+  Abnahme und aktiviert keinen App-Mailpfad.
 - Staging-Workspace-Vertrag: Der Browser-INSERT für `anon` und `authenticated`
   ist im getrennten Supabase-Staging gesperrt; Owner-UPDATE ist auf die
   definierte zehnspaltige Allowlist begrenzt. Zwei synthetische Nutzer in zwei

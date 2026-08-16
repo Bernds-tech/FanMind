@@ -8,6 +8,7 @@ const root = process.cwd();
 const checkedFiles = [
   ".gitignore",
   ".env.example",
+  ".env.staging.example",
   ".github/workflows/deploy-fanmind.yml",
   ".github/workflows/ai-tier-staging-migration.yml",
   ".github/workflows/ai-tier-staging-acceptance.yml",
@@ -20,6 +21,8 @@ const checkedFiles = [
   ".github/workflows/workspace-member-data-boundary-staging-apply.yml",
   ".github/workflows/workspace-member-data-boundary-staging-verify.yml",
   ".github/workflows/staging-synthetic-fixture-provisioning.yml",
+  ".github/workflows/staging-email-provider-acceptance.yml",
+  ".github/workflows/provision-staging-host.yml",
   ".github/workflows/restore-drill-host-readiness.yml",
   ".github/workflows/restore-drill-resource-readiness.yml",
   ".github/workflows/restore-drill-database.yml",
@@ -31,6 +34,7 @@ const checkedFiles = [
   "scripts/testing/regular-user-core-flow-fixture.mjs",
   "tests/regular-user-core-flow-fixture.test.mjs",
   "tests/staging-core-csv-acceptance.test.mjs",
+  "tests/staging-email-provider-acceptance.test.mjs",
   "tests/workspace-member-core-flow.test.mjs",
   "tests/workspace-member-data-boundary.test.mjs",
   "tests/workspace-member-data-boundary-staging.test.mjs",
@@ -64,10 +68,13 @@ const checkedFiles = [
   "docs/operations/ROADMAP_1_7_COMPLETION.md",
   "docs/operations/STAGING_DATABASE_ROLLOUT_STATE.md",
   "docs/operations/STAGING_SYNTHETIC_FIXTURES.md",
+  "docs/operations/STAGING_EMAIL_PROVIDER_ACCEPTANCE.md",
   "scripts/operations/staging-core-csv-acceptance.mjs",
+  "scripts/operations/staging-email-provider-acceptance.mjs",
   "scripts/operations/canonicalize-staging-rollout-evidence.mjs",
   "scripts/operations/staging-synthetic-fixtures.mjs",
   "src/lib/stagingCoreCsvAcceptancePolicy.mjs",
+  "src/lib/stagingEmailProviderAcceptancePolicy.mjs",
   "src/lib/stagingSyntheticFixturePolicy.mjs",
   "src/app/fans/import/csv.ts",
   "src/app/workspace/access-paused/page.tsx",
@@ -338,6 +345,81 @@ forbidIn(
   ".github/workflows/browser-e2e-staging-write.yml",
   /(?<!FANMIND_PRODUCTION_API_ORIGIN: )https:\/\/(?:www\.)?fanmind\.ch|FANMIND_RUNTIME_ENVIRONMENT:\s*production/iu,
   "Die schreibende Browser-Abnahme darf kein Production-Ziel enthalten.",
+);
+
+// Staging email is a provider-only synthetic proof, never a global app switch.
+for (const command of [
+  '"staging:email:check": "node scripts/operations/staging-email-provider-acceptance.mjs --check"',
+  '"staging:email:preflight": "node scripts/operations/staging-email-provider-acceptance.mjs --preflight"',
+  '"staging:email:send": "node scripts/operations/staging-email-provider-acceptance.mjs --send"',
+]) {
+  requireText(
+    "package.json",
+    command,
+    "Die isolierte Staging-E-Mail-Abnahme muss explizite Check-, Preflight- und Send-Befehle besitzen.",
+  );
+}
+for (const fragment of [
+  "validate-dispatch:",
+  "needs: validate-dispatch",
+  "environment: staging-email-acceptance",
+  "send-one-staging-email-provider-acceptance",
+  "FANMIND_STAGING_EMAIL_ACCEPTANCE_RESEND_KEY: ''",
+  "GITHUB_TOKEN: ${{ github.token }}",
+  "unset GITHUB_TOKEN",
+  "--preflight",
+  "--send",
+]) {
+  requireText(
+    ".github/workflows/staging-email-provider-acceptance.yml",
+    fragment,
+    "Der E-Mail-Providerlauf muss Dispatch, geschütztes Environment und getrennte GitHub-/Resend-Token fail-closed binden.",
+  );
+}
+forbidIn(
+  ".github/workflows/staging-email-provider-acceptance.yml",
+  /^\s{2}(?:push|schedule|workflow_call):/mu,
+  "Die E-Mail-Providerabnahme darf ausschließlich manuell gestartet werden.",
+);
+for (const fragment of [
+  '"delivered+fanmind-staging@resend.dev"',
+  '"FanMind Staging <acceptance@mail.staging.fanmind.ch>"',
+  '`${STAGING_EMAIL_ACCEPTANCE_APP_ORIGIN}/api/health`',
+  'emailChecks[0]?.status !== "unknown"',
+  '"send_indeterminate"',
+  "response.body.getReader()",
+  'Object.keys(payload).sort().join(",") !== "from,subject,text,to"',
+]) {
+  requireText(
+    "src/lib/stagingEmailProviderAcceptancePolicy.mjs",
+    fragment,
+    "Der Providerpfad muss feste Testdaten, mailfreie App-Runtime, harte Response-Grenzen und unklaren Sendestatus binden.",
+  );
+}
+forbidIn(
+  ".github/workflows/provision-staging-host.yml",
+  /RESEND_API_KEY|FANMIND_NOTIFICATION_FROM|STAGING_RESEND/u,
+  "Die normale Staging-Provisionierung darf keinen globalen E-Mail-Provider in die öffentliche App tragen.",
+);
+requireText(
+  ".env.staging.example",
+  "RESEND_API_KEY=\nFANMIND_NOTIFICATION_FROM=",
+  "Die Staging-App-Vorlage muss beide globalen Mailwerte leer lassen.",
+);
+forbidIn(
+  "src/lib/stagingEmailProviderAcceptancePolicy.mjs",
+  /(?:Fanmind|kontakt)@fanmind\.ch/iu,
+  "Die synthetische Providerabnahme darf kein echtes FanMind-Postfach adressieren.",
+);
+requireText(
+  "docs/operations/STAGING_EMAIL_PROVIDER_ACCEPTANCE.md",
+  "keine Resend-Fernattestierung",
+  "Die Doku muss den operatorseitigen Domain-Scope-Beleg ehrlich von technischer Fernattestierung trennen.",
+);
+requireText(
+  "docs/operations/STAGING_EMAIL_PROVIDER_ACCEPTANCE.md",
+  "nicht ausgeführt",
+  "Die vorbereitete E-Mail-Abnahme darf ohne echten Providerlauf nicht als erledigt gelten.",
 );
 
 // Member data boundary stays externally unapplied until the controlled Staging evidence exists.
