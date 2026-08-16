@@ -25,6 +25,7 @@ import {
   META_CONTINUATION_STATE_SQL,
   MOBILE_PUSH_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
+  WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
   ledgerManagedMetaMigrations,
   ledgerSql,
   psqlFailureCategory,
@@ -67,6 +68,8 @@ const controlledStagingDatabaseWorkflowPaths = [
   "staging-database-rollout-state.yml",
   "trigger-function-hardening-staging-apply.yml",
   "trigger-function-hardening-staging-verify.yml",
+  "workspace-member-data-boundary-staging-apply.yml",
+  "workspace-member-data-boundary-staging-verify.yml",
   "workspace-processing-staging-acceptance.yml",
 ];
 const tlsStagingDatabaseWorkflowPaths = [
@@ -81,6 +84,8 @@ const tlsStagingDatabaseWorkflowPaths = [
   "staging-database-rollout-state.yml",
   "trigger-function-hardening-staging-apply.yml",
   "trigger-function-hardening-staging-verify.yml",
+  "workspace-member-data-boundary-staging-apply.yml",
+  "workspace-member-data-boundary-staging-verify.yml",
   "workspace-processing-staging-acceptance.yml",
 ];
 
@@ -146,8 +151,11 @@ test("action derivation prevents every ledger and object double-apply", () => {
         mobilePush: true,
         metaFoundation: false,
         metaHistory: false,
+        workspaceMemberPrerequisite: true,
+        workspaceMemberInGenericLedger: false,
       },
       objects: {
+        workspaceMemberBoundary: "absent",
         aiTier: "current",
         mobilePush: "current",
         metaContent: "absent",
@@ -158,6 +166,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
     }),
     {
       actions: {
+        workspaceMemberBoundary: "apply",
         aiTier: "verify",
         mobilePush: "verify",
         metaContent: "apply",
@@ -176,8 +185,11 @@ test("action derivation prevents every ledger and object double-apply", () => {
         mobilePush: false,
         metaFoundation: false,
         metaHistory: false,
+        workspaceMemberPrerequisite: true,
+        workspaceMemberInGenericLedger: false,
       },
       objects: {
+        workspaceMemberBoundary: "current",
         aiTier: "current",
         mobilePush: "current",
         metaContent: "current",
@@ -187,6 +199,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
       },
     }).actions,
     {
+      workspaceMemberBoundary: "verify",
       aiTier: "skip",
       mobilePush: "skip",
       metaContent: "skip",
@@ -203,8 +216,11 @@ test("action derivation prevents every ledger and object double-apply", () => {
         mobilePush: true,
         metaFoundation: true,
         metaHistory: true,
+        workspaceMemberPrerequisite: true,
+        workspaceMemberInGenericLedger: false,
       },
       objects: {
+        workspaceMemberBoundary: "current",
         aiTier: "current",
         mobilePush: "current",
         metaContent: "foundation",
@@ -225,8 +241,11 @@ test("partial ledgers, missing applied objects and invalid metadata block", () =
         mobilePush: false,
         metaFoundation: false,
         metaHistory: false,
+        workspaceMemberPrerequisite: true,
+        workspaceMemberInGenericLedger: false,
       },
       objects: {
+        workspaceMemberBoundary: "absent",
         aiTier: "absent",
         mobilePush: "absent",
         metaContent: "absent",
@@ -241,8 +260,11 @@ test("partial ledgers, missing applied objects and invalid metadata block", () =
         mobilePush: true,
         metaFoundation: true,
         metaHistory: false,
+        workspaceMemberPrerequisite: true,
+        workspaceMemberInGenericLedger: false,
       },
       objects: {
+        workspaceMemberBoundary: "invalid",
         aiTier: "current",
         mobilePush: "current",
         metaContent: "invalid",
@@ -253,6 +275,40 @@ test("partial ledgers, missing applied objects and invalid metadata block", () =
     },
   ]) {
     assert.equal(deriveStagingDatabaseRolloutActions(scenario).blocked, true);
+  }
+});
+
+test("member boundary requires the exact prerequisite and absence from generic ledger", () => {
+  for (const ledgerBoundary of [
+    {
+      workspaceMemberPrerequisite: false,
+      workspaceMemberInGenericLedger: false,
+    },
+    {
+      workspaceMemberPrerequisite: true,
+      workspaceMemberInGenericLedger: true,
+    },
+  ]) {
+    const result = deriveStagingDatabaseRolloutActions({
+      ledger: {
+        aiTier: false,
+        mobilePush: false,
+        metaFoundation: false,
+        metaHistory: false,
+        ...ledgerBoundary,
+      },
+      objects: {
+        workspaceMemberBoundary: "absent",
+        aiTier: "absent",
+        mobilePush: "absent",
+        metaContent: "absent",
+        metaCatchup: "absent",
+        metaContinuation: "absent",
+        triggerHardening: "unavailable",
+      },
+    });
+    assert.equal(result.actions.workspaceMemberBoundary, "block");
+    assert.equal(result.blocked, true);
   }
 });
 
@@ -269,6 +325,18 @@ test("ledger and object probes are transactionally read-only and exact", () => {
     assert.match(ledger, new RegExp(migrationName, "u"));
   }
   assert.match(ledger, /where version = '[0-9]{14}'[\s\S]*or name in/iu);
+  assert.match(
+    ledger,
+    /where version = '20260809141141'\s+and name = 'workspace_server_owned_columns_controlled'/u,
+  );
+  assert.match(
+    ledger,
+    /where version = '20260816120000'[\s\S]*workspace_member_data_boundary[\s\S]*= 0 then '0' else '1'/u,
+  );
+  assert.match(
+    WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
+    /function_count = 0 and policy_count = 0[\s\S]*function_count = 3 and policy_count = 42/u,
+  );
   for (const sql of [
     LEDGER_STATE_SQL,
     ledger,
@@ -277,6 +345,7 @@ test("ledger and object probes are transactionally read-only and exact", () => {
     META_CONTINUATION_STATE_SQL,
     MOBILE_PUSH_STATE_SQL,
     TRIGGER_HARDENING_STATE_SQL,
+    WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
   ]) {
     assert.match(sql, /begin;[\s\S]*set transaction read only;[\s\S]*rollback;/u);
     assert.doesNotMatch(
@@ -359,7 +428,7 @@ test("three-step Meta manifest keeps the controlled idempotency step out of the 
   assert.match(sql, /20260803120000/u);
   assert.match(sql, /20260803210000/u);
   assert.doesNotMatch(sql, /20260806160000/u);
-  assert.equal([...sql.matchAll(/where version =/gu)].length, 4);
+  assert.equal([...sql.matchAll(/where version =/gu)].length, 6);
 
   assert.equal(
     deriveStagingDatabaseRolloutActions({
@@ -368,8 +437,11 @@ test("three-step Meta manifest keeps the controlled idempotency step out of the 
         mobilePush: true,
         metaFoundation: false,
         metaHistory: false,
+        workspaceMemberPrerequisite: true,
+        workspaceMemberInGenericLedger: false,
       },
       objects: {
+        workspaceMemberBoundary: "current",
         aiTier: "current",
         mobilePush: "current",
         metaContent: "foundation",
@@ -479,7 +551,8 @@ fi
 input="$(cat)"
 case "$input" in
   *STAGING_DATABASE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_LEDGER_OBJECT=present' ;;
-  *STAGING_DATABASE_LEDGER=*) echo 'STAGING_DATABASE_LEDGER=1:1:0:0' ;;
+  *STAGING_DATABASE_LEDGER=*) echo 'STAGING_DATABASE_LEDGER=1:1:0:0:1:0' ;;
+  *STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=*) echo 'STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=absent' ;;
   *STAGING_DATABASE_AI_TIER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_OBJECT=present' ;;
   *AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS*) echo 'AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS' ;;
   *STAGING_DATABASE_MOBILE_PUSH_OBJECT=*) echo 'STAGING_DATABASE_MOBILE_PUSH_OBJECT=present' ;;
@@ -519,6 +592,10 @@ esac
       },
     );
     assert.equal(result.status, 0, result.stderr);
+    assert.match(
+      result.stdout,
+      /STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=apply/u,
+    );
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_AI_TIER=verify/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=verify/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CONTENT=apply/u);
@@ -538,7 +615,7 @@ esac
   }
 });
 
-test("read-only CLI handles an absent migration ledger through object state", () => {
+test("read-only CLI blocks the member boundary when the prerequisite ledger is absent", () => {
   const temporaryDirectory = mkdtempSync(join(tmpdir(), "fanmind-rollout-no-ledger-"));
   try {
     const fakePsql = resolve(temporaryDirectory, "psql");
@@ -553,6 +630,7 @@ input="$(cat)"
 case "$input" in
   *STAGING_DATABASE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_LEDGER_OBJECT=absent' ;;
   *STAGING_DATABASE_LEDGER=*) exit 91 ;;
+  *STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=*) echo 'STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=absent' ;;
   *STAGING_DATABASE_AI_TIER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_OBJECT=absent' ;;
   *STAGING_DATABASE_MOBILE_PUSH_OBJECT=*) echo 'STAGING_DATABASE_MOBILE_PUSH_OBJECT=absent' ;;
   *META_CONTENT_MIGRATION_STATE=*) echo 'META_CONTENT_MIGRATION_STATE=absent' ;;
@@ -589,13 +667,17 @@ esac
         },
       },
     );
-    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(
+      result.stdout,
+      /STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=block/u,
+    );
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_AI_TIER=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CONTENT=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CONTINUATION=apply/u);
-    assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_STATE=PASS/u);
+    assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_STATE=BLOCKED/u);
     assert.doesNotMatch(result.stdout, /stagingprojectref|host:|password/u);
   } finally {
     rmSync(temporaryDirectory, { recursive: true, force: true });

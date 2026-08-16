@@ -136,10 +136,20 @@ jobs:
           ROLLOUT_STATE="$(npm run db:staging-rollout-state:run)"
           printf '%s\n' "$ROLLOUT_STATE"
           grep -Fxq 'STAGING_DATABASE_ROLLOUT_STATE=PASS' <<< "$ROLLOUT_STATE"
+          grep -Fxq 'STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=verify' <<< "$ROLLOUT_STATE"
           printf '%s\n' "$ROLLOUT_STATE" \
             | node scripts/operations/canonicalize-staging-rollout-evidence.mjs \
             > "$FANMIND_STAGING_ROLLOUT_BASELINE"
           [[ "$(stat -c '%a' "$FANMIND_STAGING_ROLLOUT_BASELINE")" == '600' ]]
+
+      - name: Verify the applied member boundary before fixture writes
+        env:
+          PGPASSFILE: ${{ runner.temp }}/fanmind-staging-core-csv.pgpass
+          FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'
+          FANMIND_NON_PRODUCTION_WRITE_ACK: ''
+          FANMIND_WORKSPACE_MEMBER_DATA_BOUNDARY_REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+          FANMIND_WORKSPACE_MEMBER_DATA_BOUNDARY_VERIFY_CONFIRM: verify-workspace-member-data-boundary
+        run: npm run db:workspace-member-data-boundary:verify
 
       - name: Prepare isolated synthetic core records
         env: &acceptance_database_environment
@@ -201,6 +211,8 @@ jobs:
           FANMIND_NON_PRODUCTION_WRITE_ACK: ''
           FANMIND_STAGING_DATABASE_ROLLOUT_REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
           FANMIND_STAGING_DATABASE_ROLLOUT_STATE_CONFIRM: verify-staging-database-rollout-state
+          FANMIND_WORKSPACE_MEMBER_DATA_BOUNDARY_REVIEWED_COMMIT: ${{ inputs.reviewed_commit }}
+          FANMIND_WORKSPACE_MEMBER_DATA_BOUNDARY_VERIFY_CONFIRM: verify-workspace-member-data-boundary
           FANMIND_DEPLOYED_VERSION_URL: ${{ format('{0}/api/version', vars.FANMIND_STAGING_APP_URL) }}
           FANMIND_EXPECTED_RELEASE_COMMIT: ${{ inputs.reviewed_commit }}
         run: |
@@ -208,9 +220,12 @@ jobs:
           CURRENT_ROLLOUT="$(mktemp "$RUNNER_TEMP/fanmind-staging-core-csv-rollout.current.XXXXXX")"
           trap 'rm -f -- "$CURRENT_ROLLOUT"' EXIT
 
+          npm run db:workspace-member-data-boundary:verify
+
           ROLLOUT_STATE="$(npm run db:staging-rollout-state:run)"
           printf '%s\n' "$ROLLOUT_STATE"
           grep -Fxq 'STAGING_DATABASE_ROLLOUT_STATE=PASS' <<< "$ROLLOUT_STATE"
+          grep -Fxq 'STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=verify' <<< "$ROLLOUT_STATE"
           printf '%s\n' "$ROLLOUT_STATE" \
             | node scripts/operations/canonicalize-staging-rollout-evidence.mjs \
             > "$CURRENT_ROLLOUT"
@@ -231,6 +246,7 @@ jobs:
           NODE
 
           echo 'STAGING_CORE_CSV_DATABASE_POSTFLIGHT=PASS'
+          echo 'STAGING_CORE_CSV_MEMBER_BOUNDARY_POSTFLIGHT=PASS'
           echo 'STAGING_CORE_CSV_FINAL_RELEASE=PASS'
           echo 'STAGING_CORE_CSV_ACCEPTANCE=PASS'
 

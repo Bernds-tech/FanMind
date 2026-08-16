@@ -113,7 +113,9 @@ RLS-Erwartung:
 - Workspace-Mitglieder dürfen nach dem kontrollierten Member-Boundary-Apply
   nicht die Basiszeile lesen, sondern nur die parameterlose Safe-RPC-Projektion
   aus ID, Name, Plan, normalisierter Member-Rolle und Processing-Bool. Der
-  checksum-gebundene Control ist derzeit `CHECKED_NOT_APPLIED`.
+  checksum-gebundene Control ist derzeit `CHECKED_NOT_APPLIED`; sein
+  geschützter Staging-Apply-/Verify-Pfad ist vorbereitet, aber noch nicht
+  extern ausgeführt.
 - `workspace_analysis_settings` enthält administrative Legal-, AVV-,
   Retention- und Bestätigerfelder und wird erst nach nachgewiesenem Apply
   desselben Controls für direkte Browser-Reads auf den Owner begrenzt.
@@ -174,7 +176,9 @@ RLS-Erwartung:
 - Member-Mutationen sind im App-Vertrag deaktiviert. Die direkte JWT-/RLS-
   Grenze ist bis zum nachgewiesenen Apply noch offen; danach erzwingt der
   vorbereitete Control für zwölf Tabellen aktive Workspace-Ownership, während
-  bestehende Member-Reads erhalten bleiben. Details:
+  bestehende Member-Reads erhalten bleiben. Der Nachweis erfordert App-first-
+  Deploy, getrennten Apply/Verify, reale Chromium-Abnahme und finalen Verify.
+  Details:
   `docs/operations/WORKSPACE_MEMBER_DATA_BOUNDARY.md`.
 
 ## 3. CRM-Kern

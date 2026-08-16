@@ -52,6 +52,14 @@ ungültige Zeilen, Zwei-Workspace-RLS und vollständiges Cleanup. Solange dieser
 Workflow auf dem exakt deployten Staging-Commit nicht tatsächlich grün lief,
 bleiben die Staging-Spalten der Roadmaps 1 und 2 offen.
 
+Vor diesem Browserlauf muss derselbe exakte Commit app-first auf Staging aktiv
+sein und die Workspace-Member-Datengrenze über ihren getrennten kontrollierten
+Apply sowie einen unabhängigen read-only Verify geschlossen werden. Der
+Chromium-Workflow prüft diesen Boundary-Postflight vor jedem Fixture-Write und
+nach Cleanup erneut; ein abschließender separater Verify vervollständigt den
+Staging-Nachweis. Ein vorbereiteter Workflow oder Offline-PASS gilt weiterhin
+nicht als ausgeführte Abnahme.
+
 ## Roadmap 1 – Produktkern
 
 - **Code:** Login, Registrierung, Workspace, Dashboard, Kontakte, CSV-Import,

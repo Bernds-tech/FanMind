@@ -252,26 +252,29 @@ synthetischen Staging-Workspace. Danach prüft er zusammenhängend:
 - genau einen Kontaktwissen- und einen offenen Follow-up-Eintrag;
 - CSV-Import mit genau einer gültigen, einer doppelten und einer ungültigen
   Zeile;
-- Member-Zugriff auf CRM-Flächen und den vollständigen
-  Follow-up-Abschluss-/Wiedereröffnungszyklus;
+- Member-Lesezugriff auf CRM-Flächen, sichtbare Owner-Inhalte und fehlende
+  Create-, CSV-, KI-, Kontaktwissen-, Follow-up- und direkte JWT-
+  Mutationsrechte;
 - bidirektionale RLS-Isolation zum sekundären Workspace;
 - exakte Datenbankeffekte vor und vollständige Entfernung aller kurzlebigen
   Abnahmedaten danach.
 
 Vor dem Browserlauf prüft der Workflow `/api/version`, den gemeinsamen
-read-only Datenbank-Rollout-State, TLS und das private Passwortfile. Den
-kanonischen, ausschließlich driftrelevanten Rollout-State hält er als private
-Baseline fest. Ein `always()`-Cleanup läuft auch nach Browser- oder
-Verifikationsfehlern. Nach einem erfolgreichen Browserlauf und nachgewiesenem
-Cleanup wiederholt der Workflow den read-only Datenbank-Postflight, verlangt
-die unveränderte kanonische Baseline und prüft unmittelbar vor dem einzigen
-Acceptance-PASS erneut den exakten Release-Commit sowie
-`runtimeEnvironment=staging`. Ein Deploy-Wechsel oder eine dauerhaft
-abweichende kontrollierte Datenbank-Rollout-Lage während der Abnahme kann
-damit keinen grünen Nachweis erzeugen. Andere Staging-Writer sollen trotzdem
-nicht absichtlich parallel gestartet werden; der Postflight ist ein
-Integritätsnachweis und kein globales Workflow-Lock. Es gibt keine
-Screenshots, Videos, Traces oder hochgeladenen Browserartefakte.
+read-only Datenbank-Rollout-State, den vollständigen read-only Workspace-
+Member-Boundary-Postflight, TLS und das private Passwortfile. Der Boundary-
+State muss bereits `verify` sein; `apply` oder `block` beendet die Abnahme vor
+jedem Fixture-Write. Den kanonischen, ausschließlich driftrelevanten Rollout-
+State hält der Workflow als private Baseline fest. Ein `always()`-Cleanup
+läuft auch nach Browser- oder Verifikationsfehlern. Nach einem erfolgreichen
+Browserlauf und nachgewiesenem Cleanup wiederholt der Workflow den vollständigen
+Member-Boundary- und Datenbank-Postflight, verlangt die unveränderte kanonische
+Baseline und prüft unmittelbar vor dem einzigen Acceptance-PASS erneut den
+exakten Release-Commit sowie `runtimeEnvironment=staging`. Ein Deploy-Wechsel
+oder eine dauerhaft abweichende kontrollierte Datenbank-Rollout-Lage während
+der Abnahme kann damit keinen grünen Nachweis erzeugen. Apply, Verify und
+Chromium-Abnahme teilen die Concurrency-Gruppe
+`fanmind-staging-core-csv-write`. Es gibt keine Screenshots, Videos, Traces
+oder hochgeladenen Browserartefakte.
 
 Zusätzlich zu den Werten des read-only Laufs benötigt das Environment
 `staging`:
