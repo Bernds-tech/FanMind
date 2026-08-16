@@ -52,6 +52,18 @@ ungültige Zeilen, Zwei-Workspace-RLS und vollständiges Cleanup. Solange dieser
 Workflow auf dem exakt deployten Staging-Commit nicht tatsächlich grün lief,
 bleiben die Staging-Spalten der Roadmaps 1 und 2 offen.
 
+Das bisher dafür benötigte persistente Member-Passwort ist kein Core-/CSV-
+Blocker mehr: Der geschützte Job erzeugt es kurzlebig, rotiert nur den exakt
+markierten synthetischen Member nach Adress-/Marker-/Membership-/Workspace-
+Prüfung und rotiert im `always()`-Cleanup auf ein unbekanntes Passwort. Der
+finale PASS verlangt zusätzlich die reale Ablehnung des zuvor bekannten
+Passworts. Nach jedem Admin-Write werden Profilbindung, Auth, exakt einzelne
+Membership und Workspace erneut gelesen; Drift und unbestimmte Providerwrites
+bleiben trotz bestmöglicher unbekannter Kompensationsrotation ausschließlich
+auf der zuvor gebundenen Member-UUID rot. Owner- und Secondary-Zugangsdaten
+bleiben unverändert. Diese Codevorbereitung ersetzt den noch ausstehenden
+tatsächlichen Staging-Lauf nicht.
+
 Vor diesem Browserlauf muss derselbe exakte Commit app-first auf Staging aktiv
 sein und die Workspace-Member-Datengrenze über ihren getrennten kontrollierten
 Apply sowie einen unabhängigen read-only Verify geschlossen werden. Der

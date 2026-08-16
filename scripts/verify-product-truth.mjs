@@ -34,6 +34,7 @@ const checkedFiles = [
   "scripts/testing/regular-user-core-flow-fixture.mjs",
   "tests/regular-user-core-flow-fixture.test.mjs",
   "tests/staging-core-csv-acceptance.test.mjs",
+  "tests/staging-ephemeral-member-credential.test.mjs",
   "tests/staging-email-provider-acceptance.test.mjs",
   "tests/workspace-member-core-flow.test.mjs",
   "tests/workspace-member-data-boundary.test.mjs",
@@ -68,12 +69,15 @@ const checkedFiles = [
   "docs/operations/ROADMAP_1_7_COMPLETION.md",
   "docs/operations/STAGING_DATABASE_ROLLOUT_STATE.md",
   "docs/operations/STAGING_SYNTHETIC_FIXTURES.md",
+  "docs/operations/STAGING_EPHEMERAL_MEMBER_CREDENTIAL.md",
   "docs/operations/STAGING_EMAIL_PROVIDER_ACCEPTANCE.md",
   "scripts/operations/staging-core-csv-acceptance.mjs",
+  "scripts/operations/staging-ephemeral-member-credential.mjs",
   "scripts/operations/staging-email-provider-acceptance.mjs",
   "scripts/operations/canonicalize-staging-rollout-evidence.mjs",
   "scripts/operations/staging-synthetic-fixtures.mjs",
   "src/lib/stagingCoreCsvAcceptancePolicy.mjs",
+  "src/lib/stagingEphemeralMemberCredentialPolicy.mjs",
   "src/lib/stagingEmailProviderAcceptancePolicy.mjs",
   "src/lib/stagingSyntheticFixturePolicy.mjs",
   "src/app/fans/import/csv.ts",
@@ -345,6 +349,119 @@ forbidIn(
   ".github/workflows/browser-e2e-staging-write.yml",
   /(?<!FANMIND_PRODUCTION_API_ORIGIN: )https:\/\/(?:www\.)?fanmind\.ch|FANMIND_RUNTIME_ENVIRONMENT:\s*production/iu,
   "Die schreibende Browser-Abnahme darf kein Production-Ziel enthalten.",
+);
+
+// The Staging member credential exists only inside the protected hosted job.
+for (const command of [
+  '"staging:member-credential:check": "node scripts/operations/staging-ephemeral-member-credential.mjs --check"',
+  '"staging:member-credential:generate": "node scripts/operations/staging-ephemeral-member-credential.mjs --generate"',
+  '"staging:member-credential:activate": "node scripts/operations/staging-ephemeral-member-credential.mjs --activate"',
+  '"staging:member-credential:revoke": "node scripts/operations/staging-ephemeral-member-credential.mjs --revoke"',
+]) {
+  requireText(
+    "package.json",
+    command,
+    "Der kurzlebige Member-Zugang muss getrennte Offline-, Generate-, Activate- und Revoke-Befehle besitzen.",
+  );
+}
+for (const fragment of [
+  "id: member_credential_generation",
+  "staging:member-credential:generate",
+  "id: member_credential_activation",
+  "staging:member-credential:activate",
+  "id: member_credential_cleanup",
+  "always() && steps.member_credential_generation.outcome == 'success'",
+  "staging:member-credential:revoke",
+  "steps.member_credential_cleanup.outcome == 'success'",
+  "unset http_proxy https_proxy all_proxy",
+  "trap clear_member_environment EXIT",
+  "FANMIND_STAGING_E2E_MEMBER_PASSWORD=",
+  "FANMIND_E2E_STAGING_MEMBER_PASSWORD=",
+]) {
+  requireText(
+    ".github/workflows/browser-e2e-staging-write.yml",
+    fragment,
+    "Die Kern-/CSV-Abnahme muss den kurzlebigen Member-Zugang fail-closed aktivieren und immer widerrufen.",
+  );
+}
+forbidIn(
+  ".github/workflows/browser-e2e-staging-write.yml",
+  /secrets\.FANMIND_STAGING_E2E_MEMBER_PASSWORD/u,
+  "Die Kern-/CSV-Abnahme darf kein persistentes Member-Passwort lesen.",
+);
+forbidIn(
+  ".github/workflows/browser-e2e-staging-write.yml",
+  /^\s*<<\s*:/mu,
+  "GitHub Actions unterstützt keine YAML-Merge-Keys; Step-Umgebungen müssen explizit oder als vollständiger Alias vorliegen.",
+);
+forbidIn(
+  ".github/workflows/browser-e2e-staging-write.yml",
+  /^\s+(?:http_proxy|https_proxy|all_proxy):/mu,
+  "Case-insensitive Proxy-Doppelkeys dürfen nicht im Workflow-Environment stehen; lowercase Werte werden im Step-Prozess geleert.",
+);
+for (const fragment of [
+  "::add-mask::${password}",
+  "environment.GITHUB_ENV",
+  "constants.O_NOFOLLOW",
+  "const initialStat = fstatSync(descriptor)",
+  "initialStat.nlink !== 1",
+  "fchmodSync(descriptor, 0o600)",
+  "stat.nlink !== 1",
+  "(stat.mode & 0o777) !== 0o600",
+  "FANMIND_STAGING_E2E_MEMBER_PASSWORD=${password}",
+  "FANMIND_E2E_STAGING_MEMBER_PASSWORD=${password}",
+  "STAGING_EPHEMERAL_MEMBER_KNOWN_PASSWORD_REJECTED=PASS",
+]) {
+  requireText(
+    "scripts/operations/staging-ephemeral-member-credential.mjs",
+    fragment,
+    "Das Member-Passwort muss ausschließlich maskiert und über die kurzlebige Runner-Umgebung gebunden werden.",
+  );
+}
+for (const fragment of [
+  'STAGING_EPHEMERAL_MEMBER_MARKER = "ai_member"',
+  '"/rest/v1/profiles"',
+  '"/rest/v1/workspace_members"',
+  '"/rest/v1/workspaces"',
+  "JSON.stringify({ password })",
+  "resolveFixedMemberProfile",
+  "verifyMarkedMemberAfterUpdate",
+  "compensateBoundMemberPassword",
+  '"admin_update_indeterminate_compensated"',
+  '"post_update_contract_drift_compensated"',
+  'code !== "invalid_credentials"',
+  '"/auth/v1/logout?scope=global"',
+]) {
+  requireText(
+    "src/lib/stagingEphemeralMemberCredentialPolicy.mjs",
+    fragment,
+    "Der Service-Role-Helper muss Zielidentität, Marker, Membership und bekannte Passwortablehnung eng prüfen.",
+  );
+}
+for (const fragment of [
+  "GITHUB_ENV hardlink is rejected before any credential append",
+  "profile binding drift after PUT stays red",
+  "membership drift after PUT stays red",
+  "workspace drift after PUT stays red",
+  "accepted-then-timeout Admin PUT stays red",
+  "compensation failure remains red",
+  "never reads owner or secondary credentials",
+]) {
+  requireText(
+    "tests/staging-ephemeral-member-credential.test.mjs",
+    fragment,
+    "Die kurzlebige Member-Rotation muss Dateiangriffe, Ziel-Drift und unbestimmte Providerwrites fail-closed regressionsprüfen.",
+  );
+}
+requireText(
+  "docs/operations/STAGING_EPHEMERAL_MEMBER_CREDENTIAL.md",
+  "Kompensationsrotation",
+  "Das Runbook muss den fehlenden persistenten Member-Secret-Vertrag ausdrücklich festhalten.",
+);
+requireText(
+  "docs/operations/STAGING_EPHEMERAL_MEMBER_CREDENTIAL.md",
+  "kein persistentes Member-Passwort",
+  "Das Runbook muss den fehlenden persistenten Member-Secret-Vertrag ausdrücklich festhalten.",
 );
 
 // Staging email is a provider-only synthetic proof, never a global app switch.

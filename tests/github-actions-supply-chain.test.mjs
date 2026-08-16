@@ -34,7 +34,9 @@ function workflowEnvBlocks(source) {
   const blocks = [];
 
   for (let index = 0; index < lines.length; index += 1) {
-    const match = /^(\s*)env:\s*$/u.exec(lines[index]);
+    const match = /^(\s*)env:\s*(?:&[A-Za-z0-9_-]+\s*)?$/u.exec(
+      lines[index],
+    );
     if (!match) continue;
 
     const indent = match[1].length;
@@ -57,6 +59,12 @@ function workflowEnvBlocks(source) {
 
 function workflowEnvironmentRegistrationErrors(source, file) {
   const errors = [];
+
+  for (const [index, line] of source.split("\n").entries()) {
+    if (/^\s*<<\s*:/u.test(line)) {
+      errors.push(`${file}:${index + 1} uses unsupported YAML merge key`);
+    }
+  }
 
   for (const block of workflowEnvBlocks(source)) {
     const seen = new Map();
@@ -142,7 +150,7 @@ test("workflow environment maps avoid the known GitHub registration hazards", as
   }
 });
 
-test("workflow registration guard detects case-folded env duplicates and early runner context", () => {
+test("workflow registration guard detects step env duplicates, merge keys and early runner context", () => {
   const fixture = `env:
   CACHE_ROOT: \${{ runner.temp }}
 jobs:
@@ -153,13 +161,23 @@ jobs:
       all_proxy: ''
       TMPDIR: \${{ runner.temp }}
     steps:
-      - run: 'true'
+      - name: Case-folded step variables
+        env: &proxy_environment
+          HTTPS_PROXY: ''
+          https_proxy: ''
+        run: 'true'
+      - name: Unsupported merge
+        env:
+          <<: *proxy_environment
+        run: 'true'
 `;
 
   assert.deepEqual(workflowEnvironmentRegistrationErrors(fixture, "fixture.yml"), [
+    "fixture.yml:18 uses unsupported YAML merge key",
     "fixture.yml:2 uses runner context before a step starts",
     "fixture.yml:8 duplicates environment key all_proxy case-insensitively",
     "fixture.yml:9 uses runner context before a step starts",
+    "fixture.yml:14 duplicates environment key https_proxy case-insensitively",
   ]);
 });
 

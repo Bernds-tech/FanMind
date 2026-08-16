@@ -276,6 +276,26 @@ Chromium-Abnahme teilen die Concurrency-Gruppe
 `fanmind-staging-core-csv-write`. Es gibt keine Screenshots, Videos, Traces
 oder hochgeladenen Browserartefakte.
 
+Das Member-Passwort ist kein persistentes Environment-Secret. Der geschützte
+Job erzeugt und maskiert es erst im Hosted Runner, bindet beide benötigten
+Prozessnamen ausschließlich über `GITHUB_ENV` und lässt einen eng begrenzten
+Service-Role-Helper vor der Rotation Adresse, Auth-Fixture-Marker, genau eine
+`member`-Membership und den markierten primären Workspace prüfen. Ein
+vollständiger Post-`PUT`-Read bestätigt dieselbe Profilbindung, Auth-Identität,
+Membership und denselben Workspace erneut. Bei unbestimmtem Providerergebnis
+oder Drift versucht der Helper nur auf der zuvor gebundenen Member-UUID eine
+neue unbekannte Kompensationsrotation; der Lauf bleibt unabhängig von deren
+Erfolg rot. `GITHUB_ENV` wird nur als reguläre Runner-Datei mit einem Link
+akzeptiert, über den geöffneten Deskriptor auf exakt `0600` gesetzt und vor
+dem Passwort-Append erneut geprüft. Ein
+`always()`-Schritt rotiert nach dem Browserlauf auf ein neues, nicht
+ausgegebenes Passwort und beweist, dass das zuvor bekannte Passwort mit
+`invalid_credentials` abgewiesen wird. Ohne diesen Cleanup kann der finale
+Acceptance-PASS nicht erscheinen. Der vollständige Vertrag steht in
+`docs/operations/STAGING_EPHEMERAL_MEMBER_CREDENTIAL.md`.
+Chromium wird vor der Erzeugung installiert; der Revoke-Schritt leert beide
+Prozessaliase per `EXIT`-Trap vor Postflight und Evidence-Cleanup wieder.
+
 Zusätzlich zu den Werten des read-only Laufs benötigt das Environment
 `staging`:
 
@@ -287,7 +307,8 @@ FANMIND_STAGING_DB_NAME
 und diese Secrets:
 
 ```text
-FANMIND_STAGING_E2E_MEMBER_PASSWORD
+FANMIND_STAGING_SUPABASE_ANON_KEY
+FANMIND_STAGING_SUPABASE_SERVICE_ROLE_KEY
 FANMIND_STAGING_DB_HOST
 FANMIND_STAGING_DB_PASSWORD
 ```
@@ -295,8 +316,10 @@ FANMIND_STAGING_DB_PASSWORD
 Der Member verwendet ausschließlich die fest gebundene synthetische Adresse
 `fanmind-ai-member-staging@example.invalid`. Die Abnahme darf erst nach dem
 Fixture-Provisioning und nach Deploy des exakten geprüften Commits gestartet
-werden. Ein grüner Repositorytest oder Merge ersetzt den tatsächlichen
-manuellen Lauf nicht.
+werden. Für diesen Workflow darf kein persistentes Member-Passwort angelegt
+werden; die Owner-/Secondary-Secrets bleiben unverändert.
+Ein grüner Repositorytest oder Merge ersetzt den tatsächlichen manuellen Lauf
+nicht.
 
 ## Positive read-only Admin-Abnahme in Staging
 

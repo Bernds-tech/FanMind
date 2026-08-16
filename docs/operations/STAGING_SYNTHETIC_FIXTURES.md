@@ -92,6 +92,13 @@ Versand einer Nachricht. Das Member-Konto verwendet die fest gebundene Adresse
 unterschiedlich sein und dürfen nicht in Issue, PR, Log oder Chat kopiert
 werden.
 
+Dieses Member-Secret gehört nur zum einmaligen oder ausdrücklich wiederholten
+Provisionierungslauf. Die nachfolgende Core-/CSV-Abnahme liest es nicht mehr:
+Sie erzeugt ein eigenes kurzlebiges Passwort im geschützten Hosted Runner,
+rotiert ausschließlich das bereits markierte Member-Konto und setzt danach
+ein neues unbekanntes Passwort. Der getrennte Vertrag ist unter
+`docs/operations/STAGING_EPHEMERAL_MEMBER_CREDENTIAL.md` beschrieben.
+
 ## Kontrollierter Lauf
 
 1. Code vollständig prüfen und nach `main` mergen.
