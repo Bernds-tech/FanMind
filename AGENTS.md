@@ -116,8 +116,11 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   it may verify only the Stripe Test catalog plus the synthetic owner/member
   workspace and must not inspect entitlement rows or apply SQL.
 - Restore resource readiness is also strictly read-only. Keep it main-only,
-  bound to the separate `restore-drill` environment and exclusive
-  `fanmind-restore` runner. Its first checksum-only phase must never connect
+  bound to the separate `restore-drill` environment and the dedicated runner
+  group `fanmind-restore-drill` with the exact five-label
+  `fanmind-restore-01` contract. A secret-free prerequisite job must execute
+  the root-owned, SHA-bound host gate before the protected job; both jobs need
+  separate fresh one-job JIT runners. Its first checksum-only phase must never connect
   to PostgreSQL, decrypt a backup or invoke the restore runner. Only after
   that phase passes, the separate `restore:target:compatibility` step may make
   one connection to the explicitly confirmed isolated target with a private
@@ -131,8 +134,9 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   the step must never create roles/extensions, decrypt or restore anything.
 - The separate isolated database restore workflow is the only GitHub path that
   may enable the two restore write gates. Keep it exact-reviewed-commit-bound,
-  on the protected `restore-drill` environment and exclusive
-  `fanmind-restore` runner. It must re-run checksum readiness and PostgreSQL 17
+  on the protected `restore-drill` environment and the same dedicated runner
+  group, exact runner identity and two-JIT-runner host-attestation contract.
+  It must re-run checksum readiness and PostgreSQL 17
   compatibility first, freeze the private age identity, passfile and CA
   without following symlinks, require TLS `verify-full`, restore the
   receipt-bound dump in one transaction, preserve the exact ACL/ownership

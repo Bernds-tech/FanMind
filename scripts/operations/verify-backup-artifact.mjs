@@ -386,7 +386,12 @@ function run(command, args, options = {}) {
     const child = spawn(command, args, {
       shell: false,
       cwd: options.cwd,
-      env: { ...process.env, ...(options.env ?? {}) },
+      env: {
+        LANG: "C",
+        LC_ALL: "C",
+        PATH: "/usr/bin:/bin",
+        ...(options.env ?? {}),
+      },
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";

@@ -287,6 +287,7 @@ async function restoreCompatibilityFixture(
   return {
     environment: {
       ...process.env,
+      GITHUB_ACTIONS: "",
       ...safeReadinessEnvironment(),
       FANMIND_RESTORE_TARGET_COMPATIBILITY_CONFIRM:
         RESTORE_TARGET_COMPATIBILITY_CONFIRMATION,
@@ -399,6 +400,7 @@ async function restoreRunnerEnvironment(root, dumpPath, overrides = {}) {
   await chmod(fakePsqlPath, 0o755);
 
   return {
+    GITHUB_ACTIONS: "",
     FANMIND_OPERATIONAL_TEST_MODE: "restore-runner-test",
     FANMIND_PSQL_BIN: fakePsqlPath,
     FANMIND_FULL_BACKUP_RESTORE_RECEIPT_PATH: receiptPath,
@@ -556,20 +558,26 @@ test("manual restore readiness workflow is main-only and write-disabled", async 
   const packageJson = JSON.parse(packageSource);
 
   assert.match(workflow, /workflow_dispatch:/);
-  assert.match(
-    workflow,
-    /inputs\.confirmation == 'verify-isolated-restore-resources'/,
+  assert.match(workflow, /REQUESTED_CONFIRMATION: \$\{\{ inputs\.confirmation \}\}/);
+  assert.match(workflow, /GITHUB_REF" == 'refs\/heads\/main'/);
+  assert.match(workflow, /REQUESTED_CONFIRMATION" == 'verify-isolated-restore-resources'/);
+  assert.equal((workflow.match(/group: fanmind-restore-drill\n/gu) ?? []).length, 2);
+  assert.equal(
+    (workflow.match(/labels: \[self-hosted, fanmind-restore, fanmind-restore-01, linux, x64\]/gu) ?? []).length,
+    2,
   );
-  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
-  assert.match(workflow, /runs-on: \[self-hosted, fanmind-restore, linux, x64\]/);
   assert.match(workflow, /environment: restore-drill/);
+  assert.match(workflow, /needs: validate-dispatch/u);
+  assert.match(workflow, /needs: verify-restore-host/u);
+  assert.match(workflow, /RESTORE_HOST_GATE_SHA256:/u);
+  assert.match(workflow, /Re-attest the preinstalled gate before checkout/u);
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/);
   assert.match(workflow, /FANMIND_ENABLE_RESTORE_DRILL: 'false'/);
-  assert.match(workflow, /npm run restore:resources:preflight/);
-  assert.match(workflow, /npm run restore:target:compatibility/);
+  assert.match(workflow, /node scripts\/operations\/restore-drill-resource-readiness\.mjs/);
+  assert.match(workflow, /node scripts\/operations\/restore-target-compatibility\.mjs/);
   assert.ok(
-    workflow.indexOf("npm run restore:resources:preflight")
-      < workflow.indexOf("npm run restore:target:compatibility"),
+    workflow.indexOf("restore-drill-resource-readiness.mjs")
+      < workflow.indexOf("restore-target-compatibility.mjs"),
   );
   assert.match(
     workflow,
@@ -581,6 +589,7 @@ test("manual restore readiness workflow is main-only and write-disabled", async 
     workflow,
     /restore:database:drill|pg_restore|--identity|FANMIND_BACKUP_AGE_IDENTITY/,
   );
+  assert.doesNotMatch(workflow, /actions\/setup-node|\bnpm (?:ci|run)\b/u);
   assert.equal(
     packageJson.scripts["restore:resources:preflight"],
     "node scripts/operations/restore-drill-resource-readiness.mjs",
@@ -597,46 +606,62 @@ test("manual restore readiness workflow is main-only and write-disabled", async 
 
 test("manual database restore workflow is exact-commit-bound and receipt-only", async () => {
   const workflow = await readFile(databaseRestoreWorkflowPath, "utf8");
-  const jobEnvironment = workflow.match(
-    /    env:\n[\s\S]*?\n\n    steps:/u,
-  )?.[0] ?? "";
+  const protectedJob = workflow.slice(workflow.indexOf("  restore-isolated-database:"));
+  const secretFreeHostJob = workflow.slice(
+    workflow.indexOf("  verify-restore-host:"),
+    workflow.indexOf("  restore-isolated-database:"),
+  );
 
   assert.match(workflow, /workflow_dispatch:/u);
-  assert.match(workflow, /inputs\.reviewed_commit == github\.sha/u);
-  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/u);
+  assert.match(workflow, /REVIEWED_COMMIT: \$\{\{ inputs\.reviewed_commit \}\}/u);
+  assert.match(workflow, /REVIEWED_COMMIT" == "\$GITHUB_SHA"/u);
+  assert.match(workflow, /GITHUB_REF" == 'refs\/heads\/main'/u);
   assert.match(workflow, /run-isolated-database-restore/u);
-  assert.match(workflow, /runs-on: \[self-hosted, fanmind-restore, linux, x64\]/u);
+  assert.equal((workflow.match(/group: fanmind-restore-drill\n/gu) ?? []).length, 2);
+  assert.equal(
+    (workflow.match(/labels: \[self-hosted, fanmind-restore, fanmind-restore-01, linux, x64\]/gu) ?? []).length,
+    2,
+  );
   assert.match(workflow, /environment: restore-drill/u);
+  assert.doesNotMatch(secretFreeHostJob, /secrets\.|environment: restore-drill|actions\/checkout/u);
+  assert.ok(
+    protectedJob.indexOf("Re-attest the preinstalled gate")
+      < protectedJob.indexOf("actions/checkout@"),
+  );
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/u);
   assert.match(workflow, /FANMIND_ENABLE_RESTORE_DRILL: 'false'/u);
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'/u);
   assert.match(workflow, /FANMIND_ENABLE_RESTORE_DRILL: 'true'/u);
-  assert.match(workflow, /npm run restore:resources:preflight/u);
-  assert.match(workflow, /npm run restore:target:compatibility/u);
-  assert.match(workflow, /npm run restore:preflight/u);
+  assert.match(workflow, /node scripts\/operations\/restore-drill-resource-readiness\.mjs/u);
+  assert.match(workflow, /node scripts\/operations\/restore-target-compatibility\.mjs/u);
+  assert.match(workflow, /node scripts\/operations\/restore-target-preflight\.mjs/u);
   assert.match(workflow, /verify-backup-artifact\.mjs/u);
-  assert.match(workflow, /npm run restore:database:drill/u);
+  assert.match(workflow, /\/usr\/bin\/bash -p scripts\/operations\/run-database-restore-drill\.sh/u);
   assert.ok(
-    workflow.indexOf("npm run restore:resources:preflight")
-      < workflow.indexOf("npm run restore:target:compatibility"),
+    workflow.indexOf("restore-drill-resource-readiness.mjs")
+      < workflow.indexOf("restore-target-compatibility.mjs"),
   );
   assert.ok(
-    workflow.indexOf("npm run restore:target:compatibility")
-      < workflow.indexOf("npm run restore:database:drill"),
+    workflow.indexOf("restore-target-compatibility.mjs")
+      < workflow.indexOf("run-database-restore-drill.sh"),
   );
   assert.match(workflow, /PGSSLMODE: verify-full/u);
   assert.match(workflow, /PGGSSENCMODE: disable/u);
   assert.match(workflow, /FANMIND_RESTORE_AGE_IDENTITY_PATH/u);
-  assert.doesNotMatch(jobEnvironment, /runner\.temp/u);
   assert.match(
     workflow,
-    /Decrypt privately and restore[\s\S]*?FANMIND_RESTORE_PRIVATE_ROOT: \$\{\{ runner\.temp \}\}/u,
+    /Decrypt privately and restore[\s\S]*?FANMIND_RESTORE_PRIVATE_ROOT: \$\{\{ runner\.temp \}\}\/fanmind-restore-/u,
   );
+  assert.match(workflow, /TMPDIR="\$FANMIND_RESTORE_PRIVATE_ROOT\/work"/u);
+  assert.match(workflow, /--age-bin \/usr\/bin\/age/u);
+  assert.match(workflow, /--pg-restore-bin \/usr\/lib\/postgresql\/17\/bin\/pg_restore/u);
+  assert.match(workflow, /--tar-bin \/usr\/bin\/tar/u);
   assert.match(workflow, /\/receipts\n/u);
   assert.match(workflow, /retention-days: 3/u);
   assert.match(workflow, /RESTORE_DISPOSABLE_TARGET_CLEANUP=required/u);
   assert.doesNotMatch(workflow, /path:.*verified-database\.dump/u);
-  assert.doesNotMatch(workflow, /rm -rf/u);
+  assert.doesNotMatch(workflow, /rm -rf|rmdir[^\n]*\|\| true/u);
+  assert.doesNotMatch(workflow, /actions\/setup-node|\bnpm (?:ci|run)\b/u);
 });
 
 test("restore target compatibility uses one redacted read-only catalog query", async () => {
@@ -2139,10 +2164,41 @@ test("restore runner binary overrides require the exact test-only gate", async (
           ...process.env,
           ...safeEnvironment({ PGPASSFILE: passfilePath }),
           ...runnerEnvironment,
+          GITHUB_ACTIONS: "true",
+          FANMIND_OPERATIONAL_TEST_MODE: "restore-runner-test",
+          FANMIND_PG_RESTORE_BIN: fakeRestorePath,
+        },
+      }),
+      /operational_binary_override_forbidden_in_actions/u,
+    );
+
+    await assert.rejects(
+      execFileAsync("bash", [runnerPath, dumpPath], {
+        env: {
+          ...process.env,
+          ...safeEnvironment({ PGPASSFILE: passfilePath }),
+          ...runnerEnvironment,
           FANMIND_PG_RESTORE_BIN: fakeRestorePath,
         },
       }),
       /operational_binary_override_forbidden/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("GitHub Actions can never enable the compatibility test binary", async () => {
+  const root = await mkdtemp(join(tmpdir(), "fanmind-compatibility-actions-"));
+  try {
+    const fixture = await restoreCompatibilityFixture(root, "170006|3|1|1", {
+      GITHUB_ACTIONS: "true",
+    });
+    await assert.rejects(
+      execFileAsync(process.execPath, [compatibilityScriptPath], {
+        env: fixture.environment,
+      }),
+      /psql_override_forbidden/u,
     );
   } finally {
     await rm(root, { recursive: true, force: true });

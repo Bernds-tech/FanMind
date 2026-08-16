@@ -85,18 +85,26 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   zu 100/200 Euro pro Monat sowie einen synthetischen Workspace mit
   unterschiedlichem Owner und Member. Er aktiviert keine Schreibfreigabe,
   liest keine Entitlement-Daten und wendet keine Migration an.
-- Restore-Ressourcencheck: ein manueller, nur auf `main` ausführbarer
-  checksum-only Workflow prüft auf einem getrennten `fanmind-restore`-Runner
-  das isolierte Ziel und das verschlüsselte Full-Backup. Er verbindet sich
-  nicht mit PostgreSQL, entschlüsselt keine Daten und aktiviert keine
+- Restore-Host- und Ressourcencheck: Vor jedem geschützten Restore-Job prüft
+  ein eigener secretfreier Workflow das root-owned Host-Gate auf der
+  dedizierten Runner-Gruppe `fanmind-restore-drill` und der exakten
+  Runner-Identität `fanmind-restore-01`. Ressourcen- und Datenbankworkflow
+  benötigen anschließend jeweils einen zweiten frischen One-Job-JIT-Runner;
+  kein persistenter oder nur gleich gelabelter Runner genügt. Der manuelle,
+  nur auf `main` ausführbare checksum-only Ressourcenworkflow prüft danach das
+  isolierte Ziel und das verschlüsselte Full-Backup. Er verbindet sich nicht
+  mit PostgreSQL, entschlüsselt keine Daten und aktiviert keine
   Schreibfreigabe. Der getrennte transaktionale Restore-Runner erzeugt nach
   einem echten isolierten Restore zusätzlich nur bei 5/5 vorhandenen
   Kerntabellen, 5/5 aktivierter RLS und 5/5 Policy-Abdeckung einen privaten,
   SHA-gebundenen Datenbank-Postcheck-Beleg. Ein getrennter commit-genauer
   Workflow führt die Datenbankphase kontrolliert auf dem exklusiven Runner
   aus: private age-Identity, Passfile und CA werden symlink-sicher eingefroren,
-  jede Verbindung nutzt TLS `verify-full`, und nur die drei redigierten
-  Receipts werden drei Tage geschützt bereitgestellt. Wegwerfziel-Cleanup,
+  jede Verbindung nutzt TLS `verify-full`, und nur die drei privaten
+  Receipts werden drei Tage geschützt bereitgestellt. Das Full-Backup-Receipt
+  ist dabei ein vertraulicher privater Beleg mit einer begrenzten Liste
+  erforderlicher Datenbankrollennamen; nur Runner- und Postcheck-Receipt sind
+  namenfrei. Wegwerfziel-Cleanup,
   Storage-Sample, Server-Konfigurationsprüfung und finaler Evidenznachweis
   bleiben für den echten externen Drill offen.
 - Mobile-Release-Ressourcencheck: ein manueller, nur auf `main` ausführbarer
@@ -196,6 +204,13 @@ Der Verkaufsdemo-Pfad ist fest und soll nicht durch Nebenfunktionen überlagert 
 12. Follow-up-Liste und/oder Roadmap zeigen.
 
 Alles, was nicht zu diesem Pfad gehört, muss versteckt, als Roadmap/Beta markiert oder aus der Standarddemo herausgehalten werden.
+
+`npm run test:e2e:core-flow` schützt diesen Ablauf zusätzlich als
+deterministischen lokalen Code-Nachweis: Der gebaute Server durchläuft echte
+FanMind-Routen und Server-Actions gegen eine ausschließlich lokale
+Auth-/PostgREST-Fixture; nur die KI-Antwort wird synthetisch erfüllt. Dieser
+Nachweis ersetzt weder die isolierte Staging-, Provider- noch
+Production-Abnahme.
 
 ## Technik
 

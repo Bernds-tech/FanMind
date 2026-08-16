@@ -20,11 +20,56 @@ Aktuell geprüfte Pins:
 | `github/codeql-action` | `5595ccaf912efad79be6eef63a5619ff05969be3` | `v4.37.6` |
 
 `actions/checkout` bleibt absichtlich gemischt gepinnt. Alle Checkout-Schritte
-auf GitHub-gehosteten Runnern verwenden v7.0.1. Der getrennte
-`restore-drill-resource-readiness.yml`-Workflow läuft auf dem selbst gehosteten
-`fanmind-restore`-Runner und bleibt auf v4, bis dessen erforderliche
-Runner-/Node-24-Kompatibilität separat und read-only nachgewiesen ist. Ein
-dauerhafter Policy-Test erzwingt diese Grenze fail-closed.
+auf GitHub-gehosteten Runnern verwenden v7.0.1. Die geschützten Restore-Jobs
+verwenden den getrennten v4-Pin mit `persist-credentials: false` und
+`set-safe-directory: false`; vor diesem Checkout läuft bereits die erneute
+Attestierung des vorinstallierten Host-Gates. Restore-Jobs verwenden weder
+`actions/setup-node` noch `npm install`.
+
+### Fester Restore-Host vor Checkout und Secrets
+
+`.github/workflows/restore-drill-host-readiness.yml` prüft ausschließlich den
+isolierten Host und kann keinen Restore auslösen. Er hat keinen Checkout, keine
+GitHub-Environment-Bindung, keine Restore-Secrets und keine Datenbank- oder
+Backup-Verbindung. Die beiden geschützten Restore-Workflows führen denselben
+Gate zuerst in einem secret-freien Job und anschließend erneut in einem
+separaten environment-gebundenen Job vor Checkout aus.
+
+Alle diese Jobs benötigen die Runner-Gruppe `fanmind-restore-drill` und exakt
+die fünf Labels `self-hosted`, `fanmind-restore`, `fanmind-restore-01`, `linux`
+und `x64`. Der externe Controller muss für die beiden Jobs nacheinander zwei
+frische Ein-Job-JIT-Runner registrieren und danach entfernen. Eine persistente
+Runner-Registrierung, Credential-Wiederverwendung oder parallele Nutzung ist
+nicht zulässig; GitHub-Workflow-YAML allein kann diese externe Lebensdauer
+nicht garantieren.
+
+Der Bootstrap verwendet ausschließlich den root-eigenen, nicht schreibbaren
+Node-Pfad `/opt/fanmind-restore/node-v24.19.0-linux-x64/bin/node` und den
+root-eigenen, nicht schreibbaren Gate-Pfad
+`/opt/fanmind-restore/restore-host-readiness.mjs`. Der aktuell gebundene
+Gate-SHA-256 ist `c60f0ec5278de5ec30fba44c9568e343dc0c0277500f824a1dd73993d1c8e117`. Die Workflows prüfen vor der
+Ausführung zusätzlich Eigentümer, Modus, kanonischen Pfad, Parent-Verzeichnisse
+und die Node-Version 24.19.0.
+
+Das Gate bindet Ubuntu 24.04, PostgreSQL-Tools 17.10, age 1.1.1, GNU tar 1.35,
+gzip 1.12, Bash und GNU coreutils 9.4 an feste absolute, root-eigene und nicht
+schreibbare Pfade. Der Runner-Benutzer besitzt keine Zusatzgruppe, kein
+erfolgreiches non-interactive `sudo`, keine Capabilities und keinen Zugriff auf
+privilegierte Container-/Virtualisierungssockets; `NoNewPrivs=1` ist Pflicht.
+
+Der Workflow leert Proxy-, TLS-/CA-, Loader-, OpenSSL-, Git-Konfigurations- und
+Trace-, Node-Debug-/Loader-, Python- und Shell-Injection-Variablen. Der Gate
+selbst erhält über `env -i` nur eine feste Allowlist. Insbesondere bleiben
+libpq-Ziele, Backup-/Production-/Supabase-Werte und alle Restore-Secrets außen.
+`GIT_TRACE_REDACT=true` und `NODE_TLS_REJECT_UNAUTHORIZED=1` werden zusätzlich
+explizit erzwungen; alle anderen Trace- und Debug-Ziele bleiben leer.
+
+Die Host-Attestierung verbindet sich nicht mit PostgreSQL, entschlüsselt kein
+Artefakt und aktiviert keine Schreibgrenze. Der einzige Upload ist ein
+redigierter, drei Tage aufbewahrter Host-Receipt. Outbound-Firewall-Regeln
+müssen extern GitHub nur für die JIT-Auftragsabwicklung und im geschützten
+zweiten Job zusätzlich ausschließlich das isolierte Restore-Ziel zulassen;
+Production-, Cloud-Metadata- und privilegierte Host-Endpunkte bleiben gesperrt.
 
 Jeder Workflow benötigt außerdem einen ausdrücklichen top-level `permissions:`-Block. `permissions: write-all` ist verboten. Schreibrechte werden nur für den konkreten Zweck vergeben, beispielsweise `security-events: write` für CodeQL oder `issues: write` für den Uptime-Alarm.
 

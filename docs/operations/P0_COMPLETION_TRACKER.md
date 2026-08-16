@@ -1,8 +1,12 @@
 # FanMind P0-Abschluss-Tracker
 
-Stand: 13. August 2026
+Stand: 16. August 2026
 
-GitHub-Issue [#640](https://github.com/Bernds-tech/FanMind/issues/640) ist der laufende, verbindliche Arbeits- und Nachweis-Tracker. Dieses Dokument hält die dauerhafte Repository-Zusammenfassung fest, damit bereits erledigte Arbeit nicht erneut umgesetzt wird.
+GitHub-Issue [#640](https://github.com/Bernds-tech/FanMind/issues/640) ist
+abgeschlossen und bleibt der historische P0-Arbeitsnachweis. Der externe
+Restore-Nachweis wird unter [#874](https://github.com/Bernds-tech/FanMind/issues/874)
+weitergeführt. Dieses Dokument hält die dauerhafte Repository-Zusammenfassung
+fest, damit bereits erledigte Arbeit nicht erneut umgesetzt wird.
 
 ## Statusmodell
 
@@ -36,15 +40,15 @@ gibt. Die stabilen IDs werden durch einen Regressionstest geschützt.
 | A-06 | Abschlussblock | Recht/Steuer/AVV | 56 % | **56 %** | externe Rechts-, Steuer-, AVV- und Providerbelege |
 | A-07 | Abschlussblock | Meta Events Manager | 92 % | **94 %** | synthetischer Meta-E2E, App Review und Rechtsfreigabe |
 | A-08 | Abschlussblock | KI Standard/Plus/Ultra | 87 % | **89 %** | Stripe-Testpreise, Lifecycle- sowie Qualitäts-/Kostenabnahme |
-| W-01 | Arbeitszeile | Restore-Datenbankkontrolle und checksum-only Prüfung | – | checksum-only Readiness, PostgreSQL-17-Kompatibilität und commit-genauer TLS-`verify-full`-Datenbankworkflow vorbereitet | kontrollierten externen Lauf samt drei privaten Receipts ausführen |
-| W-02 | Arbeitszeile | Isolierter Restore-Drill | – | exklusiver Restore-Runner, verschlüsseltes Full-Backup und receipt-gebundener Transaktions-/5-5-5-Postcheck-Pfad vorhanden | Wegwerfziel löschen sowie Storage-, Server-Konfigurations- und finalen Evidenznachweis abschließen |
+| W-01 | Arbeitszeile | Restore-Datenbankkontrolle und checksum-only Prüfung | – | neues verschlüsseltes Full-Backup mit Datenbank-, Storage- und Serverkonfigurationsanteil erfolgreich validiert und Offsite übertragen; schema-2 Authorization-/Extension-Vertrag und separater checksum-only Verifikationslauf bestanden | kontrollierten externen Restore-Lauf samt drei privaten Receipts ausführen |
+| W-02 | Arbeitszeile | Isolierter Restore-Drill | – | Host-Readiness für zwei frische JIT-Runner, verschlüsseltes Full-Backup und receipt-gebundener Transaktions-/5-5-5-Postcheck-Pfad vorhanden | isolierten selbst kontrollierten PG17-Zielcluster bereitstellen, Wegwerfziel löschen sowie Storage-, Server-Konfigurations- und finalen Evidenznachweis abschließen |
 | W-03 | Arbeitszeile | KI Plus/Ultra und Stripe-Abnahme | – | Entitlement-Schema auf Staging; read-only Katalog-/Webhook-Abnahmen und signierter mutationsfreier Bindungs-Smoke vorbereitet | Stripe-Testkatalog, minimalen Testwebhook, Bindungs-Smoke und rollback-only Acceptance extern ausführen |
 | W-04 | Arbeitszeile | Meta-Abschluss | – | Foundation, History und Tenant-Idempotenz auf Staging; Providerfehlergrenzen gehärtet | E2E, App Review und Rechtsfreigabe abschließen |
 | W-05 | Arbeitszeile | Mobile Signing, Android-Beta und TestFlight | – | kontrollierte Workflows und geschützter Android-APK-Handoff vorbereitet | signierte Binaries, Realgeräte und Verteilung extern nachweisen |
 | W-06 | Arbeitszeile | Push, Gerätetests und Store-Unterlagen | – | Push-Schema auf Staging und Unterlagen vorbereitet | Acceptance und externe Nachweise abschließen |
 | W-07 | Arbeitszeile | Technische Rechts-/AVV-Unterlagen | – | Arbeitsfassungen, Register und Validatoren vorhanden | technische Belege final mit externen Entscheidungen synchronisieren |
 | W-08 | Arbeitszeile | Externe Rechts-/Steuerfreigaben | – | weiterhin extern offen | Rechts-, Steuer-, AVV- und Providerbelege einholen |
-| W-09 | Arbeitszeile | Roadmap Phase 1–7 und Umsatzmodell | – | MVP-Auftrag und Roadmap abgeglichen; Core-, KI-, Connection-, Referral- und Agency-Regeln zentral testbar | Stripe-Testpreise, Rechts-/Steuerfreigabe und Agency-Aktivierung separat abnehmen |
+| W-09 | Arbeitszeile | Roadmap Phase 1–7 und Umsatzmodell | – | MVP-Auftrag und Roadmap abgeglichen; Core-, KI-, Connection-, Referral- und Agency-Regeln zentral testbar; regulärer Gerhard-Core-Flow lokal deterministisch über echte Routen und Server-Actions abgenommen | isolierte Staging-/Provider-Abnahme, Stripe-Testpreise, Rechts-/Steuerfreigabe und Agency-Aktivierung separat abnehmen |
 
 - Produkt-/MVP-Stand: **ca. 89 %**
 - Abschlussreife der acht Blöcke: **ca. 85 %**
@@ -173,9 +177,13 @@ Referral und Agency-Mengenrabatt sind nicht kombinierbar.
 ### Restore-Drill-Vorbereitung
 
 - Zielgrenze, transaktionaler Datenbank-Runner und redigierter Evidence-Validator sind implementiert;
-- ein manueller, `main`-gebundener Ressourcencheck prüft auf einem exklusiven
-  `fanmind-restore`-Runner nur die isolierte Zielidentität und die Prüfsumme
-  eines verschlüsselten Full-Backups;
+- ein root-owned, SHA-gebundenes Host-Gate prüft vor den geschützten Phasen
+  einen secretfreien JIT-Runner in der dedizierten Gruppe
+  `fanmind-restore-drill`; Ressourcen- und Datenbankworkflow benötigen jeweils
+  einen zweiten frischen One-Job-JIT-Runner mit der exakten Identität
+  `fanmind-restore-01`;
+- ein manueller, `main`-gebundener Ressourcencheck prüft danach nur die
+  isolierte Zielidentität und die Prüfsumme eines verschlüsselten Full-Backups;
 - der Ressourcencheck verbindet sich nicht mit PostgreSQL, entschlüsselt
   nichts und aktiviert keine Schreibfreigabe;
 - der tatsächliche Restore-, RLS-, Storage-, Server-Konfigurations- und
@@ -184,7 +192,10 @@ Referral und Agency-Mengenrabatt sind nicht kombinierbar.
   Datenbankworkflow wiederholt beide read-only Gates, friert age-Identity,
   Passfile und CA symlink-sicher ein, erzwingt TLS `verify-full`, führt den
   receipt-gebundenen Transaktionsrestore samt 5/5/5-Postcheck aus und stellt
-  ausschließlich drei redigierte Receipts drei Tage geschützt bereit;
+  ausschließlich drei private Receipts drei Tage geschützt bereit. Das
+  Full-Backup-Receipt ist vertraulich und enthält die begrenzte Liste
+  erforderlicher Datenbankrollennamen; Runner- und Postcheck-Receipt bleiben
+  namenfrei;
 - der Workflow lädt keinen Dump und kein Secret hoch und behauptet weder
   Wegwerfziel-Cleanup noch den vollständigen Restore-Drill.
 
@@ -205,7 +216,7 @@ Diese Punkte benötigen einen eigenen externen oder produktiven Nachweis und dü
 
 ## Abschlussnachweis
 
-Der finale Kommentar in Issue #640 muss mindestens enthalten:
+Der finale Abschlusskommentar in Issue #640 enthält als historischer Nachweis mindestens:
 
 - Merge-Commit;
 - grüne CI-/Testläufe;
