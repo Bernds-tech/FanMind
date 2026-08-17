@@ -1452,7 +1452,7 @@ requireText(
 );
 requireText(
   "scripts/operations/ai-tier-stripe-event-ledger-runner.mjs",
-  "b9bbf0c822f23b65fa62c21b9391412178fa7fcdeb081237f5d253a298fc12a5",
+  "83e82425dfedac6286280613459d234c387cf3b89fa71bd6ed81f257efdab2f0",
   "Das kontrollierte KI-Event-Ledger muss checksum-gebunden bleiben.",
 );
 requireText(
@@ -1577,7 +1577,7 @@ requireText(
 );
 requireText(
   "scripts/operations/stripe-billing-event-ledger-runner.mjs",
-  "a05ed6423e663b26bbe8fe401e2a942d2c2bb8ba774c4c79079ec68bc8678384",
+  "6591b1f865ac7163786dec7556cd93ef58d7c03e5bfeaf1736978484cf8a9271",
   "Das kontrollierte Basis-Billing-Ledger muss checksum-gebunden bleiben.",
 );
 requireText(
