@@ -655,13 +655,25 @@ function successfulProbe(
   passfilePath,
   marker,
   outputValidator = (output) => output.includes(marker),
+  probeName = "postflight",
 ) {
   const result = runPsql(sql, environment, passfilePath);
-  return Boolean(
-    !result.error &&
-      result.status === 0 &&
-      outputValidator(String(result.stdout ?? "")),
-  );
+  const safeProbeName = /^[a-z0-9_]+$/u.test(probeName)
+    ? probeName
+    : "postflight";
+  if (result.error || result.status !== 0) {
+    console.error(
+      `STAGING_DATABASE_ROLLOUT_STATE_PROBE_FAILURE=${safeProbeName}:${psqlFailureCategory(result)}`,
+    );
+    return false;
+  }
+  if (!outputValidator(String(result.stdout ?? ""))) {
+    console.error(
+      `STAGING_DATABASE_ROLLOUT_STATE_PROBE_FAILURE=${safeProbeName}:output_invalid`,
+    );
+    return false;
+  }
+  return true;
 }
 
 function requiredProbe(sql, environment, passfilePath, probeName) {
@@ -716,6 +728,7 @@ function tableObjectState({
     passfilePath,
     postflightMarker,
     postflightOutputValidator,
+    `${stateMarker.toLowerCase()}_postflight`,
   )
     ? "current"
     : "invalid";
@@ -738,6 +751,8 @@ function metaObjectState(environment, passfilePath) {
       environment,
       passfilePath,
       "META_CONTENT_FOUNDATION_POSTFLIGHT=PASS",
+      undefined,
+      "meta_content_foundation_postflight",
     )
       ? "foundation"
       : "invalid";
@@ -750,6 +765,8 @@ function metaObjectState(environment, passfilePath) {
     environment,
     passfilePath,
     "META_CONTENT_MIGRATION_POSTFLIGHT=PASS",
+    undefined,
+    "meta_content_postflight",
   )
     ? "current"
     : "invalid";
@@ -778,6 +795,8 @@ async function triggerObjectState(environment, passfilePath) {
     environment,
     passfilePath,
     "TRIGGER_FUNCTION_HARDENING_POSTFLIGHT=PASS",
+    undefined,
+    "trigger_hardening_postflight",
   )
     ? "current"
     : "pending";
