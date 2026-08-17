@@ -92,10 +92,12 @@ const checkedFiles = [
   "tests/ai-reply-quality-eval.test.mjs",
   "scripts/operations/run-database-restore-drill.sh",
   "scripts/operations/restore-host-readiness.mjs",
+  "scripts/operations/verify-restore-runner-group-scope.mjs",
   "scripts/operations/restore-database-postcheck-receipt.mjs",
   "scripts/operations/verify-restore-drill-evidence.mjs",
   "tests/restore-drill-evidence.test.mjs",
   "tests/restore-host-readiness.test.mjs",
+  "tests/restore-runner-group-scope.test.mjs",
   "docs/operations/RESTORE_DRILL.md",
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
   "scripts/operations/ai-tier-staging-acceptance.mjs",
@@ -725,6 +727,32 @@ forbidRuntime(
 );
 
 // Restore evidence must bind schema and RLS success to the machine postcheck.
+requireText(
+  "package.json",
+  '"restore:runner-group-scope:verify": "node scripts/operations/verify-restore-runner-group-scope.mjs"',
+  "Der Offline-Validator der Restore-Runner-Gruppenrichtlinie muss registriert sein.",
+);
+for (const value of [
+  "1_259_448_985",
+  'RESTORE_RUNNER_GROUP = "fanmind-restore-drill"',
+  "restrictedToWorkflows !== true",
+  '"refs/heads/main"',
+  "remoteAttestation: false",
+  "validatorGithubApiCalls: 0",
+  "validatorRunnerRegistrations: 0",
+  "validatorRestoreAttempts: 0",
+]) {
+  requireText(
+    "scripts/operations/verify-restore-runner-group-scope.mjs",
+    value,
+    "Der Offline-Scope-Validator muss die begrenzte, nicht attestierende Policy fest binden.",
+  );
+}
+requireText(
+  "docs/operations/RESTORE_DRILL.md",
+  "captured-policy verification, **not remote attestation**",
+  "Das Runbook muss die Grenze des Offline-Belegs ausdrücklich benennen.",
+);
 requireText(
   "package.json",
   '"restore:database:postcheck": "node scripts/operations/restore-database-postcheck-receipt.mjs"',

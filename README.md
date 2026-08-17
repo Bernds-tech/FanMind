@@ -97,6 +97,12 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   vor dem Self-hosted-Job gesperrt. Erst ein Organisations-Transfer, die auf
   diese drei `main`-Workflows beschränkte Gruppe `fanmind-restore-drill` und die
   danach gesetzte Scope-Bestätigung erlauben eine Runner-Registrierung.
+  `npm run restore:runner-group-scope:verify` validiert davor ausschließlich
+  eine höchstens eine Stunde alte, private Administratoraufnahme offline gegen
+  Repository-ID `1259448985` und die exakte Drei-Workflow-Allowlist. Der
+  redigierte private Beleg ist keine Remote-Attestierung; der Validator ruft
+  GitHub nicht auf, erstellt weder Organisation noch Gruppe, registriert keinen
+  Runner und startet keinen Restore.
   Ressourcen- und Datenbankworkflow
   benötigen anschließend jeweils einen zweiten frischen One-Job-JIT-Runner;
   kein persistenter oder nur gleich gelabelter Runner genügt. Der manuelle,
