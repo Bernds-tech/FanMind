@@ -30,7 +30,7 @@ export const CONTROL_PATH = resolve(
   `supabase/controlled/${CONTROL_ID}.sql`,
 );
 export const EXPECTED_CONTROL_SHA256 =
-  "f3d4f9878ad706637da6ec815f810d5113527bf950ed3f9a17c1011b539f0e27";
+  "d41e2065b671f32e46f065259ddbe85a142fdea4b0b62769061f8d7421b0b26c";
 
 const MAX_PASSFILE_BYTES = 64 * 1024;
 const FUNCTION_SIGNATURES = Object.freeze([

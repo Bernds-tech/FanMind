@@ -47,6 +47,7 @@ import {
 } from "./config";
 import {
   minimizeWebhookDiagnosticPayload,
+  normalizeWhatsAppCloudDiagnosticPayload,
   normalizeWebhookErrorCode,
 } from "@/lib/webhookSecurityPolicy.mjs";
 import {
@@ -2687,7 +2688,13 @@ export async function createMetaWebhookDebugEvent(input: {
   const errorReason = input.errorReason
     ? normalizeWebhookErrorCode(input.errorReason)
     : null;
-  const minimized = minimizeWebhookDiagnosticPayload(input.rawPayload);
+  const boundedWhatsAppDiagnostic =
+    input.platform === "whatsapp"
+      ? normalizeWhatsAppCloudDiagnosticPayload(input.rawPayload)
+      : null;
+  const minimized =
+    boundedWhatsAppDiagnostic ??
+    minimizeWebhookDiagnosticPayload(input.rawPayload);
   const rawPayload =
     minimized && typeof minimized === "object" && !Array.isArray(minimized)
       ? minimized

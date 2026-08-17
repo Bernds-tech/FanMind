@@ -51,6 +51,20 @@ export async function processWhatsAppCloudInboundEvents(input: {
   let skippedCount = input.unsupportedCount ?? 0;
   let firstErrorCode: WhatsAppCloudWebhookProcessResult["errorCode"];
 
+  if ((input.unsupportedCount ?? 0) > 0) {
+    const diagnostic = await recordWhatsAppCloudDiagnostic({
+      connection: null,
+      eventCount: 0,
+      savedCount: 0,
+      duplicateCount: 0,
+      unsupportedCount: input.unsupportedCount ?? 0,
+      status: "ignored_unsupported",
+      errorReason: null,
+      schemaReady: true,
+    });
+    if (!diagnostic) firstErrorCode ??= "diagnostic_persist_failed";
+  }
+
   const groups = groupEventsByPhoneNumberId(input.events);
   for (const group of groups) {
     const lookup = await findWhatsAppCloudConnectionByPhoneNumberId(
@@ -149,7 +163,6 @@ export async function processWhatsAppCloudInboundEvents(input: {
 
     let groupSaved = 0;
     let groupDuplicates = 0;
-    let groupSkipped = 0;
     let groupProcessingBlocked = false;
     let groupConnectionUnavailable = false;
     let groupErrorCode: WhatsAppCloudWebhookProcessResult["errorCode"];
@@ -166,28 +179,24 @@ export async function processWhatsAppCloudInboundEvents(input: {
         duplicateCount += 1;
         groupDuplicates += 1;
         skippedCount += 1;
-        groupSkipped += 1;
         continue;
       }
       if (claim.outcome === "in_progress") {
         firstErrorCode ??= "idempotency_in_progress";
         groupErrorCode ??= "idempotency_in_progress";
         skippedCount += 1;
-        groupSkipped += 1;
         continue;
       }
       if (claim.outcome === "exhausted") {
         firstErrorCode ??= "idempotency_exhausted";
         groupErrorCode ??= "idempotency_exhausted";
         skippedCount += 1;
-        groupSkipped += 1;
         continue;
       }
       if (claim.outcome === "conflict") {
         firstErrorCode ??= "idempotency_conflict";
         groupErrorCode ??= "idempotency_conflict";
         skippedCount += 1;
-        groupSkipped += 1;
         continue;
       }
       if (
@@ -199,7 +208,6 @@ export async function processWhatsAppCloudInboundEvents(input: {
         firstErrorCode ??= "idempotency_claim_failed";
         groupErrorCode ??= "idempotency_claim_failed";
         skippedCount += 1;
-        groupSkipped += 1;
         continue;
       }
 
@@ -225,12 +233,10 @@ export async function processWhatsAppCloudInboundEvents(input: {
         duplicateCount += 1;
         groupDuplicates += 1;
         skippedCount += 1;
-        groupSkipped += 1;
       } else if (stored.outcome === "conflict") {
         firstErrorCode ??= "idempotency_conflict";
         groupErrorCode ??= "idempotency_conflict";
         skippedCount += 1;
-        groupSkipped += 1;
       } else if (
         stored.outcome === "processing_blocked" ||
         stored.outcome === "connection_unavailable"
@@ -239,17 +245,14 @@ export async function processWhatsAppCloudInboundEvents(input: {
         groupConnectionUnavailable ||=
           stored.outcome === "connection_unavailable";
         skippedCount += 1;
-        groupSkipped += 1;
       } else if (stored.outcome === "stale_lease") {
         firstErrorCode ??= "stale_lease";
         groupErrorCode ??= "stale_lease";
         skippedCount += 1;
-        groupSkipped += 1;
       } else {
         firstErrorCode ??= "message_persist_failed";
         groupErrorCode ??= "message_persist_failed";
         skippedCount += 1;
-        groupSkipped += 1;
       }
     }
 
@@ -272,7 +275,7 @@ export async function processWhatsAppCloudInboundEvents(input: {
       eventCount: group.events.length,
       savedCount: groupSaved,
       duplicateCount: groupDuplicates,
-      unsupportedCount: groupSkipped,
+      unsupportedCount: 0,
       status: groupStatus,
       errorReason: groupDiagnosticReason,
       processingBlocked: groupProcessingBlocked,

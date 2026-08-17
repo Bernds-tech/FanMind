@@ -177,6 +177,31 @@ bleibt bis zu einer erneuten ausdrücklichen Freigabe ungestartet. Runbooks:
     `MOBILE_PUSH_STAGING_TRANSACTION=ROLLED_BACK` und
     `MOBILE_PUSH_STAGING_CLEANUP=PASS` gemeinsam akzeptieren;
   - der Nachweis aktiviert weder echten Token-Upload noch Push-Zustellung.
+- [ ] Mobile-Push-Delivery vor jedem realen Staging-Send:
+  - `docs/mobile/PUSH_DELIVERY.md` vollständig prüfen;
+  - keine Route, kein Timer/Worker und kein Provideraufruf, solange kein
+    genehmigter service-role-only Ledger atomare Reservation, maximal drei
+    Versuche, Ticket, Receipt, Token-Widerruf und Cleanup beweist;
+  - die Reserve-RPC muss exakt dasselbe strukturell validierte Supabase-
+    URL-/Ref-/Service-Role-Binding wie der Loader erhalten, Membership,
+    Workspace-Verarbeitung, Kontakt, Follow-up, aktive Registrierung und deren
+    aktuellen Token-Fingerprint innerhalb derselben Transaktion erneut prüfen
+    und Projekt-Ref, Fingerprint sowie einen frischen kanonischen
+    Revalidierungsnachweis liefern;
+  - `DeviceNotRegistered` muss unter der reservierten Send- oder Receipt-Lease
+    Attempt-Terminalisierung und Registrierungsdeaktivierung in derselben
+    Datenbanktransaktion ausführen; getrennte Writes sind unzulässig;
+  - `FANMIND_MOBILE_PUSH_EXPO_ACCESS_TOKEN` ausschließlich serverseitig und
+    niemals in `EXPO_PUBLIC_*`, Logs oder Artefakten setzen;
+  - konfigurierte und unabhängig geprüfte EAS-Projekt-ID müssen exakt
+    übereinstimmen; zusätzlich müssen `staging.fanmind.ch`, Staging-Supabase-
+    Ref und Production-Supabase-Ref unabhängig geprüft und exakt gebunden sein;
+    beide Supabase-Refs müssen verschieden sein;
+  - ausschließlich feste Payload ohne CRM-Inhalt und mit einstündiger TTL;
+    Providertexte verwerfen;
+  - CI-Dormanztest muss jede Route, jeden Worker/Timer und jede vorzeitig
+    angeschlossene Delivery-Migration ablehnen;
+  - Production-Aktivierung bleibt gesperrt.
 - [ ] `fan_analysis_reports`
 - [ ] `communication_analysis_reports`
 - [ ] `workspace_analysis_settings`

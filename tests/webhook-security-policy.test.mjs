@@ -7,6 +7,7 @@ import {
   buildMetaWebhookDiagnosticPayload,
   evaluateWebhookSecret,
   minimizeWebhookDiagnosticPayload,
+  normalizeWhatsAppCloudDiagnosticPayload,
   normalizeWebhookErrorCode,
   validateMetaHmacSignature,
   validateMetaVerifyToken,
@@ -142,6 +143,28 @@ test("recursive diagnostic minimization removes text, identifiers and credential
       url: "https://example.invalid/private.jpg",
     }),
     { url: "[url_present]" },
+  );
+});
+
+test("validated WhatsApp diagnostics preserve only bounded counters", () => {
+  const diagnostic = {
+    schema_version: 1,
+    connector_whatsapp_cloud: true,
+    event_count: 2,
+    saved_count: 1,
+    duplicate_count: 0,
+    unsupported_count: 1,
+    processing_blocked: false,
+    schema_ready: true,
+  };
+  assert.deepEqual(normalizeWhatsAppCloudDiagnosticPayload(diagnostic), diagnostic);
+  assert.equal(
+    normalizeWhatsAppCloudDiagnosticPayload({ ...diagnostic, event_count: 26 }),
+    null,
+  );
+  assert.equal(
+    normalizeWhatsAppCloudDiagnosticPayload({ ...diagnostic, sender_id: "secret" }),
+    null,
   );
 });
 

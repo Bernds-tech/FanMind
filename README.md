@@ -136,6 +136,17 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   `staging`-Environment gebunden; Production-Ziele, echte Push-Tokens und
   Zustellung bleiben ausgeschlossen. Die rollback-only Acceptance steht noch
   aus.
+- Mobile-Push-Delivery-Grundlage: Ein serverseitiger Einzelsender für fällige
+  offene Follow-ups, feste inhaltsfreie Payloads mit einstündiger TTL, exakte Tenant-Bindung und
+  unabhängig geprüfte EAS-, Staging-App-, Staging-Supabase- und Production-
+  Supabase-Ziele, Retry-Entscheidung und Expo-Ticket-/Receipt-Auswertung ist
+  synthetisch testbar vorbereitet. Er besitzt bewusst weder Route noch
+  Timer/Worker und bleibt ohne diese geprüften Bindings und einen separat
+  genehmigten atomaren Delivery-Ledger vollständig deaktiviert. Dessen Reserve-
+  RPC muss dasselbe validierte Supabase-Binding wie der Loader sowie den
+  aktuellen Registrierungs-/Token-Fingerprint atomar revalidieren; Production
+  ist strukturell gesperrt. CI verhindert
+  eine unbemerkte Verdrahtung als Route, Worker, Timer oder Migration.
 - Website-Chat-Sicherheitsgrundlage: deaktivierte, workspace-gebundene
   Installationen, exakt verifizierte HTTPS-Origins und kurzlebige,
   consent-gebundene Besuchersitzungen sind als service-role-only Grundlage
@@ -301,7 +312,8 @@ Bereits vorhanden:
   Login-Handoff, ausdrücklichem Nutzer-Opt-in und vorbereiteter verschlüsselter
   Ein-Gerät-Registrierung für Owner oder autorisierte Workspace-Mitglieder;
   öffentliche Demo-Workspaces und nicht freigegebene EAS-Projekte werden
-  abgelehnt, serverseitige Zustellung bleibt deaktiviert;
+  abgelehnt. Der getrennte Staging-only Zustellungsbaustein ist ohne Route,
+  Timer und persistenten Ledger nicht aktiv;
 - strikt Staging-only Push-Kontrollpfad mit read-only Ressourcencheck,
   separat bestätigtem checksum-Apply sowie rollback-only Browser-/service-role-
   Abnahme für synthetische Nicht-Demo-Owner/-Member/-Geräte; kein echter Token
@@ -333,11 +345,14 @@ Noch extern beziehungsweise als nächste Mobile-Phase abzunehmen:
 - Signing Credentials und signierter interner Android-Build;
 - Apple Developer / App Store Connect und iOS-TestFlight;
 - visuelle Icon-Abnahme sowie reale Push-Berechtigungs-/Registrierungsabnahme
-  im signierten Build; erst danach echte serverseitige Zustellung;
+  im signierten Build; anschließend eigener Delivery-Ledger-Entscheid,
+  rollback-only Staging-Abnahme und genau ein synthetischer serverseitiger
+  Send-/Receipt-Nachweis;
 - finale Store-Screenshots, Datenschutzangaben und Portalabnahme aus signierten Builds;
 - reale Android-/iOS-Gerätetests.
 
-Verbindliche Details: `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md` und `docs/mobile/BETA_RELEASE.md`.
+Verbindliche Details: `apps/mobile/README.md`, `docs/mobile/ARCHITECTURE.md`,
+`docs/mobile/PUSH_DELIVERY.md` und `docs/mobile/BETA_RELEASE.md`.
 
 ## Wichtige Routen
 

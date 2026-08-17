@@ -139,7 +139,9 @@ function is_complete_config_line(directive, opened, closed, semicolons) {
     return 1
   }
   if (opened == 0 && closed == 0 && semicolons == 1 &&
-      directive ~ /;$/ && directive !~ /^include /) {
+      directive ~ /;$/ &&
+      (directive !~ /^include / ||
+       directive == "include /etc/letsencrypt/options-ssl-nginx.conf;")) {
     return 1
   }
   if (opened == 1 && closed == 0 && semicolons == 0 &&

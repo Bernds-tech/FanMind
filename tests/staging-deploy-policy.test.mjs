@@ -256,6 +256,35 @@ server {
   assert.equal(accepted.status, 0, accepted.stderr);
   assert.equal(accepted.stdout.trim(), "valid");
 
+  const certbotManaged = valid.replace(
+    `    ssl_certificate_key ${stagingCertificateKey};`,
+    `    ssl_certificate_key ${stagingCertificateKey};
+    include /etc/letsencrypt/options-ssl-nginx.conf;`,
+  );
+  const certbotAccepted = verifyStagingNginxBoundary(certbotManaged);
+  assert.equal(certbotAccepted.status, 0, certbotAccepted.stderr);
+  assert.equal(certbotAccepted.stdout.trim(), "valid");
+
+  const includeInsideProtectedLocation = valid.replace(
+    "        access_log off;",
+    `        access_log off;
+        include /etc/letsencrypt/options-ssl-nginx.conf;`,
+  );
+  assert.equal(
+    verifyStagingNginxBoundary(includeInsideProtectedLocation).stdout.trim(),
+    "invalid",
+  );
+
+  const unexpectedServerInclude = valid.replace(
+    `    ssl_certificate_key ${stagingCertificateKey};`,
+    `    ssl_certificate_key ${stagingCertificateKey};
+    include /etc/nginx/conf.d/unreviewed.conf;`,
+  );
+  assert.equal(
+    verifyStagingNginxBoundary(unexpectedServerInclude).stdout.trim(),
+    "invalid",
+  );
+
   const protectedHttpButLoggedTls = `
 server {
     listen 80;

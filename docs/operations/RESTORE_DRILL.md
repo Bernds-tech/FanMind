@@ -198,6 +198,43 @@ above. If the transferred repository remains public, the same receipt must
 show `allows_public_repositories=true`; alternatively make the repository
 private before any Runner registration. `FANMIND_RESTORE_RUNNER_SCOPE` is only the operator assertion of
 that independently verified policy; it does not query the GitHub Admin API.
+
+Normalize the private administrator capture with the exact Schema-1 contract
+described below, store it as an owner-only `0600` file in an owner-only
+directory, and validate it offline while it is at most one hour old:
+
+```bash
+npm run restore:runner-group-scope:verify -- \
+  --input /absolute/private/runner-group-scope-capture.json \
+  --output /absolute/private/runner-group-scope-receipt.json
+```
+
+The capture has exactly `schemaVersion`, `capturedAt`, `capture`,
+`organization`, `repository` and `runnerGroup`. `capture` records only method
+`github-organization-admin-policy-capture`, role
+`organization-runner-group-administrator` and `containsSecrets: false`.
+`organization.login` is supplied from the real transfer; this runbook does not
+name or predict it. `repository` contains exactly `id`, `name`, `fullName`,
+`ownerLogin`, `ownerType` and `private`. `runnerGroup` contains exactly `name`,
+`visibility`, `allowsPublicRepositories`, `restrictedToWorkflows`,
+`selectedRepositoryIds` and `selectedWorkflows`. Unknown or duplicate members,
+an owner mismatch, any repository ID other than `1259448985`, any additional
+repository/workflow, a non-`main` ref, stale capture or unsafe file fails closed.
+
+The newly created `0600` receipt is private and redacted: it omits the
+organization login/full repository name and workflow strings, binds the input
+bytes by SHA-256, and records only fixed policy facts and counts. This is
+captured-policy verification, **not remote attestation**. The validator makes
+no GitHub API call, cannot create an organization or runner group, cannot
+register a runner and cannot start a restore. An administrator must still
+create and inspect the real organization policy outside this repository.
+The capture method, administrator role and timestamp are operator-supplied
+claims rather than authenticated GitHub evidence. Its SHA-256 proves only the
+identity of the reviewed capture bytes; the receipt does not detect later
+GitHub-policy drift and does not set or enforce
+`FANMIND_RESTORE_RUNNER_SCOPE`. Keep that variable unset until the live policy
+has been independently rechecked by the responsible organization
+administrator.
 Only then may the value be set to `organization-workflow-allowlist`. The
 externally administered runner must be a fresh one-job JIT runner;
 it is removed after that single job. The workflow starts only the fixed

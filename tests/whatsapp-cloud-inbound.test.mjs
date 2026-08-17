@@ -418,6 +418,26 @@ test("controlled schema gives one active phone binding and exact DB idempotency"
     migration,
     /conversation_messages_whatsapp_identity_server_insert[\s\S]*as restrictive[\s\S]*whatsapp_payload_fingerprint is null/u,
   );
+  assert.match(
+    migration,
+    /conversation_messages_whatsapp_identity_check check \([\s\S]*when whatsapp_social_connection_id is not null[\s\S]*source_type is not distinct from 'whatsapp_messages'[\s\S]*else true/u,
+  );
+  assert.doesNotMatch(
+    migration,
+    /when source_platform is not distinct from 'whatsapp' then/u,
+  );
+  assert.match(
+    migration,
+    /conversation_messages_whatsapp_identity_server_update[\s\S]*using \(true\)[\s\S]*with check \(true\)/u,
+  );
+  assert.match(
+    migration,
+    /create function public\.protect_whatsapp_cloud_message_identity\(\)[\s\S]*auth\.role\(\) is distinct from 'service_role'[\s\S]*whatsapp_payload_fingerprint is distinct from[\s\S]*create trigger conversation_messages_whatsapp_identity_immutable/u,
+  );
+  assert.match(
+    migration,
+    /external_message_id = case[\s\S]*p_received_at >= conversation\.last_inbound_at[\s\S]*last_inbound_at = greatest[\s\S]*last_message_preview = case[\s\S]*updated_at = case/u,
+  );
   assert.match(migration, /fanmind-whatsapp:v1:sha256:/u);
   assert.match(migration, /pg_get_constraintdef\(constraint_definition\.oid, true\)/u);
   assert.match(migration, /= 'true'::text/u);
@@ -628,4 +648,11 @@ test("group diagnostics use only the current group error", async () => {
     processor,
     /lookupStatus === "processing_blocked"[\s\S]*connection: lookup\.connection/u,
   );
+  assert.match(
+    processor,
+    /input\.unsupportedCount[\s\S]*status: "ignored_unsupported"[\s\S]*unsupportedCount: input\.unsupportedCount/u,
+  );
+  assert.match(processor, /unsupportedCount: 0,[\s\S]*status: groupStatus/u);
+  assert.doesNotMatch(processor, /groupSkipped/u);
+  assert.match(server, /normalizeWhatsAppCloudDiagnosticPayload/u);
 });

@@ -290,6 +290,18 @@ begin
       select to_regprocedure(
         'public.disconnect_whatsapp_cloud_inbound_connection(uuid,uuid)'
       )::oid
+      union all
+      select to_regprocedure(
+        'public.protect_whatsapp_cloud_message_identity()'
+      )::oid
+      union all
+      select trigger_definition.oid
+        from pg_trigger as trigger_definition
+       where trigger_definition.tgrelid =
+             'public.conversation_messages'::regclass
+         and trigger_definition.tgname =
+             'conversation_messages_whatsapp_identity_immutable'
+         and not trigger_definition.tgisinternal
     ) as controlled_objects
    where controlled_objects.object_oid is not null;
   select count(*) into existing_column_count
@@ -321,7 +333,8 @@ begin
        'whatsapp_cloud_inbound_schema_state',
        'claim_whatsapp_cloud_inbound_message',
        'store_whatsapp_cloud_inbound_message',
-       'disconnect_whatsapp_cloud_inbound_connection'
+       'disconnect_whatsapp_cloud_inbound_connection',
+       'protect_whatsapp_cloud_message_identity'
      );
   if existing_object_count <> 0
      or existing_column_count <> 0
@@ -358,8 +371,12 @@ alter table public.conversation_messages
     on delete no action,
   add constraint conversation_messages_whatsapp_identity_check check (
     case
-      when source_platform is not distinct from 'whatsapp' then
-      external_message_id is not null
+      when whatsapp_social_connection_id is not null
+        or whatsapp_phone_number_id is not null
+        or whatsapp_payload_fingerprint is not null then
+      source_platform is not distinct from 'whatsapp'
+      and source_type is not distinct from 'whatsapp_messages'
+      and external_message_id is not null
       and whatsapp_social_connection_id is not null
       and whatsapp_phone_number_id is not null
       and whatsapp_phone_number_id ~ '^[1-9][0-9]{5,31}$'
@@ -368,10 +385,7 @@ alter table public.conversation_messages
       and external_message_id ~ '^wamid\.[A-Za-z0-9+/_=-]{1,505}$'
       and whatsapp_payload_fingerprint is not null
       and whatsapp_payload_fingerprint ~ '^[0-9a-f]{64}$'
-      else
-      whatsapp_social_connection_id is null
-      and whatsapp_phone_number_id is null
-      and whatsapp_payload_fingerprint is null
+      else true
     end
   );
 
@@ -402,16 +416,35 @@ create policy conversation_messages_whatsapp_identity_server_update
   as restrictive
   for update
   to authenticated
-  using (
-    whatsapp_social_connection_id is null
-    and whatsapp_phone_number_id is null
-    and whatsapp_payload_fingerprint is null
-  )
-  with check (
-    whatsapp_social_connection_id is null
-    and whatsapp_phone_number_id is null
-    and whatsapp_payload_fingerprint is null
-  );
+  using (true)
+  with check (true);
+
+create function public.protect_whatsapp_cloud_message_identity()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $function$
+begin
+  if auth.role() is distinct from 'service_role'
+     and (
+       new.whatsapp_social_connection_id is distinct from
+         old.whatsapp_social_connection_id
+       or new.whatsapp_phone_number_id is distinct from
+         old.whatsapp_phone_number_id
+       or new.whatsapp_payload_fingerprint is distinct from
+         old.whatsapp_payload_fingerprint
+     ) then
+    raise exception 'whatsapp_cloud_message_identity_immutable';
+  end if;
+  return new;
+end
+$function$;
+
+create trigger conversation_messages_whatsapp_identity_immutable
+before update on public.conversation_messages
+for each row
+execute function public.protect_whatsapp_cloud_message_identity();
 
 create table public.whatsapp_cloud_webhook_receipts (
   id uuid not null default gen_random_uuid(),
@@ -852,6 +885,29 @@ as $function$
              'public.whatsapp_cloud_webhook_receipts'::regclass
     )
     and exists (
+      select 1 from pg_trigger as trigger_definition
+       where trigger_definition.tgrelid =
+             'public.conversation_messages'::regclass
+         and trigger_definition.tgname =
+             'conversation_messages_whatsapp_identity_immutable'
+         and not trigger_definition.tgisinternal
+         and trigger_definition.tgenabled = 'O'
+         and trigger_definition.tgtype = 19
+         and trigger_definition.tgfoid = to_regprocedure(
+           'public.protect_whatsapp_cloud_message_identity()'
+         )
+    )
+    and not exists (
+      select 1 from pg_trigger as trigger_definition
+       where trigger_definition.tgrelid =
+             'public.conversation_messages'::regclass
+         and not trigger_definition.tgisinternal
+         and trigger_definition.tgname like
+             'conversation_messages_whatsapp_identity_%'
+         and trigger_definition.tgname <>
+             'conversation_messages_whatsapp_identity_immutable'
+    )
+    and exists (
       select 1
         from pg_index as definition
         join pg_class as relation on relation.oid = definition.indexrelid
@@ -1079,18 +1135,8 @@ as $function$
              policy.policyname =
                'conversation_messages_whatsapp_identity_server_update'
              and policy.cmd = 'UPDATE'
-             and coalesce(policy.qual, '') like
-                 '%whatsapp_social_connection_id%IS NULL%'
-             and coalesce(policy.qual, '') like
-                 '%whatsapp_phone_number_id%IS NULL%'
-             and coalesce(policy.qual, '') like
-                 '%whatsapp_payload_fingerprint%IS NULL%'
-             and coalesce(policy.with_check, '') like
-                 '%whatsapp_social_connection_id%IS NULL%'
-             and coalesce(policy.with_check, '') like
-                 '%whatsapp_phone_number_id%IS NULL%'
-             and coalesce(policy.with_check, '') like
-                 '%whatsapp_payload_fingerprint%IS NULL%'
+             and coalesce(policy.qual, '') = 'true'
+             and coalesce(policy.with_check, '') = 'true'
            )
          )
     ) = 2
@@ -1428,7 +1474,8 @@ as $function$
           ('public.whatsapp_cloud_inbound_schema_state()'),
           ('public.claim_whatsapp_cloud_inbound_message(uuid,uuid,text,text,text,integer)'),
           ('public.store_whatsapp_cloud_inbound_message(uuid,uuid,uuid,uuid,text,text,text,text,text,text,timestamp with time zone,text)'),
-          ('public.disconnect_whatsapp_cloud_inbound_connection(uuid,uuid)')
+          ('public.disconnect_whatsapp_cloud_inbound_connection(uuid,uuid)'),
+          ('public.protect_whatsapp_cloud_message_identity()')
         ) as required(signature)
         left join pg_proc as function_definition
           on function_definition.oid = to_regprocedure(required.signature)
@@ -1468,9 +1515,10 @@ as $function$
          'whatsapp_cloud_inbound_schema_state',
          'claim_whatsapp_cloud_inbound_message',
          'store_whatsapp_cloud_inbound_message',
-         'disconnect_whatsapp_cloud_inbound_connection'
+         'disconnect_whatsapp_cloud_inbound_connection',
+         'protect_whatsapp_cloud_message_identity'
        )
-    ) = 4
+    ) = 5
     and not exists (
       select 1 from pg_proc as function_definition
       join pg_namespace as function_namespace
@@ -1482,7 +1530,8 @@ as $function$
          'whatsapp_cloud_inbound_schema_state',
          'claim_whatsapp_cloud_inbound_message',
          'store_whatsapp_cloud_inbound_message',
-         'disconnect_whatsapp_cloud_inbound_connection'
+         'disconnect_whatsapp_cloud_inbound_connection',
+         'protect_whatsapp_cloud_message_identity'
        )
        and obj_description(function_definition.oid, 'pg_proc') is distinct from
          'fanmind-whatsapp:v1:sha256:' || pg_catalog.encode(
@@ -2026,12 +2075,30 @@ begin
          source_platform = 'whatsapp',
          source_type = 'whatsapp_messages',
          external_thread_id = connection_bound_thread_id,
-         external_message_id = normalized_message_id,
-         last_inbound_at = p_received_at,
-         last_message_preview = left(normalized_content, 240),
+         external_message_id = case
+           when conversation.last_inbound_at is null
+             or p_received_at >= conversation.last_inbound_at
+           then normalized_message_id
+           else conversation.external_message_id
+         end,
+         last_inbound_at = greatest(
+           coalesce(conversation.last_inbound_at, p_received_at),
+           p_received_at
+         ),
+         last_message_preview = case
+           when conversation.last_inbound_at is null
+             or p_received_at >= conversation.last_inbound_at
+           then left(normalized_content, 240)
+           else conversation.last_message_preview
+         end,
          ai_status = 'partial',
          next_step = 'Antwort vorbereiten',
-         updated_at = now()
+         updated_at = case
+           when conversation.last_inbound_at is null
+             or p_received_at >= conversation.last_inbound_at
+           then now()
+           else conversation.updated_at
+         end
    where conversation.id = target_conversation_id
      and conversation.workspace_id = p_workspace_id;
 
@@ -2110,6 +2177,8 @@ revoke all on function public.store_whatsapp_cloud_inbound_message(uuid, uuid, u
   from public, anon, authenticated, service_role;
 revoke all on function public.disconnect_whatsapp_cloud_inbound_connection(uuid, uuid)
   from public, anon, authenticated, service_role;
+revoke all on function public.protect_whatsapp_cloud_message_identity()
+  from public, anon, authenticated, service_role;
 
 grant execute on function public.whatsapp_cloud_inbound_schema_state()
   to service_role;
@@ -2118,6 +2187,8 @@ grant execute on function public.claim_whatsapp_cloud_inbound_message(uuid, uuid
 grant execute on function public.store_whatsapp_cloud_inbound_message(uuid, uuid, uuid, uuid, text, text, text, text, text, text, timestamptz, text)
   to service_role;
 grant execute on function public.disconnect_whatsapp_cloud_inbound_connection(uuid, uuid)
+  to service_role;
+grant execute on function public.protect_whatsapp_cloud_message_identity()
   to service_role;
 
 do $function_attestation$
@@ -2143,9 +2214,10 @@ begin
      where function_namespace.nspname = 'public'
        and function_definition.proname in (
          'whatsapp_cloud_inbound_schema_state',
-         'claim_whatsapp_cloud_inbound_message',
-         'store_whatsapp_cloud_inbound_message',
-         'disconnect_whatsapp_cloud_inbound_connection'
+       'claim_whatsapp_cloud_inbound_message',
+       'store_whatsapp_cloud_inbound_message',
+       'disconnect_whatsapp_cloud_inbound_connection',
+       'protect_whatsapp_cloud_message_identity'
        )
   loop
     canonical_definition := concat_ws(

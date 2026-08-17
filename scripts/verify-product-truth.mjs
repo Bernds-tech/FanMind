@@ -154,7 +154,12 @@ const checkedFiles = [
   "apps/mobile/README.md",
   "docs/mobile/ARCHITECTURE.md",
   "docs/mobile/BETA_RELEASE.md",
+  "docs/mobile/PUSH_DELIVERY.md",
   "docs/mobile/STORE_LISTING.md",
+  "src/lib/mobilePushDelivery.mjs",
+  "src/lib/mobilePushDeliveryPolicy.mjs",
+  "src/lib/mobilePushDeliveryTarget.ts",
+  "tests/mobile-push-delivery.test.mjs",
   "docs/operations/P0_COMPLETION_TRACKER.md",
   "src/config/plans.ts",
   "src/lib/plans.ts",
@@ -1485,6 +1490,126 @@ requireText(
   "docs/mobile/BETA_RELEASE.md",
   "Dieser Vorabcheck ist vorbereitet, aber noch nicht extern ausgeführt.",
   "Das Mobile-Runbook muss den weiterhin offenen externen EAS-Nachweis ehrlich dokumentieren.",
+);
+requireText(
+  "docs/mobile/PUSH_DELIVERY.md",
+  "Das bestehende Schema besitzt keine robuste, atomare Zustellhistorie.",
+  "Die Push-Delivery-Dokumentation muss den ungeklärten persistenten Ledger als Aktivierungsblocker benennen.",
+);
+requireText(
+  "docs/mobile/PUSH_DELIVERY.md",
+  "Der Service ist allein nicht aktivierbar",
+  "Die Push-Delivery-Dokumentation muss die unabhängigen Zielbindungen zusätzlich zum Ledger als Aktivierungsgrenze benennen.",
+);
+requireText(
+  "src/lib/mobilePushDeliveryPolicy.mjs",
+  "export const MOBILE_PUSH_PRODUCTION_DELIVERY_SUPPORTED = false",
+  "Mobile Push Delivery muss Production strukturell sperren.",
+);
+requireText(
+  "src/lib/mobilePushDelivery.mjs",
+  '"https://exp.host/--/api/v2/push/send"',
+  "Der Mobile-Push-Sender muss den festen offiziellen Expo-HTTPS-Endpunkt verwenden.",
+);
+requireText(
+  "src/lib/mobilePushDelivery.mjs",
+  'throw new MobilePushDeliveryError("provider_fetch_override_forbidden")',
+  "Ein austauschbarer Push-Provider darf ausschließlich synthetischen Tests dienen.",
+);
+requireText(
+  "src/lib/mobilePushDeliveryPolicy.mjs",
+  'export const MOBILE_PUSH_STAGING_APP_HOSTNAME = "staging.fanmind.ch"',
+  "Der Mobile-Push-Sender muss an den geprüften Staging-App-Host gebunden bleiben.",
+);
+requireText(
+  "src/lib/mobilePushDeliveryPolicy.mjs",
+  "export const MOBILE_PUSH_REMINDER_TTL_SECONDS = 60 * 60",
+  "Mobile Push Delivery muss die generische Erinnerung kurz und fest auf eine Stunde begrenzen.",
+);
+requireText(
+  "src/lib/mobilePushDelivery.mjs",
+  "revalidationContract: MOBILE_PUSH_ATOMIC_REVALIDATION_CONTRACT",
+  "Jede neue Mobile-Push-Reservation muss die atomare Datenbank-Revalidierung verpflichtend anfordern.",
+);
+requireText(
+  "src/lib/mobilePushDelivery.mjs",
+  "expectedRegistrationTokenFingerprint",
+  "Die atomare Mobile-Push-Reservation muss den aktuellen Registrierungs-/Token-Fingerprint binden.",
+);
+requireText(
+  "src/lib/mobilePushDelivery.mjs",
+  "config.targetBinding,",
+  "Loader und Ledger-Reservation müssen denselben strukturell validierten Supabase-Zielkontext erhalten.",
+);
+requireText(
+  "src/lib/mobilePushDelivery.mjs",
+  "dependencies.ledger.markDeviceNotRegistered({",
+  "Ein ungültiges Push-Gerät muss Attempt und Registrierung über genau eine atomare Ledger-Operation abschließen.",
+);
+requireText(
+  "src/lib/mobilePushDeliveryTarget.ts",
+  'import "server-only"',
+  "Der service-role Mobile-Push-Target-Loader muss gegen Client-Bundling gesperrt sein.",
+);
+requireText(
+  "src/lib/mobilePushDeliveryTarget.ts",
+  "input.targetBinding",
+  "Der Target-Loader muss den bereits geprüften gemeinsamen Supabase-Zielkontext verwenden.",
+);
+requireText(
+  "src/lib/mobilePushDeliveryTarget.ts",
+  "hashMobilePushToken(token) !== tokenFingerprint",
+  "Der entschlüsselte Mobile-Push-Token muss vor der Reservation dem gespeicherten Fingerprint entsprechen.",
+);
+requireText(
+  "src/lib/mobilePushDelivery.mjs",
+  "reviewedProductionSupabaseProjectRef",
+  "Mobile Push Delivery muss Staging- und Production-Supabase-Ziele gegen unabhängige geprüfte Bindings abgleichen.",
+);
+requireText(
+  "tests/mobile-push-delivery.test.mjs",
+  "an indeterminate provider result plus ledger failure is never success",
+  "Unklare Provider-/Ledger-Zustände müssen automatisiert als Nicht-Erfolg geprüft werden.",
+);
+requireText(
+  "tests/mobile-push-delivery.test.mjs",
+  "missing or incomplete ledger fails closed before target or provider access",
+  "Ein fehlender oder unvollständiger Mobile-Push-Ledger muss vor jedem Target- oder Providerzugriff sperren.",
+);
+requireText(
+  "tests/mobile-push-delivery.test.mjs",
+  "tamperedTag[0] ^= 0x01",
+  "Der Token-Ciphertext-Tamper-Test muss deterministisch ein dekodiertes Byte verändern.",
+);
+requireText(
+  "tests/mobile-push-delivery.test.mjs",
+  "reviewed app and Supabase bindings reject environment drift before target loading",
+  "Manipulierte Mobile-Push-Zielwerte müssen vor Target- oder Providerzugriff abgelehnt werden.",
+);
+requireText(
+  "tests/mobile-push-delivery.test.mjs",
+  "receipt polling uses an atomic lease and is provider-bounded",
+  "Mobile-Push-Receipts müssen atomar reserviert und auf eine feste Provideraufrufzahl begrenzt bleiben.",
+);
+requireText(
+  "tests/mobile-push-delivery.test.mjs",
+  "registration expiry is calendar-strict, canonical and future-bounded",
+  "Mobile-Push-Registrierungen müssen normalisierte Kalenderdaten und ungebundene Ablaufzeiten ablehnen.",
+);
+requireText(
+  "tests/mobile-push-delivery.test.mjs",
+  "a send reservation requires fresh atomic database revalidation",
+  "Der Sender muss fehlende, driftende oder veraltete Target-Revalidierungen vor dem Provideraufruf ablehnen.",
+);
+requireText(
+  "tests/mobile-push-delivery.test.mjs",
+  "receipt ticket timestamps are canonical and bounded by the 24-hour window",
+  "Receipt-Zeitpunkte müssen kanonisch und auf das Providerfenster begrenzt bleiben.",
+);
+requireText(
+  "tests/mobile-push-delivery.test.mjs",
+  "dormancy invariant rejects routes workers timers migrations and production wiring",
+  "CI muss eine vorzeitige Mobile-Push-Route, einen Worker/Timer oder eine Migration ablehnen.",
 );
 requireText(
   "docs/operations/AI_TIER_READINESS.md",
