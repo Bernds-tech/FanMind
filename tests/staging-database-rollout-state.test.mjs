@@ -948,3 +948,80 @@ exit 2
     rmSync(temporaryDirectory, { recursive: true, force: true });
   }
 });
+
+test("read-only CLI reports a safe optional postflight failure category", () => {
+  const temporaryDirectory = mkdtempSync(
+    join(tmpdir(), "fanmind-rollout-postflight-diagnostic-"),
+  );
+  try {
+    const fakePsql = resolve(temporaryDirectory, "psql");
+    const passfile = resolve(temporaryDirectory, "pgpass");
+    writeFileSync(
+      fakePsql,
+      `#!/bin/sh
+if [ "\${1:-}" = "--version" ]; then
+  exit 0
+fi
+input="$(cat)"
+case "$input" in
+  *STAGING_DATABASE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_LEDGER_OBJECT=present' ;;
+  *STAGING_DATABASE_LEDGER=*) echo 'STAGING_DATABASE_LEDGER=1:1:0:0:1:0:0' ;;
+  *STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=*) echo 'STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=absent' ;;
+  *WHATSAPP_CLOUD_INBOUND_OBJECT_STATE=*) echo 'WHATSAPP_CLOUD_INBOUND_OBJECT_STATE=absent' ;;
+  *STAGING_DATABASE_AI_TIER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_OBJECT=present' ;;
+  *AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS*)
+    echo 'ERROR: cannot execute DO in a read-only transaction raw-private-db-error' >&2
+    exit 2
+    ;;
+  *STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT=absent' ;;
+  *STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT=absent' ;;
+  *STAGING_DATABASE_MOBILE_PUSH_OBJECT=*) echo 'STAGING_DATABASE_MOBILE_PUSH_OBJECT=present' ;;
+  *MOBILE_PUSH_REGISTRATION_MIGRATION_POSTFLIGHT=PASS*) echo 'MOBILE_PUSH_REGISTRATION_MIGRATION_POSTFLIGHT=PASS' ;;
+  *META_CONTENT_MIGRATION_STATE=*) echo 'META_CONTENT_MIGRATION_STATE=absent' ;;
+  *STAGING_DATABASE_META_CATCHUP_OBJECT=*) echo 'STAGING_DATABASE_META_CATCHUP_OBJECT=absent' ;;
+  *META_CONVERSATION_CONTINUATION_STATE=*) echo 'META_CONVERSATION_CONTINUATION_STATE=absent' ;;
+  *STAGING_DATABASE_TRIGGER_OBJECT=*) echo 'STAGING_DATABASE_TRIGGER_OBJECT=pending' ;;
+  *TRIGGER_FUNCTION_HARDENING_POSTFLIGHT=PASS*) echo 'TRIGGER_FUNCTION_HARDENING_POSTFLIGHT=PASS' ;;
+  *) exit 1 ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(fakePsql, 0o700);
+    writeFileSync(passfile, "host:5432:postgres:user:password\n", {
+      mode: 0o600,
+    });
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        resolve(
+          repositoryRoot,
+          "scripts/operations/staging-database-rollout-state.mjs",
+        ),
+        "--run",
+      ],
+      {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          ...validEnvironment(),
+          PATH: `${temporaryDirectory}:${process.env.PATH}`,
+          PGPASSFILE: passfile,
+        },
+      },
+    );
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /STAGING_DATABASE_ROLLOUT_STATE_PROBE_FAILURE=staging_database_ai_tier_object_postflight:write_blocked/u,
+    );
+    assert.doesNotMatch(
+      `${result.stdout}\n${result.stderr}`,
+      /raw-private-db-error|stagingprojectref|host:|password/u,
+    );
+  } finally {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
+});
