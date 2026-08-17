@@ -47,6 +47,11 @@ import {
   PROTECTED_MEMBER_WRITABLE_TABLES,
   materializeWorkspaceMemberDataBoundaryPostflight,
 } from "./workspace-member-data-boundary-runner.mjs";
+import {
+  CONTROL_PATH as WHATSAPP_CLOUD_INBOUND_CONTROL_PATH,
+  STATE_SQL as WHATSAPP_CLOUD_INBOUND_STATE_SQL,
+  materializeWhatsAppCloudInboundPostflight,
+} from "./whatsapp-cloud-inbound-migration-runner.mjs";
 
 const MAX_PASSFILE_BYTES = 64 * 1024;
 const OPTIONAL_TRIGGER_RUNNER = resolve(
@@ -59,6 +64,13 @@ const OFFLINE_CONTROLS = Object.freeze([
     path: resolve(
       process.cwd(),
       "scripts/operations/workspace-member-data-boundary-runner.mjs",
+    ),
+    arguments: ["--check"],
+  }),
+  Object.freeze({
+    path: resolve(
+      process.cwd(),
+      "scripts/operations/whatsapp-cloud-inbound-migration-runner.mjs",
     ),
     arguments: ["--check"],
   }),
@@ -205,6 +217,13 @@ function ledgerSql({
         or name in (
           '20260816120000_workspace_member_data_boundary',
           'workspace_member_data_boundary'
+        )
+    ) = 0 then '0' else '1' end`);
+  flags.push(String.raw`case when count(*) filter (
+      where version = '20260817230000'
+        or name in (
+          '20260817230000_whatsapp_cloud_inbound_foundation',
+          'whatsapp_cloud_inbound_foundation'
         )
     ) = 0 then '0' else '1' end`);
   return String.raw`
@@ -658,7 +677,7 @@ function requiredProbe(sql, environment, passfilePath, probeName) {
 
 function parseLedger(output) {
   const match =
-    /STAGING_DATABASE_LEDGER=([01]):([01]):([01]):([01]):([01]):([01])/u.exec(
+    /STAGING_DATABASE_LEDGER=([01]):([01]):([01]):([01]):([01]):([01]):([01])/u.exec(
       output,
     );
   if (!match) fail("ledger_probe_invalid");
@@ -669,6 +688,7 @@ function parseLedger(output) {
     metaHistory: match[4] === "1",
     workspaceMemberPrerequisite: match[5] === "1",
     workspaceMemberInGenericLedger: match[6] === "1",
+    whatsappCloudInboundInGenericLedger: match[7] === "1",
   });
 }
 
@@ -785,6 +805,7 @@ async function inspectDatabase(environment) {
           metaHistory: false,
           workspaceMemberPrerequisite: false,
           workspaceMemberInGenericLedger: false,
+          whatsappCloudInboundInGenericLedger: false,
         })
       : ledgerState.includes("STAGING_DATABASE_LEDGER_OBJECT=present")
         ? parseLedger(
@@ -804,6 +825,16 @@ async function inspectDatabase(environment) {
           readFileSync(WORKSPACE_MEMBER_BOUNDARY_CONTROL_PATH, "utf8"),
         ),
         postflightMarker: "WORKSPACE_MEMBER_DATA_BOUNDARY_POSTFLIGHT=PASS",
+        environment,
+        passfilePath: snapshotPath,
+      }),
+      whatsappCloudInbound: tableObjectState({
+        stateSql: WHATSAPP_CLOUD_INBOUND_STATE_SQL,
+        stateMarker: "WHATSAPP_CLOUD_INBOUND_OBJECT_STATE",
+        postflightSql: materializeWhatsAppCloudInboundPostflight(
+          readFileSync(WHATSAPP_CLOUD_INBOUND_CONTROL_PATH, "utf8"),
+        ),
+        postflightMarker: "WHATSAPP_CLOUD_INBOUND_POSTFLIGHT=PASS",
         environment,
         passfilePath: snapshotPath,
       }),
@@ -883,6 +914,9 @@ async function main() {
   console.log(
     `STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=${result.actions.workspaceMemberBoundary}`,
   );
+  console.log(
+    `STAGING_DATABASE_ROLLOUT_WHATSAPP_CLOUD_INBOUND=${result.actions.whatsappCloudInbound}`,
+  );
   console.log(`STAGING_DATABASE_ROLLOUT_AI_TIER=${result.actions.aiTier}`);
   console.log(
     `STAGING_DATABASE_ROLLOUT_AI_TIER_STRIPE_LEDGER=${result.actions.aiTierStripeLedger}`,
@@ -943,6 +977,7 @@ export {
   STRIPE_BILLING_LEDGER_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
   WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
+  WHATSAPP_CLOUD_INBOUND_STATE_SQL,
   exactAiTierStripeLedgerPostflight,
   exactControlledObjectState,
   exactStripeBillingLedgerPostflight,

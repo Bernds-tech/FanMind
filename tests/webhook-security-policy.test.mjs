@@ -7,6 +7,7 @@ import {
   buildMetaWebhookDiagnosticPayload,
   evaluateWebhookSecret,
   minimizeWebhookDiagnosticPayload,
+  normalizeWhatsAppCloudDiagnosticPayload,
   normalizeWebhookErrorCode,
   validateMetaHmacSignature,
   validateMetaVerifyToken,
@@ -145,6 +146,28 @@ test("recursive diagnostic minimization removes text, identifiers and credential
   );
 });
 
+test("validated WhatsApp diagnostics preserve only bounded counters", () => {
+  const diagnostic = {
+    schema_version: 1,
+    connector_whatsapp_cloud: true,
+    event_count: 2,
+    saved_count: 1,
+    duplicate_count: 0,
+    unsupported_count: 1,
+    processing_blocked: false,
+    schema_ready: true,
+  };
+  assert.deepEqual(normalizeWhatsAppCloudDiagnosticPayload(diagnostic), diagnostic);
+  assert.equal(
+    normalizeWhatsAppCloudDiagnosticPayload({ ...diagnostic, event_count: 26 }),
+    null,
+  );
+  assert.equal(
+    normalizeWhatsAppCloudDiagnosticPayload({ ...diagnostic, sender_id: "secret" }),
+    null,
+  );
+});
+
 test("Meta diagnostic payload keeps only aggregate shape and presence flags", () => {
   const payload = buildMetaWebhookDiagnosticPayload({
     sourcePlatform: "instagram",
@@ -189,6 +212,13 @@ test("only reviewed machine-readable error codes can cross the boundary", () => 
   assert.equal(
     normalizeWebhookErrorCode("database password leaked: abc"),
     "processing_failed",
+  );
+});
+
+test("idempotency conflict remains a reviewed diagnostic error code", () => {
+  assert.equal(
+    normalizeWebhookErrorCode("idempotency_conflict"),
+    "idempotency_conflict",
   );
 });
 

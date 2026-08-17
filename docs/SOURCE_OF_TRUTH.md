@@ -779,11 +779,24 @@ Vorbereitet / Beta / nicht allgemein live verkaufen:
 - Meta Pixel als consent-gesteuerte Marketing-Messung ausschließlich mit parameterlosem `PageView` auf freigegebenen öffentlichen Seiten; geschützte und dynamische CRM-Routen sowie unsichere Query-/Fragmentwerte sind fail-closed ausgeschlossen; `CompleteRegistration`, `Lead` und weitere Conversion-Events bleiben vorbereitet und unverknüpft, bis sie einzeln fachlich und datenschutzrechtlich freigegeben sind;
 - Facebook-Reply-Target- und Messenger-Hilfen;
 - Telegram-Webhook- und Bot-Grundlagen;
+- WhatsApp-Cloud-API-Inbound-Textpfad als standardmäßig deaktivierte,
+  nicht-produktive Vorbereitung mit getrennten Secrets, exakter
+  Phone-ID-Tenant-Bindung, Connection-/Phone-/WAMID-Identity,
+  SHA-256-Payload-Fingerprint, connection-gebundenen Kontakten/Threads,
+  atomarem Store und Disconnect. Ein Receipt-Tombstone verhindert nach einer
+  CRM-Nachrichtenlöschung die Wiederanlage per Provider-Retry; seine konkrete
+  Retention und Legal-Grenze bleibt extern freizugeben. Der unvermeidliche
+  GET-Query-Transport des Verify-Tokens ist im versionierten Staging-nginx für
+  die exakte Route aus Access- und route-lokalen Error-Logs ausgeschlossen;
+  ein zukünftiger Edge-Layer braucht dieselbe Grenze. Schema-Apply, realer
+  Staging-/Meta-Lauf, externe Freigaben und Production-Aktivierung bleiben
+  offen; Production ist technisch verboten;
 - Stripe Checkout für Starter.
 
 Roadmap / Coming Soon:
 
-- WhatsApp, TikTok, X, Discord und weitere Kanäle;
+- WhatsApp (trotz vorbereiteten deaktivierten Inbound-Codes nicht live),
+  TikTok, X, Discord und weitere Kanäle;
 - vollständige Social-Synchronisation jenseits der ausdrücklich abgegrenzten Meta-Pilotfunktionen;
 - Kampagnen und vollständige Analytics-Suite; die abgegrenzte Meta-Content-Intelligence-Grundlage ist separat in `docs/integrations/META_CONTENT_INTELLIGENCE.md` definiert;
 - komplexe Rollen und Enterprise-Governance;

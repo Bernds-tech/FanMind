@@ -207,6 +207,7 @@ test("database rollout evidence is canonical, complete and fail-closed", () => {
     "> fanmind-temp@0.1.0 db:staging-rollout-state:run",
     "STAGING_DATABASE_ROLLOUT_STATE=PASS",
     "STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=verify",
+    "STAGING_DATABASE_ROLLOUT_WHATSAPP_CLOUD_INBOUND=apply",
     "STAGING_DATABASE_ROLLOUT_META_CONTENT=apply",
     "STAGING_DATABASE_ROLLOUT_AI_TIER=verify",
     "STAGING_DATABASE_ROLLOUT_GENERIC_MIGRATION=disabled",
@@ -221,6 +222,7 @@ test("database rollout evidence is canonical, complete and fail-closed", () => {
     canonicalizeStagingRolloutEvidence(output),
     [
       "STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=verify",
+      "STAGING_DATABASE_ROLLOUT_WHATSAPP_CLOUD_INBOUND=apply",
       "STAGING_DATABASE_ROLLOUT_AI_TIER=verify",
       "STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=apply",
       "STAGING_DATABASE_ROLLOUT_META_CONTENT=apply",
@@ -235,6 +237,7 @@ test("database rollout evidence is canonical, complete and fail-closed", () => {
 
   for (const invalid of [
     output.replace("STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=verify\n", ""),
+    output.replace("STAGING_DATABASE_ROLLOUT_WHATSAPP_CLOUD_INBOUND=apply\n", ""),
     output.replace("STAGING_DATABASE_ROLLOUT_META_CATCHUP=skip\n", ""),
     `${output}\nSTAGING_DATABASE_ROLLOUT_META_CATCHUP=skip`,
     output.replace("STAGING_DATABASE_ROLLOUT_STATE=PASS", "STAGING_DATABASE_ROLLOUT_STATE=BLOCKED"),

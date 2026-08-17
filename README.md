@@ -181,6 +181,12 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
   und nutzt ausschließlich diese Session- und Ingestion-Endpunkte. Es hält das
   Sitzungstoken nur im Speicher und bestätigt lediglich den Empfang;
   Besucher-KI, Rückkanal und Outbound-Versand sind nicht aktiviert.
+- WhatsApp Cloud API besitzt einen getrennten, standardmäßig deaktivierten
+  und in Production technisch gesperrten Inbound-Textpfad. Getrennte Secrets,
+  Raw-Body-HMAC, exakte Phone-ID-Tenant-Bindung, atomarer Lease-/CRM-Store und
+  Disconnect sind vorbereitet; Controlled Migration, reales Staging-/Meta-
+  Konto, Provider-/Legal-Freigaben und jede Aktivierung bleiben offen. Es gibt
+  keinen Send-Endpunkt und keine Provider-Aufrufe.
 - Vorbereitetes Inbox-Handoff: Production besitzt `assigned_user_id` noch
   nicht; die Anwendung erkennt die fehlende Spalte und blendet Übernehmen und
   Freigeben fail-closed aus. Der Codepfad darf erst nach einem getrennten, in

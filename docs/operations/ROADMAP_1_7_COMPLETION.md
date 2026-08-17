@@ -104,14 +104,19 @@ nicht als ausgeführte Abnahme.
 
 - **Code:** Facebook-/Instagram-OAuth, explizite Ressourcenauswahl, Webhook-
   Ingestion, begrenzte Historie, Content-Cache, Conversation-Fortsetzung und
-  Catch-up-Queue sind vorbereitet. WhatsApp besitzt nur Parser-/Speicher-
-  Grundlage und bleibt ohne eigenen freigegebenen Cloud-API-Kontrollpfad
-  inaktiv. Kein Kanal darf allgemein live erscheinen.
+  Catch-up-Queue sind vorbereitet. WhatsApp besitzt nun einen getrennten,
+  standardmäßig deaktivierten offiziellen Cloud-API-Inbound-Textpfad mit
+  Raw-Body-HMAC, strikter Providerform, exakter Phone-ID-Tenant-Bindung,
+  atomarem Lease-/Receipt-/CRM-Store und Disconnect-Cleanup. Seine Controlled
+  Migration ist nur checksum-geprüft und nicht angewendet; Staging-, Meta-,
+  Legal- und Production-Freigaben bleiben offen. Kein Kanal darf allgemein
+  live erscheinen.
 - **Staging/Infrastruktur:** Meta-Continuation und Catch-up-Queue kontrolliert
   anwenden, rollback-only Acceptances, Workspace-Processing und echten
-  synthetischen Webhook-/Cursor-E2E ausführen. Für WhatsApp sind getrennte
-  Cloud-API-Fixtures, Tenant-Bindung, Signaturprüfung, Idempotenz und Cleanup
-  erforderlich.
+  synthetischen Webhook-/Cursor-E2E ausführen. Für WhatsApp sind die
+  providerfreien Cloud-API-Fixtures grün; Controlled Migration, reale
+  Tenant-Bindung, Signatur-/Idempotenz-/Lease-Reclaim-/Disconnect-E2E und
+  Cleanup müssen noch isoliert in Staging abgenommen werden.
 - **Extern:** Meta App Review, Advanced Access, Business Verification,
   WhatsApp-Cloud-API-Zugang sowie Rechtsgrundlage, Transparenz, AVV und
   Aufbewahrungsfreigabe.

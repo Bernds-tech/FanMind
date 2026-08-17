@@ -47,6 +47,7 @@ import {
 } from "./config";
 import {
   minimizeWebhookDiagnosticPayload,
+  normalizeWhatsAppCloudDiagnosticPayload,
   normalizeWebhookErrorCode,
 } from "@/lib/webhookSecurityPolicy.mjs";
 import {
@@ -676,6 +677,59 @@ type SocialConnectionResult = {
   error: Error | null;
   processingBlocked?: boolean;
 };
+
+export type WhatsAppCloudConnectionLookupResult = {
+  connection: SocialConnectionRow | null;
+  error: Error | null;
+  processingBlocked: boolean;
+  schemaReady: boolean;
+  lookupStatus:
+    | "matched"
+    | "schema_not_ready"
+    | "unmapped"
+    | "ambiguous"
+    | "processing_blocked"
+    | "lookup_failed";
+};
+
+export type WhatsAppCloudReceiptClaimResult = {
+  receiptId: string | null;
+  leaseToken: string | null;
+  outcome:
+    | "claimed"
+    | "duplicate"
+    | "in_progress"
+    | "exhausted"
+    | "cancelled"
+    | "conflict"
+    | "claim_failed";
+  error: Error | null;
+};
+
+export type WhatsAppCloudStoreResult = {
+  conversationMessageId: string | null;
+  outcome:
+    | "stored"
+    | "duplicate"
+    | "processing_blocked"
+    | "connection_unavailable"
+    | "stale_lease"
+    | "conflict"
+    | "store_failed";
+  error: Error | null;
+};
+
+type WhatsAppCloudSchemaStateRow = { ready: boolean };
+type WhatsAppCloudReceiptClaimRow = {
+  receipt_id: string;
+  lease_token: string | null;
+  outcome: string;
+};
+type WhatsAppCloudStoreRow = {
+  conversation_message_id: string | null;
+  outcome: string;
+};
+type WhatsAppCloudDisconnectRow = { disconnected: boolean };
 
 export type WorkspaceProcessingEntitlementResult = {
   allowed: boolean;
@@ -2111,6 +2165,264 @@ export async function findMetaSocialConnectionByPageId(
   return { connection: result.data, error: null };
 }
 
+export async function findWhatsAppCloudConnectionByPhoneNumberId(
+  phoneNumberId: string,
+): Promise<WhatsAppCloudConnectionLookupResult> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return whatsappCloudConnectionLookupError("lookup_failed");
+  }
+
+  const schemaState = await postgrestRequest<WhatsAppCloudSchemaStateRow>(
+    "rpc/whatsapp_cloud_inbound_schema_state",
+    "POST",
+    {},
+    serviceAccessToken,
+    { select: "ready", single: true },
+  );
+  if (schemaState.error || schemaState.data?.ready !== true) {
+    return whatsappCloudConnectionLookupError("schema_not_ready");
+  }
+
+  const result = await postgrestSelect<SocialConnectionRow[]>(
+    "social_connections",
+    serviceAccessToken,
+    SOCIAL_CONNECTION_PUBLIC_COLUMNS,
+    [
+      ["platform", "whatsapp"],
+      ["provider", "meta_whatsapp_cloud"],
+      ["status", "connected"],
+      ["webhook_subscribed", true],
+      ["page_id", phoneNumberId],
+    ],
+    2,
+  );
+  if (result.error) return whatsappCloudConnectionLookupError("lookup_failed");
+
+  const matches = result.data ?? [];
+  if (matches.length === 0) {
+    return {
+      connection: null,
+      error: null,
+      processingBlocked: false,
+      schemaReady: true,
+      lookupStatus: "unmapped",
+    };
+  }
+  if (matches.length !== 1) {
+    return whatsappCloudConnectionLookupError("ambiguous", true);
+  }
+
+  const entitlement = await getWorkspaceProcessingEntitlement(
+    matches[0].workspace_id,
+  );
+  if (entitlement.error) {
+    return whatsappCloudConnectionLookupError("lookup_failed", true);
+  }
+  if (!entitlement.allowed) {
+    return {
+      connection: matches[0],
+      error: null,
+      processingBlocked: true,
+      schemaReady: true,
+      lookupStatus: "processing_blocked",
+    };
+  }
+
+  return {
+    connection: matches[0],
+    error: null,
+    processingBlocked: false,
+    schemaReady: true,
+    lookupStatus: "matched",
+  };
+}
+
+export async function claimWhatsAppCloudInboundMessage(input: {
+  workspaceId: string;
+  socialConnectionId: string;
+  phoneNumberId: string;
+  externalMessageId: string;
+  payloadFingerprint: string;
+}): Promise<WhatsAppCloudReceiptClaimResult> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) return whatsappCloudReceiptClaimError();
+
+  const result = await postgrestRequest<WhatsAppCloudReceiptClaimRow>(
+    "rpc/claim_whatsapp_cloud_inbound_message",
+    "POST",
+    {
+      p_workspace_id: input.workspaceId,
+      p_social_connection_id: input.socialConnectionId,
+      p_phone_number_id: input.phoneNumberId,
+      p_external_message_id: input.externalMessageId,
+      p_payload_fingerprint: input.payloadFingerprint,
+      p_lease_seconds: 120,
+    },
+    serviceAccessToken,
+    { select: "receipt_id,lease_token,outcome", single: true },
+  );
+  const allowedOutcomes = new Set([
+    "claimed",
+    "duplicate",
+    "in_progress",
+    "exhausted",
+    "cancelled",
+    "conflict",
+  ]);
+  if (
+    result.error ||
+    !result.data?.receipt_id ||
+    !allowedOutcomes.has(result.data.outcome) ||
+    (result.data.outcome === "claimed" && !result.data.lease_token) ||
+    (result.data.outcome !== "claimed" && result.data.lease_token !== null)
+  ) {
+    return whatsappCloudReceiptClaimError();
+  }
+
+  return {
+    receiptId: result.data.receipt_id,
+    leaseToken: result.data.lease_token,
+    outcome: result.data.outcome as Exclude<
+      WhatsAppCloudReceiptClaimResult["outcome"],
+      "claim_failed"
+    >,
+    error: null,
+  };
+}
+
+export async function storeWhatsAppCloudInboundMessage(input: {
+  workspaceId: string;
+  socialConnectionId: string;
+  receiptId: string;
+  leaseToken: string;
+  phoneNumberId: string;
+  senderId: string;
+  externalMessageId: string;
+  externalThreadId: string;
+  authorLabel: string;
+  content: string;
+  receivedAt: string;
+  payloadFingerprint: string;
+}): Promise<WhatsAppCloudStoreResult> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return {
+      conversationMessageId: null,
+      outcome: "store_failed",
+      error: new Error("WhatsApp Cloud atomic store unavailable."),
+    };
+  }
+  const result = await postgrestRequest<WhatsAppCloudStoreRow>(
+    "rpc/store_whatsapp_cloud_inbound_message",
+    "POST",
+    {
+      p_workspace_id: input.workspaceId,
+      p_social_connection_id: input.socialConnectionId,
+      p_receipt_id: input.receiptId,
+      p_lease_token: input.leaseToken,
+      p_phone_number_id: input.phoneNumberId,
+      p_sender_id: input.senderId,
+      p_external_message_id: input.externalMessageId,
+      p_external_thread_id: input.externalThreadId,
+      p_author_label: input.authorLabel,
+      p_content: input.content,
+      p_received_at: input.receivedAt,
+      p_payload_fingerprint: input.payloadFingerprint,
+    },
+    serviceAccessToken,
+    { select: "conversation_message_id,outcome", single: true },
+  );
+  const allowedOutcomes = new Set([
+    "stored",
+    "duplicate",
+    "processing_blocked",
+    "connection_unavailable",
+    "stale_lease",
+    "conflict",
+  ]);
+  if (result.error || !result.data || !allowedOutcomes.has(result.data.outcome)) {
+    return {
+      conversationMessageId: null,
+      outcome: "store_failed",
+      error: new Error("WhatsApp Cloud atomic store failed."),
+    };
+  }
+  if (
+    (result.data.outcome === "stored" || result.data.outcome === "duplicate") &&
+    !result.data.conversation_message_id
+  ) {
+    return {
+      conversationMessageId: null,
+      outcome: "store_failed",
+      error: new Error("WhatsApp Cloud atomic store result invalid."),
+    };
+  }
+  return {
+    conversationMessageId: result.data.conversation_message_id,
+    outcome: result.data.outcome as Exclude<
+      WhatsAppCloudStoreResult["outcome"],
+      "store_failed"
+    >,
+    error: null,
+  };
+}
+
+export async function disconnectWhatsAppCloudInboundConnection(input: {
+  workspaceId: string;
+  socialConnectionId: string;
+}): Promise<{ disconnected: boolean; error: Error | null }> {
+  const serviceAccessToken = getServiceAccessToken();
+  if (!serviceAccessToken) {
+    return {
+      disconnected: false,
+      error: new Error("WhatsApp Cloud disconnect unavailable."),
+    };
+  }
+  const result = await postgrestRequest<WhatsAppCloudDisconnectRow>(
+    "rpc/disconnect_whatsapp_cloud_inbound_connection",
+    "POST",
+    {
+      p_workspace_id: input.workspaceId,
+      p_social_connection_id: input.socialConnectionId,
+    },
+    serviceAccessToken,
+    { select: "disconnected", single: true },
+  );
+  if (result.error || result.data?.disconnected !== true) {
+    return {
+      disconnected: false,
+      error: new Error("WhatsApp Cloud disconnect failed."),
+    };
+  }
+  return { disconnected: true, error: null };
+}
+
+function whatsappCloudConnectionLookupError(
+  lookupStatus: Extract<
+    WhatsAppCloudConnectionLookupResult["lookupStatus"],
+    "schema_not_ready" | "ambiguous" | "lookup_failed"
+  >,
+  schemaReady = false,
+): WhatsAppCloudConnectionLookupResult {
+  return {
+    connection: null,
+    error: new Error("WhatsApp Cloud connection lookup unavailable."),
+    processingBlocked: false,
+    schemaReady,
+    lookupStatus,
+  };
+}
+
+function whatsappCloudReceiptClaimError(): WhatsAppCloudReceiptClaimResult {
+  return {
+    receiptId: null,
+    leaseToken: null,
+    outcome: "claim_failed",
+    error: new Error("WhatsApp Cloud receipt claim unavailable."),
+  };
+}
+
 export async function findTelegramWebhookWorkspaceId(): Promise<{
   workspaceId: string | null;
   error: Error | null;
@@ -2342,7 +2654,7 @@ export async function sendManualTelegramMessage(input: {
 export async function createMetaWebhookDebugEvent(input: {
   workspaceId?: string | null;
   socialConnectionId?: string | null;
-  platform?: "facebook" | "instagram" | "telegram";
+  platform?: "facebook" | "instagram" | "whatsapp" | "telegram";
   eventType: "feed" | "feed_comment" | "messages" | "comments" | "unknown";
   pageId?: string | null;
   senderId?: string | null;
@@ -2376,7 +2688,13 @@ export async function createMetaWebhookDebugEvent(input: {
   const errorReason = input.errorReason
     ? normalizeWebhookErrorCode(input.errorReason)
     : null;
-  const minimized = minimizeWebhookDiagnosticPayload(input.rawPayload);
+  const boundedWhatsAppDiagnostic =
+    input.platform === "whatsapp"
+      ? normalizeWhatsAppCloudDiagnosticPayload(input.rawPayload)
+      : null;
+  const minimized =
+    boundedWhatsAppDiagnostic ??
+    minimizeWebhookDiagnosticPayload(input.rawPayload);
   const rawPayload =
     minimized && typeof minimized === "object" && !Array.isArray(minimized)
       ? minimized

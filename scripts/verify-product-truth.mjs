@@ -22,9 +22,13 @@ const checkedFiles = [
   ".github/workflows/browser-e2e-staging-write.yml",
   ".github/workflows/workspace-member-data-boundary-staging-apply.yml",
   ".github/workflows/workspace-member-data-boundary-staging-verify.yml",
+  ".github/workflows/whatsapp-cloud-inbound-staging-apply.yml",
+  ".github/workflows/whatsapp-cloud-inbound-staging-verify.yml",
   ".github/workflows/staging-synthetic-fixture-provisioning.yml",
   ".github/workflows/staging-email-provider-acceptance.yml",
   ".github/workflows/provision-staging-host.yml",
+  "ops/nginx/fanmind-staging.http.conf",
+  "scripts/operations/verify-staging-nginx-whatsapp-boundary.awk",
   ".github/workflows/restore-drill-host-readiness.yml",
   ".github/workflows/restore-drill-resource-readiness.yml",
   ".github/workflows/restore-drill-database.yml",
@@ -67,6 +71,22 @@ const checkedFiles = [
   "tests/csv-import-parser.test.mjs",
   "tests/csv-import-atomicity.test.mjs",
   "tests/test-suite-coverage.test.mjs",
+  "src/app/api/webhooks/whatsapp/route.ts",
+  "src/lib/webhookSecurityPolicy.mjs",
+  "src/lib/whatsappCloudInboundPolicy.mjs",
+  "src/lib/whatsappCloudInboundStagingPolicy.mjs",
+  "src/lib/whatsappWebhook.ts",
+  "src/lib/channelSources.ts",
+  "src/lib/supabase/server.ts",
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  "scripts/operations/whatsapp-cloud-inbound-migration-runner.mjs",
+  "tests/whatsapp-cloud-inbound.test.mjs",
+  "tests/whatsapp-cloud-inbound-staging.test.mjs",
+  "tests/staging-deploy-policy.test.mjs",
+  "tests/webhook-security-policy.test.mjs",
+  "docs/integrations/WHATSAPP_CLOUD_INBOUND.md",
+  "docs/operations/STAGING_PROVISIONING.md",
+  "docs/security/WEBHOOK_LOG_RETENTION.md",
   "docs/testing/BROWSER_E2E.md",
   "docs/operations/ROADMAP_1_7_COMPLETION.md",
   "docs/operations/STAGING_DATABASE_ROLLOUT_STATE.md",
@@ -321,6 +341,7 @@ requireText(
 );
 for (const field of [
   "STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY",
+  "STAGING_DATABASE_ROLLOUT_WHATSAPP_CLOUD_INBOUND",
   "STAGING_DATABASE_ROLLOUT_AI_TIER",
   "STAGING_DATABASE_ROLLOUT_MOBILE_PUSH",
   "STAGING_DATABASE_ROLLOUT_META_CONTENT",
@@ -710,6 +731,302 @@ requireText(
   "noch keinen atomaren\n  Processing-Entitlement-Check",
   "Website Chat muss bis zum atomaren DB-Processing-Gate ausdrücklich deaktiviert bleiben.",
 );
+
+// WhatsApp Cloud bleibt ein explizit deaktivierter Non-Production-Inbound-Pfad.
+requireText(
+  "package.json",
+  '"db:whatsapp-cloud-inbound:check": "node scripts/operations/whatsapp-cloud-inbound-migration-runner.mjs --check"',
+  "Die WhatsApp-Controlled-Migration muss checksum-gepinnt offline prüfbar registriert sein.",
+);
+requireText(
+  "package.json",
+  '"db:whatsapp-cloud-inbound:verify": "node scripts/operations/whatsapp-cloud-inbound-migration-runner.mjs --verify"',
+  "WhatsApp muss einen getrennten read-only Staging-Verify besitzen.",
+);
+requireText(
+  "package.json",
+  '"db:whatsapp-cloud-inbound:apply": "node scripts/operations/whatsapp-cloud-inbound-migration-runner.mjs --apply"',
+  "WhatsApp muss einen getrennten geschützten Staging-Apply besitzen.",
+);
+requireText(
+  "src/lib/whatsappCloudInboundPolicy.mjs",
+  'reason: runtime === "production" ? "production_forbidden" : "runtime_unknown"',
+  "Die WhatsApp-Inbound-Policy muss Production auch bei gesetztem Flag sperren.",
+);
+requireText(
+  "src/lib/whatsappCloudInboundPolicy.mjs",
+  'return invalidPayload("duplicate_message_conflict")',
+  "Widersprüchliche providerinterne Message-ID-Duplikate müssen fail-closed bleiben.",
+);
+requireText(
+  "src/lib/whatsappCloudInboundPolicy.mjs",
+  `event?.sourcePlatform,
+    event?.sourceType,
+    event?.messageType,
+    event?.messageKind,
+    event?.direction,
+    event?.content,
+    event?.externalMessageId,
+    event?.externalThreadId,
+    event?.authorLabel,
+    event?.phoneNumberId,
+    event?.senderId,
+    event?.receivedAt,`,
+  "Der WhatsApp-Fingerprint muss die zwölf normalisierten Eventfelder in exakter Reihenfolge binden.",
+);
+requireText(
+  "src/lib/whatsappCloudInboundPolicy.mjs",
+  '.map((value) => `${Buffer.byteLength(value, "utf8")}:${value}`)',
+  "Der WhatsApp-Fingerprint muss jedes normalisierte Feld mit seiner UTF-8-Bytelänge rahmen.",
+);
+requireText(
+  "src/app/api/webhooks/whatsapp/route.ts",
+  "WHATSAPP_CLOUD_APP_SECRET",
+  "Der WhatsApp-Webhook muss ein getrenntes App Secret verwenden.",
+);
+requireText(
+  "src/lib/whatsappWebhook.ts",
+  "storeWhatsAppCloudInboundMessage",
+  "WhatsApp-Inbound darf nur den atomaren Store-RPC verwenden.",
+);
+requireText(
+  "src/lib/channelSources.ts",
+  'statusText: "Vorbereitet · Inbound-Text standardmäßig aus"',
+  "Die Kanalwahrheit darf den deaktivierten WhatsApp-Textpfad nicht als live oder medienfähig darstellen.",
+);
+forbidIn(
+  "src/lib/channelSources.ts",
+  /whatsapp_messages:\s*\{[\s\S]{0,800}?mediaSupported:\s*true/iu,
+  "Der vorbereitete WhatsApp-Textpfad darf keine Medienunterstützung behaupten.",
+);
+requireText(
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  "force row level security",
+  "WhatsApp-Receipts müssen FORCE RLS verwenden.",
+);
+requireText(
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  "and receipt.lease_token = p_lease_token",
+  "Der atomare WhatsApp-Store muss exakt an das aktuelle Lease-Token gebunden sein.",
+);
+requireText(
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  "workspace_allowed := public.workspace_processing_allowed_contract(",
+  "Der atomare WhatsApp-Store muss den kanonischen Processing-Vertrag verwenden.",
+);
+for (const fragment of [
+  "add column whatsapp_social_connection_id uuid",
+  "add column whatsapp_phone_number_id text",
+  "add column whatsapp_payload_fingerprint text",
+]) {
+  requireText(
+    "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+    fragment,
+    "WhatsApp muss Message und Receipt an Connection, Phone-ID, WAMID und Payload-Fingerprint binden.",
+  );
+}
+requireText(
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  `create unique index conversation_messages_whatsapp_identity_unique_idx
+  on public.conversation_messages (
+    whatsapp_social_connection_id,
+    whatsapp_phone_number_id,
+    external_message_id
+  )`,
+  "Die gespeicherte WhatsApp-Nachrichtenidentity muss exakt Connection, Phone-ID und WAMID umfassen.",
+);
+requireText(
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  `constraint whatsapp_cloud_receipt_identity_unique unique (
+    social_connection_id,
+    phone_number_id,
+    external_message_id
+  )`,
+  "Die WhatsApp-Receipt-Identity muss exakt Connection, Phone-ID und WAMID umfassen.",
+);
+requireText(
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  "expected_payload_fingerprint := pg_catalog.encode(",
+  "Der atomare Store muss den normalisierten SHA-256-Payload-Fingerprint unabhängig nachrechnen.",
+);
+requireText(
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  `connection_bound_thread_id :=
+    p_social_connection_id::text || ':' || normalized_thread_id;`,
+  "WhatsApp-Threads müssen an die konkrete Social Connection gebunden bleiben.",
+);
+requireText(
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  `connection_bound_contact_handle :=
+    p_social_connection_id::text || ':' || normalized_sender_id;`,
+  "WhatsApp-Kontakte müssen an die konkrete Social Connection gebunden bleiben.",
+);
+requireText(
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  "claimed_receipt.payload_fingerprint is distinct from",
+  "Der atomare Store muss Payload-Drift am geclaimten Receipt fail-closed erkennen.",
+);
+requireText(
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  "on delete set null (conversation_message_id)",
+  "Eine CRM-Nachrichtenlöschung muss den WhatsApp-Receipt als Anti-Resurrection-Tombstone erhalten.",
+);
+forbidIn(
+  "supabase/controlled/20260817230000_whatsapp_cloud_inbound_foundation.sql",
+  /create unique index conversation_messages_whatsapp_external_message_unique_idx/iu,
+  "Die veraltete workspaceweite WhatsApp-WAMID-Identity darf nicht neu angelegt werden.",
+);
+requireText(
+  "src/app/api/webhooks/whatsapp/route.ts",
+  'result.errorCode === "idempotency_conflict"',
+  "Ein WhatsApp-Payload-Drift muss als eigener Idempotenzkonflikt behandelt werden.",
+);
+requireText(
+  "src/app/api/webhooks/whatsapp/route.ts",
+  "? 409",
+  "Ein WhatsApp-Payload-Drift muss öffentlich HTTP 409 liefern.",
+);
+requireText(
+  "scripts/operations/whatsapp-cloud-inbound-migration-runner.mjs",
+  "WHATSAPP_CLOUD_INBOUND_DATABASE_WRITE=not_performed",
+  "Der WhatsApp-Offline-Check muss jeden Datenbankschreibvorgang ausdrücklich ausschließen.",
+);
+requireText(
+  "docs/integrations/WHATSAPP_CLOUD_INBOUND.md",
+  "Die Controlled Migration wurde nicht",
+  "Das WhatsApp-Runbook muss den nicht angewendeten Schema-Stand ehrlich ausweisen.",
+);
+requireText(
+  "docs/integrations/WHATSAPP_CLOUD_INBOUND.md",
+  "wurde weder mit einem realen Meta-Konto\nnoch in Staging extern abgenommen",
+  "Das WhatsApp-Runbook darf keinen realen Meta- oder Staging-Lauf vortäuschen.",
+);
+requireText(
+  "docs/integrations/WHATSAPP_CLOUD_INBOUND.md",
+  "Receipt-Tombstone-Aufbewahrung einschließlich Löschlauf extern",
+  "Das WhatsApp-Runbook muss die noch offene externe Tombstone-Retention ausdrücklich ausweisen.",
+);
+requireText(
+  "ops/nginx/fanmind-staging.http.conf",
+  `location = /api/webhooks/whatsapp {
+        access_log off;
+        error_log /dev/null crit;
+        proxy_pass http://127.0.0.1:3001;`,
+  "Der versionierte Staging-vHost muss die exakte WhatsApp-Route aus Access- und route-lokalen Error-Logs ausschließen.",
+);
+for (const fragment of [
+  "WHATSAPP_TLS_BOUNDARY",
+  "scripts/operations/verify-staging-nginx-whatsapp-boundary.awk",
+  'expected_certificate="$STAGING_CERTIFICATE"',
+  'expected_certificate_key="$STAGING_CERTIFICATE_KEY"',
+  'if [ "$WHATSAPP_TLS_BOUNDARY" != "valid" ]; then',
+  "Existing staging TLS virtual host lacks the exact WhatsApp query-redaction boundary.",
+]) {
+  requireText(
+    ".github/workflows/provision-staging-host.yml",
+    fragment,
+    "Die Host-Provisionierung muss bei einer fehlenden oder abweichenden WhatsApp-Loggrenze fail-closed stoppen.",
+  );
+}
+for (const fragment of [
+  "function without_comment(",
+  "function brace_count(",
+  "function normalized_decimal_port(",
+  "server_insecure_443_listens == 0",
+  "server_ipv6_443_listens <= 1",
+  'normalized == "listen 443 ssl;"',
+  'normalized == "server_name staging.fanmind.ch;"',
+  'normalized == "location = /api/webhooks/whatsapp {"',
+  'normalized == "access_log off;"',
+  'normalized == "proxy_set_header Connection \\"upgrade\\";"',
+  "location_unknown_directives == 0",
+  "server_request_flow_directives == 0",
+  "port_443_servers != 1",
+  "global_whatsapp_path_locations != 1",
+]) {
+  requireText(
+    "scripts/operations/verify-staging-nginx-whatsapp-boundary.awk",
+    fragment,
+    "Der nginx-Verifier muss TLS-Host und WhatsApp-Loggrenze strukturell im selben eindeutigen Serverblock binden.",
+  );
+}
+for (const fragment of [
+  "protectedHttpButLoggedTls",
+  "quotedBraceDepthBypass",
+  "duplicateHttpLocation",
+  "splitServerDeclarationBypass",
+  "splitListenDirectiveBypass",
+  "splitAccessLogDirectiveBypass",
+  "rewriteRedirectBypass",
+  "serverRewriteBypass",
+  "closeThenServerRewriteBypass",
+  "quotedListen443Bypass",
+  "leadingZeroListen443Bypass",
+  "addressLeadingZeroListen443Bypass",
+  "ipv6ListenWithoutSsl",
+]) {
+  requireText(
+    "tests/staging-deploy-policy.test.mjs",
+    fragment,
+    "Die nginx-Policy muss verteilte und parserverfälschende Loggrenzen regressionsprüfen.",
+  );
+}
+requireText(
+  "src/lib/webhookSecurityPolicy.mjs",
+  '"idempotency_conflict",',
+  "Der geprüfte WhatsApp-Idempotenzkonflikt muss als sichere Diagnoseklasse erhalten bleiben.",
+);
+requireText(
+  "tests/webhook-security-policy.test.mjs",
+  "idempotency conflict remains a reviewed diagnostic error code",
+  "Die sichere WhatsApp-Konfliktdiagnose muss regressionsgeprüft sein.",
+);
+requireText(
+  "docs/operations/STAGING_PROVISIONING.md",
+  "jedes später vorgeschaltete CDN, WAF oder Load-Balancer eine gleichwertige",
+  "Das Staging-Runbook muss die Query-Redaktionsgrenze auf künftige Edge-Systeme ausdehnen.",
+);
+requireText(
+  "docs/security/WEBHOOK_LOG_RETENTION.md",
+  "Social-Connection-ID,\n`phone_number_id`, WAMID und der SHA-256-Fingerprint",
+  "Der Retention-Vertrag muss die erhaltene WhatsApp-Tombstone-Identity benennen.",
+);
+requireText(
+  "tests/whatsapp-cloud-inbound.test.mjs",
+  "route authenticates bounded raw bytes before JSON and has no secret fallbacks",
+  "Signaturreihenfolge, Secret-Trennung und Outbound-Sperre müssen regressionsgeprüft sein.",
+);
+forbidIn(
+  "src/app/api/webhooks/whatsapp/route.ts",
+  /fetch\s*\(|send(?:Message|_message)|graph\.facebook/iu,
+  "Der WhatsApp-Inbound-Endpoint darf keine Provider- oder Sendelogik enthalten.",
+);
+for (const [file, confirmation] of [
+  [
+    ".github/workflows/whatsapp-cloud-inbound-staging-apply.yml",
+    "apply-whatsapp-cloud-inbound",
+  ],
+  [
+    ".github/workflows/whatsapp-cloud-inbound-staging-verify.yml",
+    "verify-whatsapp-cloud-inbound",
+  ],
+]) {
+  requireText(file, "workflow_dispatch:", `${file} darf nur manuell starten.`);
+  requireText(file, "environment: staging", `${file} muss Staging-geschützt sein.`);
+  requireText(file, confirmation, `${file} muss eine eigene exakte Bestätigung verlangen.`);
+  requireText(file, "/api/version", `${file} muss den deployten App-Commit zuerst binden.`);
+  requireText(file, "/api/health", `${file} muss die Staging-Gesundheit vor DB-Zugriff prüfen.`);
+  requireText(
+    file,
+    "STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=verify",
+    `${file} muss die vollständige Member-Boundary hart voraussetzen.`,
+  );
+  forbidIn(
+    file,
+    /WHATSAPP_CLOUD_(?:APP_SECRET|WEBHOOK_VERIFY_TOKEN)/u,
+    `${file} darf keine Provider-Secrets laden.`,
+  );
+}
 
 // Alte oder widersprüchliche öffentliche Wahrheit.
 forbidRuntime(

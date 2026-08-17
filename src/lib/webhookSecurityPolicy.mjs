@@ -29,6 +29,16 @@ const WEBHOOK_ERROR_CODES = Object.freeze([
   "workspace_not_configured",
   "workspace_lookup_failed",
   "connection_lookup_failed",
+  "connection_unavailable",
+  "connection_ambiguous",
+  "unmapped_phone_number",
+  "schema_not_ready",
+  "processing_blocked",
+  "idempotency_claim_failed",
+  "idempotency_conflict",
+  "idempotency_in_progress",
+  "idempotency_exhausted",
+  "stale_lease",
   "catchup_enqueue_failed",
   "fallback_workspace_failed",
   "message_persist_failed",
@@ -246,6 +256,49 @@ function minimizeWebhookDiagnosticPayload(value, options = {}, state = {}) {
   return result;
 }
 
+function normalizeWhatsAppCloudDiagnosticPayload(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const expectedKeys = [
+    "connector_whatsapp_cloud",
+    "duplicate_count",
+    "event_count",
+    "processing_blocked",
+    "saved_count",
+    "schema_ready",
+    "schema_version",
+    "unsupported_count",
+  ];
+  if (
+    Object.keys(value).sort().join("|") !== expectedKeys.join("|") ||
+    value.schema_version !== 1 ||
+    value.connector_whatsapp_cloud !== true ||
+    typeof value.processing_blocked !== "boolean" ||
+    typeof value.schema_ready !== "boolean"
+  ) {
+    return null;
+  }
+  for (const key of [
+    "event_count",
+    "saved_count",
+    "duplicate_count",
+    "unsupported_count",
+  ]) {
+    if (!Number.isInteger(value[key]) || value[key] < 0 || value[key] > 25) {
+      return null;
+    }
+  }
+  return Object.freeze({
+    schema_version: 1,
+    connector_whatsapp_cloud: true,
+    event_count: value.event_count,
+    saved_count: value.saved_count,
+    duplicate_count: value.duplicate_count,
+    unsupported_count: value.unsupported_count,
+    processing_blocked: value.processing_blocked,
+    schema_ready: value.schema_ready,
+  });
+}
+
 function buildMetaWebhookDiagnosticPayload(event) {
   const attachments = Array.isArray(event?.attachments)
     ? event.attachments
@@ -300,6 +353,7 @@ export {
   evaluateWebhookSecret,
   isProductionRuntime,
   minimizeWebhookDiagnosticPayload,
+  normalizeWhatsAppCloudDiagnosticPayload,
   normalizeWebhookErrorCode,
   timingSafeTextEqual,
   validateMetaHmacSignature,

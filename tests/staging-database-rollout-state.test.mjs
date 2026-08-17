@@ -27,6 +27,7 @@ import {
   MOBILE_PUSH_STATE_SQL,
   STRIPE_BILLING_LEDGER_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
+  WHATSAPP_CLOUD_INBOUND_STATE_SQL,
   WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
   exactAiTierStripeLedgerPostflight,
   exactControlledObjectState,
@@ -78,6 +79,8 @@ const controlledStagingDatabaseWorkflowPaths = [
   "workspace-member-data-boundary-staging-apply.yml",
   "workspace-member-data-boundary-staging-verify.yml",
   "workspace-processing-staging-acceptance.yml",
+  "whatsapp-cloud-inbound-staging-apply.yml",
+  "whatsapp-cloud-inbound-staging-verify.yml",
 ];
 const tlsStagingDatabaseWorkflowPaths = [
   "ai-tier-stripe-event-ledger-staging.yml",
@@ -96,6 +99,8 @@ const tlsStagingDatabaseWorkflowPaths = [
   "workspace-member-data-boundary-staging-apply.yml",
   "workspace-member-data-boundary-staging-verify.yml",
   "workspace-processing-staging-acceptance.yml",
+  "whatsapp-cloud-inbound-staging-apply.yml",
+  "whatsapp-cloud-inbound-staging-verify.yml",
 ];
 
 function validEnvironment() {
@@ -162,9 +167,11 @@ test("action derivation prevents every ledger and object double-apply", () => {
         metaHistory: false,
         workspaceMemberPrerequisite: true,
         workspaceMemberInGenericLedger: false,
+        whatsappCloudInboundInGenericLedger: false,
       },
       objects: {
         workspaceMemberBoundary: "absent",
+        whatsappCloudInbound: "absent",
         aiTier: "current",
         mobilePush: "current",
         metaContent: "absent",
@@ -176,6 +183,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
     {
       actions: {
         workspaceMemberBoundary: "apply",
+        whatsappCloudInbound: "skip",
         aiTier: "verify",
         aiTierStripeLedger: "apply",
         stripeBillingLedger: "apply",
@@ -198,9 +206,11 @@ test("action derivation prevents every ledger and object double-apply", () => {
         metaHistory: false,
         workspaceMemberPrerequisite: true,
         workspaceMemberInGenericLedger: false,
+        whatsappCloudInboundInGenericLedger: false,
       },
       objects: {
         workspaceMemberBoundary: "current",
+        whatsappCloudInbound: "current",
         aiTier: "current",
         mobilePush: "current",
         metaContent: "current",
@@ -211,6 +221,7 @@ test("action derivation prevents every ledger and object double-apply", () => {
     }).actions,
     {
       workspaceMemberBoundary: "verify",
+      whatsappCloudInbound: "verify",
       aiTier: "skip",
       aiTierStripeLedger: "apply",
       stripeBillingLedger: "apply",
@@ -231,9 +242,11 @@ test("action derivation prevents every ledger and object double-apply", () => {
         metaHistory: true,
         workspaceMemberPrerequisite: true,
         workspaceMemberInGenericLedger: false,
+        whatsappCloudInboundInGenericLedger: false,
       },
       objects: {
         workspaceMemberBoundary: "current",
+        whatsappCloudInbound: "absent",
         aiTier: "current",
         mobilePush: "current",
         metaContent: "foundation",
@@ -256,9 +269,11 @@ test("partial ledgers, missing applied objects and invalid metadata block", () =
         metaHistory: false,
         workspaceMemberPrerequisite: true,
         workspaceMemberInGenericLedger: false,
+        whatsappCloudInboundInGenericLedger: false,
       },
       objects: {
         workspaceMemberBoundary: "absent",
+        whatsappCloudInbound: "absent",
         aiTier: "absent",
         mobilePush: "absent",
         metaContent: "absent",
@@ -275,9 +290,11 @@ test("partial ledgers, missing applied objects and invalid metadata block", () =
         metaHistory: false,
         workspaceMemberPrerequisite: true,
         workspaceMemberInGenericLedger: false,
+        whatsappCloudInboundInGenericLedger: false,
       },
       objects: {
         workspaceMemberBoundary: "invalid",
+        whatsappCloudInbound: "invalid",
         aiTier: "current",
         mobilePush: "current",
         metaContent: "invalid",
@@ -388,10 +405,12 @@ test("member boundary requires the exact prerequisite and absence from generic l
         mobilePush: false,
         metaFoundation: false,
         metaHistory: false,
+        whatsappCloudInboundInGenericLedger: false,
         ...ledgerBoundary,
       },
       objects: {
         workspaceMemberBoundary: "absent",
+        whatsappCloudInbound: "absent",
         aiTier: "absent",
         mobilePush: "absent",
         metaContent: "absent",
@@ -403,6 +422,54 @@ test("member boundary requires the exact prerequisite and absence from generic l
     assert.equal(result.actions.workspaceMemberBoundary, "block");
     assert.equal(result.blocked, true);
   }
+});
+
+test("WhatsApp rollout is dormant until the Member boundary is current and blocks drift", () => {
+  const base = {
+    aiTier: false,
+    mobilePush: false,
+    metaFoundation: false,
+    metaHistory: false,
+    workspaceMemberPrerequisite: true,
+    workspaceMemberInGenericLedger: false,
+    whatsappCloudInboundInGenericLedger: false,
+  };
+  const otherObjects = {
+    aiTier: "absent",
+    mobilePush: "absent",
+    metaContent: "absent",
+    metaCatchup: "absent",
+    metaContinuation: "absent",
+    triggerHardening: "unavailable",
+  };
+  for (const [memberState, whatsappState, expected] of [
+    ["absent", "absent", "skip"],
+    ["current", "absent", "apply"],
+    ["current", "current", "verify"],
+    ["current", "invalid", "block"],
+    ["absent", "current", "block"],
+  ]) {
+    const result = deriveStagingDatabaseRolloutActions({
+      ledger: base,
+      objects: {
+        ...otherObjects,
+        workspaceMemberBoundary: memberState,
+        whatsappCloudInbound: whatsappState,
+      },
+    });
+    assert.equal(result.actions.whatsappCloudInbound, expected);
+  }
+  assert.equal(
+    deriveStagingDatabaseRolloutActions({
+      ledger: { ...base, whatsappCloudInboundInGenericLedger: true },
+      objects: {
+        ...otherObjects,
+        workspaceMemberBoundary: "current",
+        whatsappCloudInbound: "current",
+      },
+    }).actions.whatsappCloudInbound,
+    "block",
+  );
 });
 
 test("ledger and object probes are transactionally read-only and exact", () => {
@@ -427,8 +494,20 @@ test("ledger and object probes are transactionally read-only and exact", () => {
     /where version = '20260816120000'[\s\S]*workspace_member_data_boundary[\s\S]*= 0 then '0' else '1'/u,
   );
   assert.match(
+    ledger,
+    /where version = '20260817230000'[\s\S]*whatsapp_cloud_inbound_foundation[\s\S]*= 0 then '0' else '1'/u,
+  );
+  assert.match(
     WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
     /function_count = 0 and policy_count = 0[\s\S]*function_count = 3 and policy_count = 42/u,
+  );
+  assert.match(
+    WHATSAPP_CLOUD_INBOUND_STATE_SQL,
+    /object_count = 0 and column_count = 0 and constraint_count = 0[\s\S]*policy_count = 0 and function_name_count = 0[\s\S]*legacy_index_count = 0 then 'absent'/u,
+  );
+  assert.match(
+    WHATSAPP_CLOUD_INBOUND_STATE_SQL,
+    /object_count = 11 and column_count = 3 and constraint_count = 2[\s\S]*policy_count = 2 and function_name_count = 4[\s\S]*legacy_index_count = 0 then 'present'/u,
   );
   for (const sql of [
     LEDGER_STATE_SQL,
@@ -441,6 +520,7 @@ test("ledger and object probes are transactionally read-only and exact", () => {
     STRIPE_BILLING_LEDGER_STATE_SQL,
     TRIGGER_HARDENING_STATE_SQL,
     WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
+    WHATSAPP_CLOUD_INBOUND_STATE_SQL,
   ]) {
     assert.match(sql, /begin;[\s\S]*set transaction read only;[\s\S]*rollback;/u);
     assert.doesNotMatch(
@@ -523,7 +603,7 @@ test("three-step Meta manifest keeps the controlled idempotency step out of the 
   assert.match(sql, /20260803120000/u);
   assert.match(sql, /20260803210000/u);
   assert.doesNotMatch(sql, /20260806160000/u);
-  assert.equal([...sql.matchAll(/where version =/gu)].length, 6);
+  assert.equal([...sql.matchAll(/where version =/gu)].length, 7);
 
   assert.equal(
     deriveStagingDatabaseRolloutActions({
@@ -534,9 +614,11 @@ test("three-step Meta manifest keeps the controlled idempotency step out of the 
         metaHistory: false,
         workspaceMemberPrerequisite: true,
         workspaceMemberInGenericLedger: false,
+        whatsappCloudInboundInGenericLedger: false,
       },
       objects: {
         workspaceMemberBoundary: "current",
+        whatsappCloudInbound: "absent",
         aiTier: "current",
         mobilePush: "current",
         metaContent: "foundation",
@@ -646,8 +728,9 @@ fi
 input="$(cat)"
 case "$input" in
   *STAGING_DATABASE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_LEDGER_OBJECT=present' ;;
-  *STAGING_DATABASE_LEDGER=*) echo 'STAGING_DATABASE_LEDGER=1:1:0:0:1:0' ;;
+  *STAGING_DATABASE_LEDGER=*) echo 'STAGING_DATABASE_LEDGER=1:1:0:0:1:0:0' ;;
   *STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=*) echo 'STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=absent' ;;
+  *WHATSAPP_CLOUD_INBOUND_OBJECT_STATE=*) echo 'WHATSAPP_CLOUD_INBOUND_OBJECT_STATE=absent' ;;
   *STAGING_DATABASE_AI_TIER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_OBJECT=present' ;;
   *STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT=absent' ;;
   *STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT=absent' ;;
@@ -693,6 +776,10 @@ esac
       result.stdout,
       /STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=apply/u,
     );
+    assert.match(
+      result.stdout,
+      /STAGING_DATABASE_ROLLOUT_WHATSAPP_CLOUD_INBOUND=skip/u,
+    );
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_AI_TIER=verify/u);
     assert.match(
       result.stdout,
@@ -736,6 +823,7 @@ case "$input" in
   *STAGING_DATABASE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_LEDGER_OBJECT=absent' ;;
   *STAGING_DATABASE_LEDGER=*) exit 91 ;;
   *STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=*) echo 'STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=absent' ;;
+  *WHATSAPP_CLOUD_INBOUND_OBJECT_STATE=*) echo 'WHATSAPP_CLOUD_INBOUND_OBJECT_STATE=absent' ;;
   *STAGING_DATABASE_AI_TIER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_OBJECT=absent' ;;
   *STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT=absent' ;;
   *STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT=absent' ;;
@@ -778,6 +866,10 @@ esac
     assert.match(
       result.stdout,
       /STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=block/u,
+    );
+    assert.match(
+      result.stdout,
+      /STAGING_DATABASE_ROLLOUT_WHATSAPP_CLOUD_INBOUND=skip/u,
     );
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_AI_TIER=apply/u);
     assert.match(

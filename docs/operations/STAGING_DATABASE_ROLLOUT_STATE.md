@@ -9,6 +9,7 @@ nächste Zustand für die bereits vorhandenen Kontrollpfade sicher ist:
 - KI-Stufen-Entitlements;
 - Mobile-Push-Registrierungen;
 - die kontrollierte Workspace-Member-Datengrenze;
+- die kontrollierte, weiterhin deaktivierte WhatsApp-Cloud-Inbound-Grundlage;
 - Meta Content Intelligence plus inkrementelle Conversation-Historie;
 - die kontrollierte Meta Conversation Catch-up Queue;
 - die kontrollierte Meta Conversation Continuation;
@@ -32,8 +33,8 @@ im Ledger fehlt.
 Der Zustandscheck verbindet deshalb zwei unabhängige Nachweise:
 
 1. die exakten vier Migrationszeitstempel im Supabase-Ledger;
-2. die bereits bestehenden vollständigen Metadaten-Postflights der drei
-   Migrationspfade.
+2. die bereits bestehenden vollständigen Metadaten-Postflights der
+   ledger- und controlled-geführten Pfade.
 
 Der kontrollierte Meta-Idempotency-Schritt liegt unter
 `supabase/controlled/` und ist kein Supabase-Ledger-Eintrag. Er wird niemals
@@ -60,6 +61,33 @@ Jeder Teilzustand ergibt `block`. Der Ledger wird dabei nur auf den exakten
 server-owned-Prerequisite-Beleg
 `20260809141141 / workspace_server_owned_columns_controlled` und auf das
 verbotene Vorhandensein des Boundary-Controls im generischen Ledger geprüft.
+
+Die WhatsApp-Cloud-Inbound-Grundlage liegt ebenfalls ausschließlich unter
+`supabase/controlled/`. Ihr eindeutiger späterer Control-Zeitstempel
+`20260817230000` darf nie im generischen Ledger stehen. Sie setzt die
+Workspace-Member-Datengrenze hart voraus: solange die Member-Boundary fehlt,
+ist nur der gemeinsam abwesende WhatsApp-Zustand als `skip` zulässig. Erst eine
+vollständig verifizierte Member-Boundary erlaubt für WhatsApp `apply` bei exakt
+elf abwesenden benannten Objekten, drei abwesenden WhatsApp-Spalten, zwei
+abwesenden Message-Constraints, zwei abwesenden Identity-Policies, vier
+abwesenden Funktionsnamen und keinem Legacy-Index. `verify` ist nur nach dem
+vollständigen exakten Postflight zulässig: Spaltennamen, Typen, Nullbarkeit und
+Defaults; Constraints, zusammengesetzte Foreign Keys und Löschaktionen;
+Indexspalten und partielle Prädikate; Policy-Modus und -Ausdrücke; Tabellen-
+und Funktions-ACLs ohne unerwartetes `EXECUTE`; exakter
+`workspace_processing_allowed_contract`; Funktionssignaturen und -Bodies sowie
+Verhalten für Processing und `trusted_demo`. Katalog-Attestierungen binden die
+kanonischen Definitionen und lassen auch gleichnamig neu angelegte
+`CHECK (true)`- oder Prädikat-Drifts scheitern. Die Message-/Receipt-Identity
+ist dabei Connection + `phone_number_id` + WAMID und der Receipt bindet den
+SHA-256-Fingerprint des exakt normalisierten Payloads. Jeder Teilzustand, ein
+Legacy-Index oder ein vor Member vorhandenes WhatsApp-Objekt ergibt `block`.
+
+Diese Zustandslogik ist nur vorbereitet. Für WhatsApp wurde weder ein
+Datenbank-Apply noch ein realer Staging-/Meta-Providerlauf ausgeführt; Route,
+Feature-Flag und Connector bleiben dormant. Der read-only Zustandscheck enthält
+keine Provider-, Outbound- oder Dispatch-Logik und Production ist als Ziel
+verboten.
 
 ## Ausschließlich mögliche Aktionen
 
@@ -152,6 +180,11 @@ Workflow-Log.
    demselben Lauf exakt `STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply`.
    Die Member-Datengrenze verlangt zusätzlich den app-first deployten exakten
    Commit und ihren getrennten Apply-/Verify-/Chromium-Ablauf.
+   WhatsApp darf erst nach `WORKSPACE_MEMBER_BOUNDARY=verify` angewendet werden
+   und verlangt im selben read-only Lauf exakt
+   `STAGING_DATABASE_ROLLOUT_WHATSAPP_CLOUD_INBOUND=apply`; danach muss der
+   getrennte Verify-Lauf `...=verify` melden. Dieser Schema-Schritt aktiviert
+   weder Route noch Feature-Flag und führt keinen Provider-Dispatch aus.
 5. Datenbank-Schreibworkflows nie parallel ausführen.
 6. Meta Foundation und History immer gemeinsam und atomar anwenden.
 7. Trigger-Hardening vorzugsweise nach Meta ausführen; dann ist die alte
@@ -161,6 +194,7 @@ Erlaubte Ergebniszeilen:
 
 ```text
 STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=verify|apply|block
+STAGING_DATABASE_ROLLOUT_WHATSAPP_CLOUD_INBOUND=verify|skip|apply|block
 STAGING_DATABASE_ROLLOUT_AI_TIER=verify|skip|apply|block
 STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=verify|skip|apply|block
 STAGING_DATABASE_ROLLOUT_META_CONTENT=verify|skip|apply|block

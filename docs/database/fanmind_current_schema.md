@@ -753,6 +753,33 @@ RLS-Erwartung:
   kontrolliert im jeweiligen Ziel angewendet und nachgeprüft werden.
 - Aktive `(platform, external_account_id)`-Bindungen sind global eindeutig,
   damit ein externes Konto nicht zwei Workspaces zugeordnet werden kann.
+- Der vorbereitete WhatsApp-Cloud-Inbound-Pfad benötigt zusätzlich die nicht
+  angewendete Controlled Migration
+  `20260817230000_whatsapp_cloud_inbound_foundation.sql`. Sie erzwingt eine
+  global eindeutige aktive `page_id` als exakte `phone_number_id`, ergänzt
+  auf Social Connection, `phone_number_id` und WAMID zusammengesetzte
+  Nachrichtenidentität sowie die FORCE-RLS-Tabelle
+  `whatsapp_cloud_webhook_receipts`. `conversation_messages` erhält dafür die
+  server-owned Spalten `whatsapp_social_connection_id`,
+  `whatsapp_phone_number_id` und `whatsapp_payload_fingerprint`; direkte
+  Browser-Mutationen dieser Identität werden restriktiv blockiert. Der
+  SHA-256-Fingerprint rahmt die zwölf exakt normalisierten Eventfelder mit
+  ihrer UTF-8-Bytelänge. Ein Retry derselben Identity mit verändertem Text,
+  Absender, Label, Thread oder Zeitstempel ist deshalb kein Duplikat, sondern
+  ein HTTP-409-`idempotency_conflict`.
+- WhatsApp-Kontakt-Handle und externe Thread-ID werden zusätzlich mit der
+  konkreten Social-Connection-ID gebunden. Dadurch kann eine wiederverwendete
+  Telefonnummer oder neu angelegte Connection keine bestehende Kontakt- oder
+  Conversation-Zeile einer anderen Connection übernehmen.
+- Der Receipt-Fremdschlüssel auf die CRM-Nachricht verwendet
+  `ON DELETE SET NULL (conversation_message_id)`: nach fachlicher
+  Nachrichtenlöschung bleiben Connection, `phone_number_id`, WAMID und
+  Fingerprint als Anti-Resurrection-Tombstone erhalten. Workspace- oder
+  Connection-Löschung cascadiert den Receipt. Frist, Löschlauf und externe
+  Legal-/Retention-Freigabe sind vor realem Pilotbetrieb noch festzulegen.
+  Direkte Tabellenrechte bleiben für Browser und Service Role entzogen;
+  ausschließlich die service-role-only Claim-/Atomic-Store-/Disconnect-RPCs
+  dürfen den Zustand verändern.
 - OAuth, Callback und Trennung verlangen Owner-/Admin-Rolle; bei mehreren
   verwalteten Seiten ist eine ausdrückliche Auswahl Pflicht.
 - Keine externen Login-Passwörter speichern.

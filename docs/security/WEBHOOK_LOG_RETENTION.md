@@ -54,6 +54,34 @@ Diese doppelte Zuständigkeit wurde als eigener Fehler in `#700` behandelt. Das 
 - Ein falscher Header führt zu HTTP 401.
 - Request-Bodies sind auf 1.000.000 Bytes begrenzt.
 
+### WhatsApp Cloud API
+
+- der getrennte Inbound-Pfad ist standardmäßig aus und in Production
+  unabhängig vom Flag verboten;
+- `WHATSAPP_CLOUD_WEBHOOK_VERIFY_TOKEN` und `WHATSAPP_CLOUD_APP_SECRET` sind
+  eigene Pflichtwerte ohne Facebook-/Instagram-/Meta-Fallback;
+- Meta überträgt `hub.verify_token` für den GET-Handshake notwendigerweise in
+  der Query. Die exakte Staging-nginx-Location `/api/webhooks/whatsapp` setzt
+  deshalb `access_log off` und route-lokal `error_log /dev/null crit`; die
+  Host-Provisionierung zählt dabei auch dezimal äquivalente Listener wie
+  `0443` oder `Adresse:0443`, bindet diesen einmaligen Block, das exakte
+  `listen 443 ssl;`, höchstens einen zusätzlichen SSL-IPv6-Listener, den
+  Staging-Host und die Zertifikatdirektiven strukturell an denselben eindeutigen
+  Port-443-Server. Der Block erlaubt nur die zehn versionierten Log-, Proxy-
+  und Headerdirektiven; zusätzliche oder gesplittete Direktiven und Rewrites
+  auf Location- oder TLS-Serverebene blockieren. Schutz nur im HTTP-vHost
+  genügt nicht;
+- POST prüft maximal 256 KiB Raw-Bytes zeitkonstant gegen
+  `X-Hub-Signature-256`, bevor UTF-8 oder JSON dekodiert werden;
+- technische Ausgaben und Diagnosezeilen enthalten nur feste Fehlerklassen,
+  begrenzte Zähler und Booleans, niemals Raw-Body, Text, Namen,
+  Telefonnummern, Provider-IDs, Signaturen, Challenge, vollständige Query oder
+  Secrets;
+- jedes künftig vorgeschaltete CDN, WAF oder Load-Balancer muss eine
+  gleichwertige Query-Redaktionsgrenze nachweisbar umsetzen;
+- Controlled Migration, isoliertes Staging und externe Meta-/Legal-Abnahme
+  bleiben vor jeder Aktivierung verpflichtend.
+
 Öffentliche Antworten enthalten nur stabile Fehlerklassen. Provider-, Datenbank- oder Credential-Details werden nicht zurückgegeben.
 
 ## Minimierter Meta-Diagnosevertrag
@@ -127,6 +155,26 @@ Eigenschaften:
 - keine andere Tabelle wird durch den Meta-RPC verändert.
 
 `manage_server_error_event_retention` ist rein additiv vorbereitet. Fehlt die optionale Tabelle, liefert der RPC `table_present=false` und verändert nichts.
+
+### WhatsApp-Receipt-Tombstones
+
+Die nicht angewendete WhatsApp-Controlled-Migration besitzt einen getrennten
+Idempotenzvertrag, der vom bestehenden Meta-Diagnose-Retention-Worker nicht
+gelöscht wird. Wird eine fachliche CRM-Nachricht gelöscht, setzt der
+zusammengesetzte Fremdschlüssel des zugehörigen Receipts ausschließlich
+`conversation_message_id` auf `NULL`. Social-Connection-ID,
+`phone_number_id`, WAMID und der SHA-256-Fingerprint des exakt normalisierten
+Payloads bleiben als Tombstone erhalten, damit ein Provider-Retry keine bereits
+gelöschte Nachricht erneut anlegt. Das Löschen des Workspaces oder der Social
+Connection entfernt den Receipt dagegen per Cascade.
+
+Dieser technische Anti-Resurrection-Vertrag ist noch keine freigegebene
+Aufbewahrungsfrist. Vor einem realen Staging-Pilot mit Meta-Testkonto müssen
+Rechtsgrundlage, transparente Information, Betroffenenrechte, konkrete Frist,
+begrenzter Löschlauf und eine gegebenenfalls erforderliche irreversible
+Pseudonymisierung extern beschlossen und im Retention- sowie
+Freigaberegister nachgeführt werden. Bis dahin bleiben Migration, Feature-Flag
+und Providerbetrieb dormant; Production ist technisch verboten.
 
 ## Worker und Timer
 
