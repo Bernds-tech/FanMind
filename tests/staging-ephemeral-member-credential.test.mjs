@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { constants } from "node:fs";
 import {
   chmod,
   link,
   mkdtemp,
+  open,
   readFile,
   rm,
   stat,
@@ -309,18 +311,26 @@ test("GITHUB_ENV is forced to an exact private regular file before append", asyn
     GITHUB_ENV: githubEnvironmentPath,
   });
 
-  const fileStat = await stat(githubEnvironmentPath);
-  assert.equal(fileStat.isFile(), true);
-  assert.equal(fileStat.nlink, 1);
-  assert.equal(fileStat.mode & 0o777, 0o600);
-  assert.equal(
-    await readFile(githubEnvironmentPath, "utf8"),
-    [
-      `FANMIND_STAGING_E2E_MEMBER_PASSWORD=${ACTIVE_PASSWORD}`,
-      `FANMIND_E2E_STAGING_MEMBER_PASSWORD=${ACTIVE_PASSWORD}`,
-      "",
-    ].join("\n"),
+  const fileHandle = await open(
+    githubEnvironmentPath,
+    constants.O_RDONLY | constants.O_NOFOLLOW,
   );
+  try {
+    const fileStat = await fileHandle.stat();
+    assert.equal(fileStat.isFile(), true);
+    assert.equal(fileStat.nlink, 1);
+    assert.equal(fileStat.mode & 0o777, 0o600);
+    assert.equal(
+      await fileHandle.readFile("utf8"),
+      [
+        `FANMIND_STAGING_E2E_MEMBER_PASSWORD=${ACTIVE_PASSWORD}`,
+        `FANMIND_E2E_STAGING_MEMBER_PASSWORD=${ACTIVE_PASSWORD}`,
+        "",
+      ].join("\n"),
+    );
+  } finally {
+    await fileHandle.close();
+  }
 });
 
 test("GITHUB_ENV hardlink is rejected before any credential append", async (t) => {
