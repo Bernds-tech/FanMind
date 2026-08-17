@@ -196,6 +196,25 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   transaction and must prove cleanup. Never send a push, use a real Expo token,
   enable delivery, expose SQL diagnostics or secrets, or let a normal Web
   deploy invoke the migration runner.
+- The dormant server-side Mobile push delivery contract is documented in
+  `docs/mobile/PUSH_DELIVERY.md`. Keep it route-, timer- and worker-free until
+  a separately approved service-role-only atomic delivery ledger exists. It
+  must remain Staging-only, require independently reviewed EAS project,
+  Staging app hostname, Staging Supabase target and Production Supabase
+  reference bindings plus an explicit single-reminder confirmation, send only fixed copy
+  plus a one-hour TTL, `type=followup_reminder` and `followupId`, and persist
+  tickets/receipts before any success claim. The server-only target loader and
+  `ledger.reserve` must consume the exact same already-validated Supabase
+  URL/ref/key context, never a second global environment source. The future
+  ledger reserve RPC must transactionally revalidate membership, processing
+  eligibility, follow-up, contact, registration and its current token
+  fingerprint before it reserves, and return that fingerprint plus the bound
+  Staging project ref as revalidation evidence. A `DeviceNotRegistered` result
+  must atomically terminalize the attempt and disable its registration under
+  the held send or receipt lease; never split those writes. Never log provider
+  text, tokens or CRM content;
+  an indeterminate request must not be automatically retried. Production
+  delivery is structurally blocked.
 - Database trigger-function hardening has its own checksum-pinned controlled
   SQL under `supabase/controlled/`. A normal Web deploy and generic
   `supabase db push` must never apply it. Keep the proven Staging control and
@@ -231,7 +250,7 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
 - Referral Growth Window truth: planned until FanMind reaches 2.000 active paying customers/workspaces. During the open window, each active referred paying customer/workspace gives the referrer 5 % discount on ongoing FanMind costs; maximum 20 active referrals count per referrer; after the 2.000 cap closes the window, existing active discounts remain but no new additional discount percentages are earned unless the window is explicitly reopened.
 - The frozen sales/demo flow is: landing page -> login/demo -> dashboard -> fans/contacts -> CSV import or Sandra/demo contact -> contact detail -> existing/latest inbound message -> AI reply suggestions -> copy answer -> save memory -> save follow-up -> follow-up list / roadmap.
 - Active CRM core: login, registration, protected dashboard, contacts/fans, contact detail, CSV import, server-side AI reply suggestions, contact knowledge, follow-ups, roadmap, admin/billing groundwork, Stripe test checkout, legal pages, and temporary demo workspace.
-- Active Mobile Phase B repository scope: independent Expo/React-Native app with native login, PKCE password recovery, secure session persistence and local purge, dashboard, contact list/search/create/edit/detail, bounded encrypted offline contact overview, contact knowledge, server-side AI reply suggestions, user-controlled copy plus native sharing of only the selected reply text, follow-ups, an explicit opt-in push-registration preparation without delivery, a native wordmark splashscreen, distinct high-resolution iOS/Android app-icon assets, an iOS required-reason privacy manifest and Android API 36 verification. Store privacy drafts are technical preparation only; Supabase redirect approval, signed internal builds, push migration/secret activation, legal/portal approval, real-device verification and store distribution remain separate external release steps.
+- Active Mobile Phase B repository scope: independent Expo/React-Native app with native login, PKCE password recovery, secure session persistence and local purge, dashboard, contact list/search/create/edit/detail, bounded encrypted offline contact overview, contact knowledge, server-side AI reply suggestions, user-controlled copy plus native sharing of only the selected reply text, follow-ups, an explicit opt-in push registration and a dormant Staging-only server-delivery contract without route, timer, ledger or activation, a native wordmark splashscreen, distinct high-resolution iOS/Android app-icon assets, an iOS required-reason privacy manifest and Android API 36 verification. Store privacy drafts are technical preparation only; Supabase redirect approval, signed internal builds, push migration/secret activation, delivery-ledger approval, legal/portal approval, real-device verification and store distribution remain separate external release steps.
 - Mobile Store metadata, branding, native identities and EAS profiles must pass
   `cd apps/mobile && npm run store:check`. Keep EAS CLI exactly pinned to the
   reviewed version and keep Android submission internal/draft until the

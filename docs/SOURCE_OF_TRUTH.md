@@ -113,7 +113,12 @@ Aktiv im App-Kern:
   kontogebundene Ein-Gerät-Registrierung für Owner oder autorisierte
   Workspace-Mitglieder. Öffentliche Demo-Workspaces, ungebundene Requests und
   nicht serverseitig freigegebene EAS-Projekte werden abgelehnt; die Migration,
-  Serverkey-Aktivierung, echte Geräteabnahme und Zustellung bleiben getrennt
+  Serverkey-Aktivierung und echte Geräteabnahme bleiben getrennt. Ein
+  Staging-only Serververtrag für genau eine inhaltsfreie Follow-up-Erinnerung
+  mit einstündiger TTL ist synthetisch getestet, besitzt aber ohne genehmigten
+  atomaren Delivery-Ledger samt transaktionaler Target-Revalidierung und
+  unabhängig geprüfte EAS-, Staging-App-, Staging-Supabase- und
+  Production-Supabase-Bindings weder Route noch Timer/Worker und bleibt
   deaktiviert;
 - checksum-festgeschriebener, strikt Staging-only Kontrollpfad für diese
   Push-Tabelle: ein read-only Ressourcencheck, ein separat bestätigter
@@ -334,6 +339,16 @@ zwingende externe Freigabe noch fehlt.
   service-role CRUD vollständig transaktional aus und verlangt danach einen
   leeren Cleanup-Nachweis. Kein normaler Deploy kann den Runner aufrufen; reale
   Push-Registrierung, Serverkey und Delivery bleiben extern deaktiviert.
+- Mobile-Push-Delivery: feste Expo-HTTPS-Endpunkte, unabhängige EAS-
+  Projektbindung, Workspace-/Member-/Kontakt-/Follow-up-/Registrierungsprüfung,
+  Minimalpayload mit einstündiger TTL sowie Retry-, Ticket- und Receipt-
+  Entscheidung sind lokal mit einem synthetischen Provider geprüft. Der
+  server-only Loader und die spätere Ledger-Reservation erhalten exakt
+  dasselbe bereits geprüfte Supabase-URL-/Ref-/Service-Role-Binding; die
+  Reservation muss außerdem den aktuellen Registrierungs-/Token-Fingerprint
+  atomar binden. Ohne eine separat genehmigte service-role-only Ledger-
+  Migration mit atomarer Revalidierungs-RPC wird kein Sender verdrahtet; eine CI-
+  Invariante schützt diese Dormanz. Production bleibt strukturell gesperrt.
 - Website-Chat bleibt bis zur getrennten Staging- und Rechtsabnahme
   deaktiviert. Seine Sicherheitsgrundlage darf nur workspace-gebundene,
   standardmäßig deaktivierte Installationen, exakt verifizierte HTTPS-Origins,

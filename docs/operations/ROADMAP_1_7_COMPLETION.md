@@ -148,13 +148,22 @@ nicht als ausgeführte Abnahme.
 
 - **Code:** nativer Expo-Kern, Auth/Recovery, Kontakte, Memory, KI, Follow-ups,
   sicherer Offline-Cache, lokaler Purge, Copy/Share und Pushregistrierungs-
-  Vorbereitung sind vorhanden.
+  Vorbereitung sind vorhanden. Der standardmäßig deaktivierte Staging-
+  Einzelsender ist mit Minimalpayload samt einstündiger TTL, Tenant-
+  Autorisierung, gemeinsamem server-only Zielkontext, Retry und Expo-Receipts
+  synthetisch geprüft, aber nicht verdrahtet; eine CI-Invariante schützt diesen
+  Zustand.
 - **Staging/Infrastruktur:** Push-Acceptance, signierte interne Builds und
-  private Android-/iOS-Geräteabnahme durchführen.
+  private Android-/iOS-Geräteabnahme durchführen; danach atomaren Delivery-
+  Ledger mit transaktionaler Target-Revalidierungs-RPC separat entscheiden,
+  migrieren und abnehmen und genau einen synthetischen
+  Send-/Receipt-Nachweis mit unabhängig geprüften EAS-, Staging-App-, Staging-
+  Supabase- und Production-Supabase-Bindings ausführen.
 - **Extern:** Expo/EAS-Projekt, Signing Credentials, Apple Developer/App Store
   Connect, Google Play, TestFlight, Store-Datenschutz und Portalabnahme.
-- **Production-Aktivierung:** Pushzustellung, Store-Verteilung und produktive
-  Mobile-Environments bleiben eigene explizite Schritte.
+- **Production-Aktivierung:** Pushzustellung ist im vorbereiteten Sender
+  strukturell gesperrt; Store-Verteilung und produktive Mobile-Environments
+  bleiben ebenfalls eigene explizite Schritte.
 
 ## Roadmap 7 – TikTok, X/Twitter, Discord und OnlyFans-Prüfung
 
