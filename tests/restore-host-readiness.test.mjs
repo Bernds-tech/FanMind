@@ -62,9 +62,9 @@ function toolOutput(path, args) {
   if (path === "/usr/bin/tar") return "tar (GNU tar) 1.35\n";
   if (path === "/usr/bin/gzip") return "gzip 1.12\n";
   if (path === "/usr/bin/age") return "age 1.1.1\n";
-  if (path.endsWith("/psql")) return "psql (PostgreSQL) 17.10\n";
-  if (path.endsWith("/pg_restore")) return "pg_restore (PostgreSQL) 17.10\n";
-  if (path.endsWith("/pg_dump")) return "pg_dump (PostgreSQL) 17.10\n";
+  if (path.endsWith("/psql")) return "psql (PostgreSQL) 17.11\n";
+  if (path.endsWith("/pg_restore")) return "pg_restore (PostgreSQL) 17.11\n";
+  if (path.endsWith("/pg_dump")) return "pg_dump (PostgreSQL) 17.11\n";
   if (path === "/usr/bin/id" && args[0] === "-gn") {
     return "fanmind-restore\n";
   }
@@ -175,7 +175,7 @@ test("the isolated fixed host contract passes without Restore data access", asyn
   assert.deepEqual(result, {
     ageVersion: "1.1.1",
     nodeVersion: "24.19.0",
-    postgresqlVersion: "17.10",
+    postgresqlVersion: "17.11",
     tarVersion: "1.35",
   });
 });

@@ -59,12 +59,12 @@ Der Bootstrap verwendet ausschließlich den root-eigenen, nicht schreibbaren
 Node-Pfad `/opt/fanmind-restore/node-v24.19.0-linux-x64/bin/node` und den
 root-eigenen, nicht schreibbaren Gate-Pfad
 `/opt/fanmind-restore/restore-host-readiness.mjs`. Der aktuell gebundene
-Gate-SHA-256 ist `0b2cbabfed3ca08e5811c719146a3b1a42d6475f8081b987b52fe54649a82e6b`. Das Gate bindet die bei einem Owner-Transfer stabile
+Gate-SHA-256 ist `71249afb3364203908d7ecf8bb85d50d02efaf605f2d36b12faf32e1e5f64ac2`. Das Gate bindet die bei einem Owner-Transfer stabile
 GitHub-Repository-ID `1259448985`. Die Workflows prüfen vor der
 Ausführung zusätzlich Eigentümer, Modus, kanonischen Pfad, Parent-Verzeichnisse
 und die Node-Version 24.19.0.
 
-Das Gate bindet Ubuntu 24.04, PostgreSQL-Tools 17.10, age 1.1.1, GNU tar 1.35,
+Das Gate bindet Ubuntu 24.04, PostgreSQL-Tools 17.11, age 1.1.1, GNU tar 1.35,
 gzip 1.12, Bash und GNU coreutils 9.4 an feste absolute, root-eigene und nicht
 schreibbare Pfade. Der Runner-Benutzer besitzt keine Zusatzgruppe, kein
 erfolgreiches non-interactive `sudo`, keine Capabilities und keinen Zugriff auf

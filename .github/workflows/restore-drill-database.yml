@@ -59,7 +59,7 @@ jobs:
     env:
       ALL_PROXY: ''
       PATH: /opt/fanmind-restore/node-v24.19.0-linux-x64/bin:/usr/lib/postgresql/17/bin:/usr/bin:/bin
-      RESTORE_HOST_GATE_SHA256: 0b2cbabfed3ca08e5811c719146a3b1a42d6475f8081b987b52fe54649a82e6b
+      RESTORE_HOST_GATE_SHA256: 71249afb3364203908d7ecf8bb85d50d02efaf605f2d36b12faf32e1e5f64ac2
       BASH_ENV: ''
       BASHOPTS: ''
       BASH_XTRACEFD: ''
@@ -218,7 +218,7 @@ jobs:
     env:
       ALL_PROXY: ''
       PATH: /opt/fanmind-restore/node-v24.19.0-linux-x64/bin:/usr/lib/postgresql/17/bin:/usr/bin:/bin
-      RESTORE_HOST_GATE_SHA256: 0b2cbabfed3ca08e5811c719146a3b1a42d6475f8081b987b52fe54649a82e6b
+      RESTORE_HOST_GATE_SHA256: 71249afb3364203908d7ecf8bb85d50d02efaf605f2d36b12faf32e1e5f64ac2
       BASH_ENV: ''
       BASHOPTS: ''
       BASH_XTRACEFD: ''

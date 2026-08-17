@@ -241,7 +241,7 @@ it is removed after that single job. The workflow starts only the fixed
 root-owned Node executable
 `/opt/fanmind-restore/node-v24.19.0-linux-x64/bin/node` and the fixed root-owned
 gate `/opt/fanmind-restore/restore-host-readiness.mjs`. The installed gate must
-match SHA-256 `0b2cbabfed3ca08e5811c719146a3b1a42d6475f8081b987b52fe54649a82e6b` before it is executed.
+match SHA-256 `71249afb3364203908d7ecf8bb85d50d02efaf605f2d36b12faf32e1e5f64ac2` before it is executed.
 The gate binds the stable GitHub repository ID `1259448985`, which survives an
 owner transfer; it does not bind the current `Bernds-tech/FanMind` name.
 
@@ -255,7 +255,7 @@ The gate fails closed unless all of these facts hold:
   Incus and libvirt sockets are inaccessible;
 - runner temp and workspace are distinct, operator-owned non-symlink
   directories, and the temp directory is private;
-- the gate, Node executable, PostgreSQL 17.10 tools, age 1.1.1, GNU tar 1.35,
+- the gate, Node executable, PostgreSQL 17.11 tools, age 1.1.1, GNU tar 1.35,
   gzip 1.12, Bash and GNU coreutils 9.4 are fixed root-owned, non-writable
   regular files beneath fixed root-owned, non-writable directories;
 - write acknowledgements remain disabled and no libpq target, Restore secret,
@@ -379,7 +379,7 @@ One-time external setup for the GitHub Environment `restore-drill`:
   labels. Neither registration
   token nor runner credential may be
   reused;
-- an isolated host image with the gate and Node path above, PostgreSQL 17.10
+- an isolated host image with the gate and Node path above, PostgreSQL 17.11
   clients at `/usr/lib/postgresql/17/bin`, age 1.1.1, GNU tar 1.35, gzip 1.12,
   Bash and GNU coreutils 9.4 preinstalled as root-owned, non-writable files.
   Restore jobs do not use `actions/setup-node`, `npm install` or an ambient
