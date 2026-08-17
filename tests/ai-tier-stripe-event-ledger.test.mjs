@@ -16,6 +16,10 @@ test("the AI Stripe ledger is a controlled, non-automatic database change", asyn
     sql,
     /^\s*(?:truncate\s+(?:table\s+)?|drop\s+(?:table|schema|database)\s+)/imu,
   );
+  assert.match(
+    sql,
+    /v_existing\.snapshot_kind = \(case[\s\S]*end\) then/u,
+  );
 });
 
 test("event and reconciliation records are server-only with forced RLS", async () => {
