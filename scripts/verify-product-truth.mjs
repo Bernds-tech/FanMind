@@ -1769,7 +1769,7 @@ requireText(
 );
 requireText(
   "scripts/operations/ai-tier-stripe-event-ledger-runner.mjs",
-  "83e82425dfedac6286280613459d234c387cf3b89fa71bd6ed81f257efdab2f0",
+  "c07636db6f246364066b2fba426d4bcc955bee13d372982a88d2569c34b8c0d7",
   "Das kontrollierte KI-Event-Ledger muss checksum-gebunden bleiben.",
 );
 requireText(
