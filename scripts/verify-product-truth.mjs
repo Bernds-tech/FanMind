@@ -12,6 +12,8 @@ const checkedFiles = [
   ".github/workflows/deploy-fanmind.yml",
   ".github/workflows/ai-tier-staging-migration.yml",
   ".github/workflows/ai-tier-staging-acceptance.yml",
+  ".github/workflows/ai-tier-stripe-event-ledger-staging.yml",
+  ".github/workflows/stripe-billing-event-ledger-staging.yml",
   ".github/workflows/meta-content-staging-migration.yml",
   ".github/workflows/mobile-release-resource-readiness.yml",
   ".github/workflows/mobile-signed-internal-build.yml",
@@ -98,6 +100,8 @@ const checkedFiles = [
   "tests/restore-host-readiness.test.mjs",
   "docs/operations/RESTORE_DRILL.md",
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
+  "scripts/operations/ai-tier-stripe-event-ledger-runner.mjs",
+  "scripts/operations/stripe-billing-event-ledger-runner.mjs",
   "scripts/operations/ai-tier-staging-acceptance.mjs",
   "scripts/operations/meta-content-migration-runner.mjs",
   "src/lib/metaContentStagingMigrationPolicy.mjs",
@@ -111,9 +115,14 @@ const checkedFiles = [
   "src/lib/workspaceAiTierStorage.mjs",
   "src/lib/workspaceAiTierEntitlements.ts",
   "src/lib/aiTierStripeLifecycle.mjs",
+  "src/lib/aiTierStripeEventLedger.mjs",
   "src/lib/aiTierStripeEntitlementSync.mjs",
+  "src/lib/stripeBillingEventLedger.mjs",
+  "src/lib/stripeBillingEventSync.mjs",
   "src/lib/aiTierStagingAcceptancePolicy.mjs",
   "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql",
+  "supabase/controlled/20260816190000_workspace_ai_tier_stripe_event_ledger.sql",
+  "supabase/controlled/20260816210000_workspace_stripe_billing_event_ledger.sql",
   "src/lib/aiPromptPolicy.mjs",
   "src/lib/workspaceAiPrompts.ts",
   "src/app/api/ai/prompt-settings/route.ts",
@@ -125,12 +134,19 @@ const checkedFiles = [
   "tests/ai-tier-entitlement-migration-policy.test.mjs",
   "tests/ai-tier-stripe-lifecycle.test.mjs",
   "tests/ai-tier-stripe-entitlement-sync.test.mjs",
+  "tests/ai-tier-stripe-event-ledger.test.mjs",
+  "tests/ai-tier-stripe-event-ledger-control.test.mjs",
+  "tests/stripe-billing-event-ledger.test.mjs",
+  "tests/stripe-billing-event-sync.test.mjs",
+  "tests/stripe-billing-event-ledger-control.test.mjs",
   "tests/ai-tier-staging-acceptance.test.mjs",
   "tests/meta-content-staging-migration.test.mjs",
   "tests/ai-prompt-policy.test.mjs",
   "tests/ai-prompt-integration-policy.test.mjs",
   "README.md",
   "AGENTS.md",
+  "docs/operations/AI_TIER_STRIPE_EVENT_LEDGER.md",
+  "docs/operations/STRIPE_BILLING_EVENT_LEDGER.md",
   "apps/mobile/README.md",
   "docs/mobile/ARCHITECTURE.md",
   "docs/mobile/BETA_RELEASE.md",
@@ -1286,8 +1302,68 @@ requireText(
 );
 requireText(
   "src/lib/aiTierStripeEntitlementSync.mjs",
-  "Concurrent deliveries therefore cannot silently",
-  "Die KI-Add-on-Persistenz muss parallele Stripe-Events optimistisch begrenzen.",
+  "FANMIND_AI_TIER_STRIPE_EVENT_LEDGER_ENABLED",
+  "Die KI-Add-on-Persistenz muss bis zum kontrollierten Ledger-Rollout separat gesperrt bleiben.",
+);
+requireText(
+  "supabase/controlled/20260816190000_workspace_ai_tier_stripe_event_ledger.sql",
+  "v_conflict_reason := 'event_order_conflict'",
+  "Gleichsekündige KI-Add-on-Events müssen dauerhaft reconciliation-needed werden.",
+);
+requireText(
+  "supabase/controlled/20260816190000_workspace_ai_tier_stripe_event_ledger.sql",
+  "stripe_sync_revision = v_expected_revision",
+  "Die atomare KI-Add-on-RPC muss ihre Projektion per Revision-CAS schützen.",
+);
+requireText(
+  "supabase/controlled/20260816190000_workspace_ai_tier_stripe_event_ledger.sql",
+  "p_expected_previous_subscription_id",
+  "Ein kanonischer KI-Subscription-Wechsel muss die exakt erwartete alte Bindung belegen.",
+);
+requireText(
+  "supabase/controlled/20260816190000_workspace_ai_tier_stripe_event_ledger.sql",
+  "snapshot_event_created_cutoff",
+  "Die KI-Reconciliation muss ihre kanonische Snapshot-Zeitgrenze dauerhaft speichern.",
+);
+requireText(
+  "scripts/operations/ai-tier-stripe-event-ledger-runner.mjs",
+  "b9bbf0c822f23b65fa62c21b9391412178fa7fcdeb081237f5d253a298fc12a5",
+  "Das kontrollierte KI-Event-Ledger muss checksum-gebunden bleiben.",
+);
+requireText(
+  "scripts/operations/ai-tier-stripe-event-ledger-runner.mjs",
+  "host === productionHost",
+  "Der KI-Ledger-Runner muss den Production-DB-Host tatsächlich gegen das Ziel prüfen.",
+);
+requireText(
+  "package.json",
+  "db:ai-tier-stripe-ledger:check",
+  "Der Offline-Vertragscheck des KI-Event-Ledgers muss fest aufrufbar sein.",
+);
+requireText(
+  ".github/workflows/ai-tier-stripe-event-ledger-staging.yml",
+  "apply-ai-tier-stripe-event-ledger",
+  "Der Staging-Apply des KI-Event-Ledgers muss eine exakte manuelle Bestätigung verlangen.",
+);
+requireText(
+  ".github/workflows/ai-tier-stripe-event-ledger-staging.yml",
+  "inputs.reviewed_commit == github.sha",
+  "Der Staging-Apply des KI-Event-Ledgers muss an den exakt geprüften main-Commit gebunden sein.",
+);
+requireText(
+  ".github/workflows/ai-tier-stripe-event-ledger-staging.yml",
+  "config/certificates/supabase-root-2021-ca.crt",
+  "Der KI-Event-Ledger-Transport muss die festgeschriebene Supabase-CA mit verify-full verwenden.",
+);
+requireText(
+  ".github/workflows/ai-tier-stripe-event-ledger-staging.yml",
+  "STAGING_DATABASE_ROLLOUT_AI_TIER_STRIPE_LEDGER=apply",
+  "Der KI-Event-Ledger-Apply muss das gemeinsame read-only Rollout-Ergebnis binden.",
+);
+requireText(
+  "docs/operations/AI_TIER_STRIPE_EVENT_LEDGER.md",
+  "Separater Basis-Billing-Blocker",
+  "Das KI-Ledger darf die weiterhin offene Basis-Billing-Reihenfolge nicht verschweigen.",
 );
 requireText(
   "src/app/api/stripe/webhook/route.ts",
@@ -1315,9 +1391,119 @@ requireText(
   "Die typisierte Stripe-Referenzmenge muss vor jeder Workspace-Auflösung vollständig geprüft werden.",
 );
 requireText(
-  "docs/SOURCE_OF_TRUTH.md",
-  "allgemeine Billing-Webhook besitzt noch kein gemeinsames",
-  "Der fehlende allgemeine Stripe-Event-Ledger muss als Aktivierungsblocker dokumentiert bleiben.",
+  "src/app/api/stripe/webhook/route.ts",
+  "syncStripeBillingEvent",
+  "Der Stripe-Webhook muss die dormante Basis-Billing-Ledger-Brücke enthalten.",
+);
+requireText(
+  "src/lib/stripeBillingEventLedger.mjs",
+  "FANMIND_STRIPE_BILLING_CANONICAL_RECONCILIATION_CONFIRMED",
+  "Das Basis-Billing-Ledger muss bis zum kanonischen Cutover mehrfach gesperrt bleiben.",
+);
+requireText(
+  "src/lib/stripeBillingEventSync.mjs",
+  "projectionEnabled: isStripeBillingEventLedgerEnabled(environment)",
+  "Capture-only und projektionsfähiges Basis-Billing müssen getrennte Gates behalten.",
+);
+requireText(
+  "supabase/controlled/20260816210000_workspace_stripe_billing_event_ledger.sql",
+  "p_event_created_at = v_stream.last_event_created_at",
+  "Gleichsekündige Basis-Billing-Events dürfen nicht nach Event-ID sortiert werden.",
+);
+requireText(
+  "supabase/controlled/20260816210000_workspace_stripe_billing_event_ledger.sql",
+  "processing_state = 'unresolved'",
+  "Nicht bindbare signierte Billing-Events müssen dauerhaft unresolved bleiben.",
+);
+requireText(
+  "supabase/controlled/20260816210000_workspace_stripe_billing_event_ledger.sql",
+  "v_stream_bootstrap_allowed",
+  "Ein fehlender Bestandsstream darf trotz Projektionsgate nicht ohne pristine Checkout kanonisch werden.",
+);
+requireText(
+  "supabase/controlled/20260816210000_workspace_stripe_billing_event_ledger.sql",
+  "verify_workspace_stripe_billing_ledger_schema",
+  "Das Basis-Billing-Ledger muss sein exaktes Schema bereits in der Apply-Transaktion prüfen.",
+);
+requireText(
+  "supabase/controlled/20260816210000_workspace_stripe_billing_event_ledger.sql",
+  "FANMIND_STRIPE_BILLING_SCHEMA_REFERENCE_BEGIN",
+  "Constraint- und Index-Sollwerte des Basis-Billing-Ledgers müssen aus dem checksum-gepinnten Control materialisiert werden.",
+);
+requireText(
+  "supabase/controlled/20260816210000_workspace_stripe_billing_event_ledger.sql",
+  "if v_definition.constraint_type = 'f' then",
+  "Nur Foreign-Key-Referenznamen dürfen zwischen temporärem Oracle und öffentlichem Schema abgebildet werden; CHECK-Literale bleiben unverändert.",
+);
+requireText(
+  "supabase/controlled/20260816210000_workspace_stripe_billing_event_ledger.sql",
+  "and not acl.is_grantable",
+  "Die service-role darf das Execute-Recht der Billing-Security-Definer nicht delegieren.",
+);
+requireText(
+  "supabase/controlled/20260816210000_workspace_stripe_billing_event_ledger.sql",
+  "rolname = session_user",
+  "Alle Billing-Funktionen müssen an den projektgebundenen Session-Owner statt an eine veränderbare Runtime-Rolle gebunden bleiben.",
+);
+requireText(
+  "supabase/controlled/20260816210000_workspace_stripe_billing_event_ledger.sql",
+  "stripe_billing_ledger_function_body_drift",
+  "Der exakte Billing-Verifier muss auch metadata-identische Änderungen aller Funktionskörper ablehnen.",
+);
+requireText(
+  "scripts/operations/stripe-billing-event-ledger-runner.mjs",
+  "a05ed6423e663b26bbe8fe401e2a942d2c2bb8ba774c4c79079ec68bc8678384",
+  "Das kontrollierte Basis-Billing-Ledger muss checksum-gebunden bleiben.",
+);
+requireText(
+  "scripts/operations/stripe-billing-event-ledger-runner.mjs",
+  "STRIPE_BILLING_EVENT_LEDGER_CUTOVER_UNINVENTORIED",
+  "Der Basis-Billing-Postflight muss ungeprüfte Apply-Capture-Gap-Workspaces zählen.",
+);
+requireText(
+  "scripts/operations/stripe-billing-event-ledger-runner.mjs",
+  "host === productionHost",
+  "Der Basis-Billing-Runner muss den Production-DB-Host tatsächlich gegen das Ziel prüfen.",
+);
+requireText(
+  "scripts/operations/stripe-billing-event-ledger-runner.mjs",
+  "schema_verifier_drift",
+  "Der unabhängige Basis-Billing-Postflight muss den committed Schema-Verifier bytegenau binden.",
+);
+requireText(
+  "docs/operations/STRIPE_BILLING_EVENT_LEDGER.md",
+  "Billing-Write-Freeze",
+  "Der Apply-Capture-Cutover muss den verpflichtenden Billing-Write-Freeze dokumentieren.",
+);
+requireText(
+  "package.json",
+  "db:stripe-billing-ledger:check",
+  "Der Offline-Vertragscheck des Basis-Billing-Ledgers muss fest aufrufbar sein.",
+);
+requireText(
+  ".github/workflows/stripe-billing-event-ledger-staging.yml",
+  "apply-stripe-billing-event-ledger",
+  "Der Staging-Apply des Basis-Billing-Ledgers muss eine exakte manuelle Bestätigung verlangen.",
+);
+requireText(
+  ".github/workflows/stripe-billing-event-ledger-staging.yml",
+  "inputs.reviewed_commit == github.sha",
+  "Der Staging-Apply des Basis-Billing-Ledgers muss an den exakt geprüften main-Commit gebunden sein.",
+);
+requireText(
+  ".github/workflows/stripe-billing-event-ledger-staging.yml",
+  "config/certificates/supabase-root-2021-ca.crt",
+  "Der Basis-Billing-Ledger-Transport muss die festgeschriebene Supabase-CA mit verify-full verwenden.",
+);
+requireText(
+  ".github/workflows/stripe-billing-event-ledger-staging.yml",
+  "STAGING_DATABASE_ROLLOUT_STRIPE_BILLING_LEDGER=apply",
+  "Der Basis-Billing-Apply muss das gemeinsame read-only Rollout-Ergebnis binden.",
+);
+forbidIn(
+  ".github/workflows/stripe-billing-event-ledger-staging.yml",
+  /FANMIND_RUNTIME_ENVIRONMENT:\s*production|FANMIND_PRODUCTION_CHANGE_TICKET|FANMIND_STRIPE_BILLING_EVENT_LEDGER_ENABLED|NEXT_PUBLIC_APP_URL:\s*https:\/\/(?:www\.)?fanmind\.ch/iu,
+  "Der Basis-Billing-Ledger-Workflow darf weder Production noch die Runtime-Aktivierung enthalten.",
 );
 requireText(
   "package.json",

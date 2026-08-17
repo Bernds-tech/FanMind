@@ -856,6 +856,27 @@ RLS-/Security-Erwartung:
   Service-Role-Abfrage exakt `manual_suspended` bestätigt. Fehlende Zeile,
   `NULL`, anderer Status und Lesefehler bleiben retryable.
 - Stripe-IDs nicht unnötig im Client anzeigen.
+- Das noch nicht angewendete kontrollierte KI-Event-Ledger erweitert
+  `workspace_ai_tier_entitlements` um `stripe_sync_state` und
+  `stripe_sync_revision`. Seine Event- und Reconciliation-Tabellen sind
+  service-role-only; Entitlement-Writes laufen danach ausschließlich über
+  zwei atomare RPCs. Gleiche Stripe-Sekunden werden nicht nach Event-ID
+  sortiert, sondern dauerhaft `reconciliation_needed` und im Loader
+  fail-closed. Die Reconciliation-Quittung bindet die vorherige und die
+  kanonische Basis-Subscription und speichert
+  `snapshot_event_created_cutoff`; Event-Ingest berücksichtigt diese Grenze
+  auch dann, wenn für einen Starter-only-Snapshot keine Entitlement-Zeile
+  existiert. Das allgemeine Basis-Billing auf `workspaces` besitzt ein
+  kontrolliertes, noch nicht angewendetes, standardmäßig dormantes und alle
+  mutierenden Eventtypen umfassendes Ledger; der externe Cutover bleibt offen.
+  Das kontrollierte SQL würde die Forced-RLS-Tabellen
+  `workspace_stripe_billing_events`, `workspace_stripe_billing_streams`,
+  `workspace_stripe_billing_object_bindings` und
+  `workspace_stripe_billing_reconciliations` sowie ausschließlich
+  service-role-ausführbare Apply-/Canonical-RPCs anlegen. Diese Objekte gehören
+  bis zum getrennten Apply ausdrücklich **nicht** zum angewendeten Schema. Ein
+  zusätzlicher owner-only Schema-Verifier prüft sie innerhalb des Apply und
+  anschließend, bytegenau an das Control gebunden, erneut read-only.
 
 ## 9. KI-Usage-Tabelle
 

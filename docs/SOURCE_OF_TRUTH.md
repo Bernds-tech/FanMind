@@ -574,22 +574,61 @@ KI Standard, KI Plus und KI Ultra sind keine eigenständigen CRM-Hauptpakete.
   dürfen vor jedem Billing-Write nur die exakt gespeicherte Customer- und
   Basis-Subscription-Bindung verwenden; ein separates KI-Abo darf die
   Basis-Subscription nicht überschreiben. Doppelte und
-  ältere Events werden nicht erneut angewendet; Zeitkollisionen,
-  Subscription-Wechsel, unvollständige Item-Listen und beschädigte Perioden
-  stoppen fail-closed. Entfernt ein neueres Subscription-Event das zuvor
+  ältere Events werden nicht erneut angewendet; unvollständige Item-Listen
+  und beschädigte Perioden stoppen fail-closed. Entfernt ein neueres
+  Subscription-Event das zuvor
   gespeicherte Plus-/Ultra-Item, wird der Datensatz `canceled` statt stale
   aktiv belassen. Insert und Update verwenden ohne Upsert eine persistente
-  Event-Grenze beziehungsweise einen Compare-and-swap-Filter; ein
-  Parallelkonflikt verlangt Stripe-Retry. Die Brücke aktiviert keine
-  KI-Stufe und bleibt ohne ihr dediziertes Persistence-Gate inaktiv.
-- Der allgemeine Billing-Webhook besitzt noch kein gemeinsames
-  transaktionales Event- und Zahlungsledger über Checkout, Invoice,
-  Subscription, PaymentIntent und Refund. Historische Refunds ohne Customer
-  und ohne aktuell gespeicherte PaymentIntent-Bindung bleiben deshalb
-  absichtlich retryable. Ein verspätetes, aber gültiges Basis-Billing-Event
-  darf deshalb vor der echten Stripe-Lifecycle-Abnahme nicht als endgültig
-  geordneter Vertragsnachweis gelten; der persistente Ledger-/RPC-Vertrag
-  bleibt ein Aktivierungsblocker.
+  Event-Grenze. Die noch nicht angewendete kontrollierte Erweiterung
+  `workspace_ai_tier_stripe_event_ledger` ersetzt direkte Lifecycle-Writes
+  durch ein service-role-only Event-Ledger und eine atomare RPC mit internem
+  Revisions-CAS. Gleichzeitige Events werden weder nach Event-ID noch
+  willkürlich sortiert: Bei identischer Stripe-Sekunde oder Subscription-
+  Konflikt wird `reconciliation_needed` dauerhaft gespeichert, der Loader
+  fällt auf Standard zurück und der unveränderliche Event darf ohne endlosen
+  Retry bestätigt werden. Eine zweite RPC kann den Zustand nur mit
+  Workspace-/Customer-/kanonischer Basis-Subscription-Bindung, exakt
+  erwarteter bisheriger Entitlement-Subscription, Stripe-Request-ID, Snapshot-
+  Fingerprint und exakt erwarteter Revision auflösen. Der Snapshot-Zeitpunkt
+  wird als dauerhafte Event-Cutoff-Grenze in der Quittung gespeichert und
+  schützt dadurch auch einen Starter-only-Zustand ohne Entitlement-Zeile vor
+  verspäteter Reaktivierung. Der dafür nötige
+  kanonische Stripe-Abruf ist noch nicht verdrahtet. Die Brücke aktiviert
+  keine KI-Stufe und bleibt ohne ihr zusätzliches Ledger-Gate inaktiv.
+- Dieses KI-Ledger umfasst nicht die allgemeinen Billing-Felder auf
+  `workspaces`. Checkout-, Invoice-, Subscription-, PaymentIntent-, Refund-
+  und Tax-Mutationen besitzen nun ein kontrolliertes, noch nicht angewendetes
+  gemeinsames Basis-Billing-Event-Ledger mit kanonischer Reconciliation.
+  Nach einem späteren kontrollierten Apply ersetzt zunächst eine zweifach
+  bestätigte Capture-only-Stufe den Legacy-PATCH, ohne Projektionen zuzulassen;
+  erst die dritte kanonische Bestätigung erlaubt Projektionen.
+  Für Apply→Capture gilt ein dokumentierter Billing-Write-Freeze mit
+  anschließender vollständiger DB-Re-Inventarisierung. Ein fehlender Stream mit
+  bestehender Stripe-Identität oder historischer Objektbindung darf selbst bei
+  offenem dritten Gate nicht automatisch `in_sync` werden; nur ein erster
+  signierter Checkout eines vollständig unberührten Workspace darf
+  bootstrapen. Vor der dritten Bestätigung müssen die DB-Postflight-Zähler für
+  offene und nicht inventarisierte Cutover-Zustände beide exakt `0` sein.
+  Insbesondere darf ein
+  verspätetes `invoice.paid` nach `customer.subscription.deleted` nicht ohne
+  eine solche Grenze reaktivieren. Bis Apply, vollständiger kanonischer
+  Cutover, der gemeinsame Basis-/KI-/Referral-Reconciliation-Operator und der
+  echte Stripe-Testlebenszyklus abgeschlossen sind, bleiben produktives
+  Billing und Plus/Ultra blockiert.
+- Die beiden kontrollierten Ledger-Apply-Transporte verlangen denselben exakt
+  eingegebenen und ausgeführten `main`-Commit, das geschützte Staging-
+  Environment, den Session-Pooler mit projektqualifiziertem Datenbankbenutzer,
+  einen separaten und tatsächlich gegen das Ziel verglichenen Production-Host
+  als negativen Vergleichsanker und TLS
+  `verify-full` mit der eingecheckten Supabase-Root-CA. Sie aktivieren keine
+  Runtime-Flags und führen keinen Stripe-Aufruf aus. Vor jedem Apply binden
+  sie den gemeinsamen read-only Rollout-State auf denselben Commit, dasselbe
+  Ziel und dieselbe Passfile und verlangen exakt ihre Ledger-Aktion `apply`
+  plus Gesamtzustand `PASS`; absent, vollständig und partiell werden getrennt
+  ermittelt. Der Basis-Ledger verifiziert Spalten, Constraints/FKs/CHECKs,
+  Indizes, RLS/ACLs und Funktionen einmal in der Apply-Transaktion und danach
+  mit bytegenau an das checksum-gepinnte Control gebundenem Verifier erneut in
+  einer unabhängigen read-only Transaktion.
 - Ein manueller, rollback-only Staging-Abnahmeworkflow ist vorbereitet. Er
   prüft bei bereits angewendeter Staging-Migration beide aktiven
   Stripe-Testpreise, Owner-/Member-Sperren, Service-Role-CRUD sowie

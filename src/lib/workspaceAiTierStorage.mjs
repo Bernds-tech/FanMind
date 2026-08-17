@@ -60,6 +60,10 @@ export function normalizeWorkspaceAiTierStorageRows(
     typeof row.last_stripe_event_created_at === "number"
       ? row.last_stripe_event_created_at
       : Number.NaN;
+  const syncRevision =
+    typeof row.stripe_sync_revision === "number"
+      ? row.stripe_sync_revision
+      : Number.NaN;
 
   if (
     row.workspace_id !== expectedWorkspaceId ||
@@ -76,6 +80,9 @@ export function normalizeWorkspaceAiTierStorageRows(
     !STRIPE_EVENT_PATTERN.test(row.last_stripe_event_id) ||
     !Number.isSafeInteger(eventCreatedAt) ||
     eventCreatedAt < 0 ||
+    row.stripe_sync_state !== "in_sync" ||
+    !Number.isSafeInteger(syncRevision) ||
+    syncRevision < 1 ||
     !validInstant(row.effective_at) ||
     (expiresAt !== null && !validInstant(expiresAt)) ||
     (expiresAt !== null &&

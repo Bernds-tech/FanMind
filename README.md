@@ -73,12 +73,35 @@ Dieser Reader folgt der aktuellen Source of Truth in `docs/SOURCE_OF_TRUTH.md`.
 - Serverseitiger Entitlement-Vertrag: fehlende, unbekannte, client-kontrollierte, pausierte, nicht gestartete, abgelaufene oder unvollständig freigegebene Plus-/Ultra-Zustände fallen immer auf KI Standard zurück.
 - Persistenter Entitlement-Speicher: server-only Tabelle und redigierender
   Loader sind auf dem getrennten Supabase-Staging migriert und nachgeprüft;
-  der echte Stripe-Webhook enthält nun eine standardmäßig inaktive,
-  optimistisch gesperrte Lifecycle-Brücke. Sie arbeitet erst bei eigenem
-  Persistence-Gate, bestätigtem Workspace-Vertrag und zwei unterschiedlichen
-  serverseitigen KI-Price-IDs.
+  der echte Stripe-Webhook enthält nun eine standardmäßig inaktive Lifecycle-
+  Brücke. Eine noch nicht angewendete kontrollierte Erweiterung bereitet ein
+  persistentes Event-Ledger und eine atomare CAS/RPC-Grenze vor. Sie arbeitet
+  erst bei eigenem Persistence- und Ledger-Gate, bestätigtem Workspace-Vertrag
+  und zwei unterschiedlichen serverseitigen KI-Price-IDs. Sekundenkollisionen
+  werden dauerhaft `reconciliation_needed` und fallen auf Standard zurück;
+  Event-IDs werden nicht als Reihenfolge missbraucht.
+  Kanonische Reconciliation bindet einen legitimen Wechsel der Basis-
+  Subscription an die exakt erwartete alte Entitlement-Subscription, Revision,
+  Request-ID und Fingerprint. Ihr persistierter Snapshot-Cutoff verhindert
+  auch ohne bezahlte Zeile, dass ältere oder gleichzeitige signierte Events
+  erneut aktivieren.
   Production-Migration und produktive KI-Nutzung sind nicht freigegeben,
+  der kanonische Reconciliation-Worker und die echte Abnahme fehlen weiterhin,
   daher bleiben Plus/Ultra blockiert.
+- Basis-Billing-Event-Ledger: Eine zweite, ebenfalls nicht angewendete und
+  standardmäßig dormante kontrollierte Erweiterung umfasst Checkout, Invoice,
+  Subscription, PaymentIntent, Refund/Dispute und Tax. Sie persistiert
+  unaufgelöste signierte Events, bindet rotierende/historische Stripe-Objekte
+  tenant-sicher, verhindert verspätete Reaktivierung und verlangt bei
+  Sekundenkollisionen einen request-id-/Fingerprint-/Revision-gebundenen
+  kanonischen Abgleich. Ein zweistufiges Gate kann nach kontrolliertem Apply
+  zuerst nur Events erfassen/fail-closed halten und Projektionen erst nach dem
+  kanonischen Cutover freigeben. Bestehende Stripe-Workspaces starten im
+  `controlled_cutover`; kein Web-Deploy wendet SQL an oder aktiviert das Gate.
+  Der Apply prüft das exakte Schema sowohl innerhalb seiner Transaktion als
+  auch danach unabhängig read-only; beide Ledger-Workflows verlangen zuvor
+  den gemeinsamen Rollout-State mit der exakten Aktion `apply` und `PASS`.
+  Ablauf: `docs/operations/STRIPE_BILLING_EVENT_LEDGER.md`.
 - Kontrollierter Entitlement-Migrationspfad: `npm run db:ai-tier-entitlements:check` prüft die festgeschriebene Migration offline; `verify` und `apply` sind explizit zielgebunden und führen niemals automatisch durch einen Web-Deploy aus. Der manuelle, ausschließlich auf `main` und das GitHub-Environment `staging` begrenzte Workflow `FanMind AI Tier Staging Migration` bereitet den echten Staging-Apply samt Postflight vor.
 - KI-Stufen-Staging-Abnahme: manueller rollback-only Workflow für getrennte
   Staging-Datenbank, synthetischen Owner-/Member-Workspace und Stripe-Testpreise

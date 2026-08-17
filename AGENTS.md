@@ -72,9 +72,10 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   resolver input before use. The Stripe webhook bridge must stay dormant
   unless its dedicated persistence gate, the server-owned Workspace contract
   and two distinct allowlisted Price IDs are explicitly configured; it must
-  preserve Starter-only semantics, use optimistic event-boundary writes and
-  retry conflicts. Do not wire the storage to productive AI execution before
-  the staged rollout in
+  preserve Starter-only semantics and use the controlled event-ledger RPC
+  after its separate gate. Equal-second conflicts must persist
+  `reconciliation_needed`, never invent Event-ID order or retry forever. Do
+  not wire the storage to productive AI execution before the staged rollout in
   `docs/operations/AI_TIER_ENTITLEMENT_STORAGE.md`.
 - Its SQL is checksum-pinned by
   `scripts/operations/ai-tier-entitlement-migration-runner.mjs`. A normal
@@ -109,8 +110,18 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   dormant webhook/storage bridge must keep Workspace target, exact stored
   customer/base-subscription binding, distinct Price allowlist, complete
   single-item list, event-order and idempotency checks fail-closed; never log
-  its internal Stripe mutation. Keep the bridge disabled outside the isolated
-  staged rollout and do not activate Plus/Ultra before its remaining gates.
+  its internal Stripe mutation. The controlled AI event-ledger SQL remains
+  unapplied until its own Staging gate. Never sort equal-second events by
+  Event ID: atomically persist `reconciliation_needed`, make the paid tier
+  fail closed and require a request-ID/fingerprint/revision-bound canonical
+  Stripe reconciliation. A legitimate base-subscription rotation must bind
+  the exact prior entitlement subscription and persist the canonical snapshot
+  second as an ordering cutoff; direct service-role table writes remain
+  forbidden after ledger hardening. Keep the bridge disabled outside the isolated
+  staged rollout. The general Workspace billing fields now have a separate,
+  controlled and still unapplied all-event ledger with a capture-only cutover
+  stage; do not activate billing or Plus/Ultra before both ledgers, their
+  shared canonical downstream operator and all remaining gates are closed.
 - The manual AI-tier staging acceptance in
   `scripts/operations/ai-tier-staging-acceptance.mjs` is a rollback-only
   proof. Keep its independent write gates, synthetic owner/member workspace,
@@ -303,7 +314,8 @@ Social integrations, analytics, campaign logic, referral automation and automati
   postflight passes; partial or drifted schemas must fail closed. Applying the
   schema must not connect Meta, enable analysis, submit App Review or imply a
   Production activation.
-- Before any AI-tier, Mobile-push, Meta-content, Meta-continuation or optional
+- Before any AI-tier, AI-tier Stripe-ledger, general Stripe-billing-ledger,
+  Mobile-push, Meta-content, Meta-continuation or optional
   trigger-hardening
   Staging database action, use the shared read-only rollout-state workflow.
   It must compare the exact Supabase migration timestamps with the reused
@@ -311,6 +323,12 @@ Social integrations, analytics, campaign logic, referral automation and automati
   infer an apply from a reported migration/table count, repair the ledger,
   invoke a generic migration push or repeat a direct-psql migration from this
   read-only path.
+  Both Stripe-ledger Apply workflows must consume their exact shared
+  absent/complete/partial result and require `apply` plus overall `PASS` on
+  the same commit, target and passfile. The general ledger must keep its exact
+  in-transaction schema verifier and the separately body-bound read-only
+  postflight; a committed partial schema or a marker-only response is never
+  success.
 - The Meta conversation continuation columns have a separate checksum-pinned
   Staging control in
   docs/operations/META_CONVERSATION_CONTINUATION_STAGING.md. Keep its normal
