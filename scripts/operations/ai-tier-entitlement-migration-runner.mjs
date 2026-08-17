@@ -224,7 +224,7 @@ begin
          'workspace_ai_tier_entitlements_sync_revision_check'
        )
        and convalidated
-  ) <> case when ledger_state = 'post_ledger' then 12 else 10 end then
+  ) <> (case when ledger_state = 'post_ledger' then 12 else 10 end) then
     raise exception 'constraints_invalid';
   end if;
 
