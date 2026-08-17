@@ -1,4 +1,9 @@
-import { createCipheriv, createHmac, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHmac,
+  randomBytes,
+} from "node:crypto";
 
 export class MobilePushTokenCryptoError extends Error {
   constructor(code) {
@@ -43,4 +48,32 @@ export function encryptMobilePushToken(token) {
     tag.toString("base64url"),
     ciphertext.toString("base64url"),
   ].join(":");
+}
+
+export function decryptMobilePushToken(value) {
+  const parts = typeof value === "string" ? value.split(":") : [];
+  if (
+    parts.length !== 4 ||
+    parts[0] !== "v1" ||
+    parts.slice(1).some((part) => !/^[A-Za-z0-9_-]+$/u.test(part))
+  ) {
+    throw new MobilePushTokenCryptoError("push_token_ciphertext_invalid");
+  }
+  try {
+    const iv = Buffer.from(parts[1], "base64url");
+    const tag = Buffer.from(parts[2], "base64url");
+    const ciphertext = Buffer.from(parts[3], "base64url");
+    if (iv.length !== 12 || tag.length !== 16 || ciphertext.length === 0) {
+      throw new Error("invalid_ciphertext");
+    }
+    const decipher = createDecipheriv("aes-256-gcm", encryptionKey(), iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([
+      decipher.update(ciphertext),
+      decipher.final(),
+    ]).toString("utf8");
+  } catch (error) {
+    if (error instanceof MobilePushTokenCryptoError) throw error;
+    throw new MobilePushTokenCryptoError("push_token_ciphertext_invalid");
+  }
 }

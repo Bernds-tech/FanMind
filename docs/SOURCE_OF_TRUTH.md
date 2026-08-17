@@ -113,7 +113,12 @@ Aktiv im App-Kern:
   kontogebundene Ein-Gerät-Registrierung für Owner oder autorisierte
   Workspace-Mitglieder. Öffentliche Demo-Workspaces, ungebundene Requests und
   nicht serverseitig freigegebene EAS-Projekte werden abgelehnt; die Migration,
-  Serverkey-Aktivierung, echte Geräteabnahme und Zustellung bleiben getrennt
+  Serverkey-Aktivierung und echte Geräteabnahme bleiben getrennt. Ein
+  Staging-only Serververtrag für genau eine inhaltsfreie Follow-up-Erinnerung
+  mit einstündiger TTL ist synthetisch getestet, besitzt aber ohne genehmigten
+  atomaren Delivery-Ledger samt transaktionaler Target-Revalidierung und
+  unabhängig geprüfte EAS-, Staging-App-, Staging-Supabase- und
+  Production-Supabase-Bindings weder Route noch Timer/Worker und bleibt
   deaktiviert;
 - checksum-festgeschriebener, strikt Staging-only Kontrollpfad für diese
   Push-Tabelle: ein read-only Ressourcencheck, ein separat bestätigter
@@ -295,13 +300,6 @@ zwingende externe Freigabe noch fehlt.
   `docs/operations/TRIGGER_FUNCTION_HARDENING_PRODUCTION.md`.
 - Umgebungs-Governance: schreibende Remote-Tests sind außerhalb eindeutig identifizierter Staging- oder Testumgebungen blockiert.
 - Restore-Drill: Zielgrenzen, transaktionaler Runner und ein strikt redigierter Evidence-Validator sind implementiert. Vor jeder geschützten Phase prüft ein root-owned, SHA-gebundenes und secretfreies Host-Gate die erwartete Runner-Identität `fanmind-restore-01` und die feste lokale Toolchain. Die Self-hosted-Jobs verlangen die Organisationsgruppe `fanmind-restore-drill` plus fünf exakte Labels; die Labels allein sind keine Sicherheitsgrenze. Das derzeit öffentliche, user-owned Repository kann die Organisationsgruppe nicht bereitstellen, deshalb blockiert schon der GitHub-hosted Dispatch-Validator jeden Self-hosted-Job, solange die externe Scope-Bestätigung fehlt. Erst nach Organisations-Transfer und einer auf die drei `main`-Restore-Workflows begrenzten Gruppen-Allowlist darf sie gesetzt werden. Ressourcen- und Datenbankworkflow benötigen danach jeweils einen zweiten frischen One-Job-JIT-Runner; ein persistenter Host oder das Label allein genügt nicht. Der manuelle `main`-gebundene Read-only-Ressourcencheck prüft erst danach den isolierten Zielhost und die Prüfsumme eines verschlüsselten Full-Backups, ohne Datenbankverbindung, Entschlüsselung oder Schreibfreigabe. Der getrennte commit-genaue Datenbank-Workflow wiederholt diese Gates, friert age-Identity, Passfile und CA symlink-sicher ein, erzwingt TLS `verify-full` und stellt nach dem Restore ausschließlich drei kurzlebige private Receipts bereit. Das vertrauliche Full-Backup-Receipt enthält die begrenzte Liste erforderlicher Datenbankrollennamen für die Prewrite-Prüfung; Runner- und Postcheck-Receipt bleiben namenfrei. Der Datenbankpfad verwendet einen isolierten, selbst kontrollierten PostgreSQL-17-Cluster statt eines gehosteten Supabase-Ziels, archiviert Owner und ACLs aus demselben exportierten Snapshot und bindet Objekt-/ACL-, Rollen- und Datenbank-Containerfingerprints durch Manifest und Receipts. Der Runner akzeptiert die receipt-gebundene vorinstallierte Extension-Baseline beim Leernachweis und erzeugt nur bei 5/5 vorhandenen Kerntabellen, 5/5 aktivierter RLS, 5/5 Policy-Abdeckung und exaktem Authorization-Postcheck einen separaten privaten, SHA-gebundenen Datenbank-Postcheck-Beleg; manuelle Schema-/RLS-Freigaben akzeptiert Evidence-Schema 6 nicht. Der tatsächliche externe Lauf sowie Storage-, Server-Konfigurations-, Wegwerfziel-Cleanup- und finale Evidenznachweise bleiben offen.
-- Der vorgelagerte Runner-Gruppen-Scope-Validator prüft eine höchstens eine
-  Stunde alte private Administratoraufnahme offline gegen Repository-ID
-  `1259448985`, Organization-Kontext, selected-only, die Public/Private-Regel
-  und exakt drei Restore-Workflows auf `refs/heads/main`. Sein redigierter,
-  SHA-gebundener Privatbeleg enthält keinen Organisationsnamen und ist keine
-  Remote-Attestierung. Der Validator kann weder Organisation/Gruppe erstellen
-  noch GitHub aufrufen, Runner registrieren oder einen Restore starten.
 - Mobile-Release: Ein eigener manueller `main`-gebundener
   Read-only-Ressourcencheck ist vorbereitet. Er prüft pro geschützter
   `mobile-development`-, `mobile-preview`- oder `mobile-production`-Umgebung
@@ -341,6 +339,16 @@ zwingende externe Freigabe noch fehlt.
   service-role CRUD vollständig transaktional aus und verlangt danach einen
   leeren Cleanup-Nachweis. Kein normaler Deploy kann den Runner aufrufen; reale
   Push-Registrierung, Serverkey und Delivery bleiben extern deaktiviert.
+- Mobile-Push-Delivery: feste Expo-HTTPS-Endpunkte, unabhängige EAS-
+  Projektbindung, Workspace-/Member-/Kontakt-/Follow-up-/Registrierungsprüfung,
+  Minimalpayload mit einstündiger TTL sowie Retry-, Ticket- und Receipt-
+  Entscheidung sind lokal mit einem synthetischen Provider geprüft. Der
+  server-only Loader und die spätere Ledger-Reservation erhalten exakt
+  dasselbe bereits geprüfte Supabase-URL-/Ref-/Service-Role-Binding; die
+  Reservation muss außerdem den aktuellen Registrierungs-/Token-Fingerprint
+  atomar binden. Ohne eine separat genehmigte service-role-only Ledger-
+  Migration mit atomarer Revalidierungs-RPC wird kein Sender verdrahtet; eine CI-
+  Invariante schützt diese Dormanz. Production bleibt strukturell gesperrt.
 - Website-Chat bleibt bis zur getrennten Staging- und Rechtsabnahme
   deaktiviert. Seine Sicherheitsgrundlage darf nur workspace-gebundene,
   standardmäßig deaktivierte Installationen, exakt verifizierte HTTPS-Origins,

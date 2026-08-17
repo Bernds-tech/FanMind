@@ -5,3 +5,4 @@ export class MobilePushTokenCryptoError extends Error {
 
 export function hashMobilePushToken(token: string): string;
 export function encryptMobilePushToken(token: string): string;
+export function decryptMobilePushToken(value: string): string;

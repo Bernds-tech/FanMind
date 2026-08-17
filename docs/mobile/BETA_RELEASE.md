@@ -41,6 +41,11 @@ Dieses Runbook trennt den im Repository fertigstellbaren Mobile-Code von den ein
   rollback-only Acceptance für synthetische Nicht-Demo-Owner/-Member/-Geräte;
   er wurde noch nicht extern ausgeführt und aktiviert weder Registrierung
   noch Zustellung;
+- serverseitiger, standardmäßig deaktivierter Einzelsendevertrag mit fester
+  Follow-up-Payload samt einstündiger TTL, Tenant-/Ressourcenprüfung,
+  gemeinsam gebundenem server-only Zielkontext, begrenztem Retry und Expo-
+  Ticket-/Receipt-Auswertung; ohne separat genehmigten atomaren Ledger gibt es
+  keine Route, keinen Timer und keinen realen Provideraufruf;
 - konfliktfreie native Splashscreen-Konfiguration mit der bestätigten FanMind-Wortmarke für das dunkle App-Theme;
 - getrennte 1024×1024-App-Icons für iOS/Legacy-Android und Android Adaptive
   Icon aus einer eigenständigen Vektorquelle; keine Hochskalierung des
@@ -252,6 +257,25 @@ Production-Supabase und Production-DB-Host sind ausdrücklich ausgeschlossen.
 Es werden keine echten Push-Tokens erzeugt oder ausgegeben und kein Expo-,
 FCM- oder APNs-Endpunkt aufgerufen. Das Runbook steht in
 `docs/operations/MOBILE_PUSH_STAGING_CONTROL.md`.
+
+### Noch deaktivierter Push-Delivery-Vertrag
+
+`docs/mobile/PUSH_DELIVERY.md` beschreibt den bereits synthetisch getesteten
+Serverbaustein. Er kann nur in Staging, nach unabhängiger EAS-Projektprüfung
+und nach unabhängiger Prüfung des Staging-App-Hosts sowie der Staging- und
+Production-Supabase-Refs für genau ein fälliges offenes Follow-up arbeiten.
+Sichtbarer Text ist fest; CRM-Inhalt wird weder geladen noch übertragen. Expo-
+Tickets und Receipts werden nur über feste redigierte Zustände verarbeitet.
+
+Der dafür notwendige persistente Idempotenz-/Receipt-Ledger existiert noch
+nicht. Seine Tabellen- und Aufbewahrungsentscheidung sowie eine
+checksum-gebundene Migration brauchen eine eigene Genehmigung und
+rollback-only Staging-Abnahme. Die Reserve-RPC muss alle Workspace-,
+Membership-, Kontakt-, Follow-up- und Registrierungsgrenzen in derselben
+Transaktion mit demselben validierten Supabase-Binding wie der Loader erneut
+prüfen und den aktuellen Token-Fingerprint atomar binden. Bis dahin bleibt der Baustein ohne Route,
+Timer/Worker und externen Request fail-closed; CI blockiert eine vorzeitige
+Verdrahtung. Production ist nicht freigeschaltet.
 
 ### Manuell freigegebener signierter interner Build
 
