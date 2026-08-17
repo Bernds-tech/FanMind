@@ -13,6 +13,8 @@ import { join } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 
+import { POSTFLIGHT_SQL } from "../scripts/operations/ai-tier-entitlement-migration-runner.mjs";
+
 const execFileAsync = promisify(execFile);
 const runnerPath =
   "scripts/operations/ai-tier-entitlement-migration-runner.mjs";
@@ -22,6 +24,13 @@ const migrationPath =
   "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql";
 const stagingWorkflowPath =
   ".github/workflows/ai-tier-staging-migration.yml";
+
+test("postflight disambiguates the conditional constraint count expression", () => {
+  assert.match(
+    POSTFLIGHT_SQL,
+    /<> \(case when ledger_state = 'post_ledger' then 12 else 10 end\) then/u,
+  );
+});
 
 async function withFakeDatabase(callback, overrides = {}) {
   const root = await mkdtemp(
