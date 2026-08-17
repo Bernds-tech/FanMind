@@ -139,7 +139,7 @@
     "referral:lifecycle:staging:run": "node scripts/operations/referral-lifecycle-staging-acceptance.mjs --run"
   },
   "dependencies": {
-    "next": "16.3.0",
+    "next": "16.3.1",
     "pdfnative": "1.6.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
@@ -150,7 +150,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.3.0",
+    "eslint-config-next": "16.3.1",
     "typescript": "^5"
   },
   "overrides": {
@@ -158,7 +158,7 @@
     "brace-expansion@>=5.0.0 <5.0.9": "5.0.9",
     "js-yaml@>=4.0.0 <4.3.1": "4.3.1",
     "nanoid@<3.3.18": "3.3.18",
-    "next@16.3.0": {
+    "next@16.3.1": {
       "postcss": "8.5.23",
       "sharp": "0.35.3"
     }
