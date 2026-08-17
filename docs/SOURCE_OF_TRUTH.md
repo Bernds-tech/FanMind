@@ -61,7 +61,17 @@ Aktiv beziehungsweise produktnah:
 - commitgenauer manueller Staging-Kern-/CSV-Abnahmepfad: Der vorbereitete
   Workflow bindet den tatsächlich deployten `main`-Commit, den markierten
   synthetischen Owner-/Member-Workspace, reale KI Standard, CSV-Duplikat- und
-  Fehlerzeilen, Zwei-Workspace-RLS sowie ein `always()`-Cleanup. Bis zu seinem
+  Fehlerzeilen, Zwei-Workspace-RLS sowie ein `always()`-Cleanup. Das
+  Member-Passwort wird nicht persistent konfiguriert: Es entsteht maskiert im
+  geschützten Hosted Runner, darf erst nach exakter Auth-Marker- und einzelner
+  Workspace-Membership-Prüfung gesetzt werden und wird im Cleanup durch ein
+  unbekanntes Passwort ersetzt; der bekannte Wert muss danach real als
+  `invalid_credentials` abgewiesen werden. Profilbindung, Auth, Membership und
+  Workspace werden nach jedem Admin-Write vollständig neu gelesen; Drift oder
+  ein unbestimmtes Providerergebnis bleibt auch nach einer bestmöglichen
+  unbekannten Rotation auf der zuvor gebundenen UUID rot. Die private
+  `GITHUB_ENV`-Datei muss regulär, Runner-eigen, einfach verlinkt und exakt
+  `0600` sein. Owner-/Secondary-Zugangsdaten bleiben davon unberührt. Bis zum
   tatsächlichen grünen Lauf bleibt die externe Staging-Abnahme offen;
 - consent-gesteuerte Meta-Pixel-Infrastruktur als ausdrücklich begrenzte Marketing-Messung auf einer festen Allowlist öffentlicher Seiten: ausschließlich `PageView` ohne Eventparameter; keine geschützten CRM-/Admin-/Billing-Routen, keine Produkt-Analytics-Suite, kein Laden ohne Einwilligung, keine PII-/CRM-/Billing-Daten, blockierte geschützte same-origin Referrer, kein Advanced Matching und keine Conversions API; vorbereitete Conversion-Events bleiben ohne separate fachliche und datenschutzrechtliche Freigabe unverdrahtet; ohne gültige `NEXT_PUBLIC_META_PIXEL_ID` vollständig deaktiviert;
 - internes Live-Testabo `internal_daily_test` mit 1 € pro Tag als kontrollierter echter End-to-End-Billing-Test; gleicher Checkout-, Zahlungs-, Webhook-, Verlängerungs-, Fehlzahlungs-, Reaktivierungs- und Kündigungs-Lifecycle wie Starter; kein Referral-Rabatt, kein dauerhaftes öffentliches Paket; eine temporäre Registrierungsfreigabe läuft spätestens nach 24 Stunden ab, lehnt fehlende, ungültige oder in der Zukunft liegende Startzeitpunkte fail-closed ab und bleibt bis zum abgenommenen `service_role`-Provisioning- und Browser-INSERT-Contract sowie vollständiger Daily-Stripe-/Webhook-Konfiguration geschlossen. Nach einer erforderlichen E-Mail-Bestätigung kann ein noch workspace-loses Konto den Daily-Test auf `/workspace/setup` erneut ausdrücklich auswählen, aber nur solange Zeitfenster, RPC-Readiness und Stripe-Vertrag frisch serverseitig bereit sind; persistente Auth-Metadaten gelten weder als Tarif- noch als Zustimmungsnachweis. Der zugehörige SQL-Schritt liegt einzeln freizugebend unter `supabase/controlled/` und bleibt außerhalb generischer Migration Discovery (`docs/operations/INTERNAL_DAILY_TEST_WORKSPACE_PROVISIONING.md`).
@@ -430,7 +440,10 @@ zwingende externe Freigabe noch fehlt.
   und einen zusätzlichen AI-Member und gibt nur die sechs nicht geheimen
   UUID-Zuordnungen aus. Der reale Lauf und die anschließenden Browser-/Billing-
   Abnahmen sind noch nicht erfolgt. Runbook:
-  `docs/operations/STAGING_SYNTHETIC_FIXTURES.md`.
+  `docs/operations/STAGING_SYNTHETIC_FIXTURES.md`. Die Core-/CSV-Abnahme nutzt
+  danach keinen persistenten Member-Zugang, sondern den getrennten
+  kurzlebigen Lifecycle aus
+  `docs/operations/STAGING_EPHEMERAL_MEMBER_CREDENTIAL.md`.
 
 Die noch fehlenden Stripe-Webhook-/Lifecycle-Abnahmen blockieren nicht den
 read-only Produktions-Smoke-Test. Sie bleiben Voraussetzung für Referral-
