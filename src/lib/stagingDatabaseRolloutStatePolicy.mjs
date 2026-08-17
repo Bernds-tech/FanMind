@@ -114,6 +114,21 @@ function deriveWorkspaceMemberBoundaryAction({
   return deriveControlledObjectAction(objectState);
 }
 
+function deriveWhatsAppCloudInboundAction({
+  workspaceMemberBoundaryState,
+  inGenericLedger,
+  objectState,
+}) {
+  if (inGenericLedger !== false || !OBJECT_STATES.has(objectState)) {
+    return "block";
+  }
+  if (workspaceMemberBoundaryState === "absent") {
+    return objectState === "absent" ? "skip" : "block";
+  }
+  if (workspaceMemberBoundaryState !== "current") return "block";
+  return deriveControlledObjectAction(objectState);
+}
+
 export function deriveStagingDatabaseRolloutActions({
   ledger = {},
   objects = {},
@@ -123,6 +138,11 @@ export function deriveStagingDatabaseRolloutActions({
       prerequisiteApplied: ledger.workspaceMemberPrerequisite,
       inGenericLedger: ledger.workspaceMemberInGenericLedger,
       objectState: objects.workspaceMemberBoundary,
+    }),
+    whatsappCloudInbound: deriveWhatsAppCloudInboundAction({
+      workspaceMemberBoundaryState: objects.workspaceMemberBoundary,
+      inGenericLedger: ledger.whatsappCloudInboundInGenericLedger,
+      objectState: objects.whatsappCloudInbound,
     }),
     aiTier: deriveMigrationBlockAction({
       ledgerApplied: ledger.aiTier,

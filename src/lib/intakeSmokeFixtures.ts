@@ -57,13 +57,16 @@ export const intakeSmokeFixtures = {
     ],
   },
   whatsappMessage: {
+    object: "whatsapp_business_account",
     entry: [
       {
+        id: "123456789012345",
         changes: [
           {
+            field: "messages",
             value: {
               messaging_product: "whatsapp",
-              metadata: { phone_number_id: "wa_phone_1" },
+              metadata: { phone_number_id: "109876543210987" },
               contacts: [{ wa_id: "491700000000", profile: { name: "WA Fan" } }],
               messages: [{ id: "wamid.demo1", from: "491700000000", timestamp: "1710000002", text: { body: "Ist noch ein Platz frei?" } }],
             },

@@ -171,12 +171,12 @@ export const CHANNEL_SOURCE_CONFIGS: Record<
     status: "prepared",
     inboundSupported: false,
     outboundSupported: false,
-    mediaSupported: true,
+    mediaSupported: false,
     historySyncSupported: false,
     liveWebhookSupported: false,
-    statusText: "Vorbereitet · Cloud-API-Konfiguration erforderlich",
+    statusText: "Vorbereitet · Inbound-Text standardmäßig aus",
     statusHint:
-      "Cloud-API-Anbindung vorbereitet, noch nicht live. Keine automatische Sendefunktion in FanMind.",
+      "Offizieller Cloud-API-Inbound-Textpfad vorbereitet, aber standardmäßig deaktiviert und nicht live. Keine Medien, kein Outbound und keine automatische Sendefunktion in FanMind.",
   },
 
   telegram_messages: {

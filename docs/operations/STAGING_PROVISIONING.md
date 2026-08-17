@@ -19,6 +19,9 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
 - separater manueller Workflow `Enable FanMind Staging TLS`, der erst nach
   erfolgreicher DNS-Bindung das vorhandene Certbot-Konto für
   `staging.fanmind.ch` verwendet;
+- versionierte nginx-Grenze für exakt `/api/webhooks/whatsapp`: wegen des von
+  Meta unvermeidlich als Query übertragenen `hub.verify_token` gelten dort
+  `access_log off` und route-lokal `error_log /dev/null crit`;
 - Policy-Tests, die Production-Ziele und unvollständige Freigaben blockieren.
 - ein getrennter, commit-genauer und read-only Workflow
   `FanMind Staging Stripe Webhook Readiness`, der URL, Testmodus, Aktivstatus,
@@ -155,7 +158,28 @@ Eine klar abgegrenzte Nicht-Production-Umgebung für schreibende Stripe-, Referr
    Er erhält ausschließlich eine vollständige, exakt auf
    `staging.fanmind.ch`, Port `3001` und dessen Zertifikat gebundene
    TLS-Konfiguration; unvollständige oder abweichende Zustände stoppen
-   fail-closed und verlangen danach erneut den getrennten TLS-Workflow.
+   fail-closed und verlangen danach erneut den getrennten TLS-Workflow. Für
+   einen vorhandenen TLS-vHost parst die Provisionierung zusätzlich blockweise.
+   Sie akzeptiert genau einen strukturell erkannten Port-443-Server. Die
+   Listener-Auswertung normalisiert den ersten nginx-Parameter dezimal, sodass
+   auch `0443` und `Adresse:0443` als Port 443 zählen. Im akzeptierten Server
+   bindet sie die eindeutige exakte Direktive `listen 443 ssl;`, höchstens
+   einen zusätzlichen SSL-geschützten IPv6-Listener, den exakten
+   `server_name staging.fanmind.ch`, beide exakten Zertifikatdirektiven sowie
+   genau eine Location `= /api/webhooks/whatsapp` mit exakt einem
+   `access_log off`, einem route-lokalen `error_log /dev/null crit` und dem
+   Upstream `127.0.0.1:3001`. In dieser Location sind ausschließlich die zehn
+   versionierten Log-, Proxy- und Headerdirektiven zulässig; zusätzliche
+   Includes, Rewrites, interne Redirects oder mehrzeilig versteckte
+   Direktiven blockieren. Auch der TLS-Server selbst darf den Request nicht
+   vor der Location-Auswahl umschreiben. Eine geschützte Location nur im HTTP-Server kann
+   einen generisch geloggten TLS-Server daher nicht freigeben. Fehlt oder
+   dupliziert sich ein Teil, wird der bestehende TLS-vHost nicht automatisch
+   umgeschrieben: der Lauf
+   stoppt mit `Existing staging TLS virtual host lacks the exact WhatsApp
+   query-redaction boundary`. Erst eine separat reviewte Korrektur des
+   TLS-vHosts, `nginx -t` und ein erneuter Provisionierungslauf dürfen
+   fortfahren.
 5. den kurzlebigen Runner-Registrierungstoken anschließend löschen;
 6. `.env.staging.example` außerhalb von Git befüllen;
 7. die Projektreferenz aus `NEXT_PUBLIC_SUPABASE_URL` exakt in `FANMIND_TARGET_SUPABASE_PROJECT_REF` übernehmen;
@@ -243,6 +267,14 @@ Staging gilt erst als tatsächlich eingerichtet, wenn:
 - GitHub-Workflow vollständig grün ist;
 - `/api/version` exakt den Commit ausliefert, auf dem der Readiness-Workflow gestartet wurde;
 - `/api/version` zusätzlich `runtimeEnvironment=staging` ausliefert und damit die aktive Staging-Runtime bestätigt;
+- der aktive nginx-TLS-vHost als einziger struktureller Port-443-Server den
+  exakten Staging-Host, das Zertifikat und im selben Block die exakte
+  WhatsApp-Location mit
+  `access_log off` und route-lokalem `error_log /dev/null crit` enthält und
+  ein kontrollierter Handshake bestätigt, dass `hub.verify_token` weder in
+  Access- noch Error-Logs erscheint;
+- jedes später vorgeschaltete CDN, WAF oder Load-Balancer eine gleichwertige
+  und nachgewiesene Query-Redaktionsgrenze besitzt;
 - keine realen Kundendaten vorhanden sind;
 - Read-only- und Write-Preflight wie vorgesehen fail-closed reagieren;
 - ein Test-Webhook erfolgreich verarbeitet wurde;

@@ -192,6 +192,13 @@ test("only reviewed machine-readable error codes can cross the boundary", () => 
   );
 });
 
+test("idempotency conflict remains a reviewed diagnostic error code", () => {
+  assert.equal(
+    normalizeWebhookErrorCode("idempotency_conflict"),
+    "idempotency_conflict",
+  );
+});
+
 test("Meta and Telegram routes contain no fail-open secret path or free provider error output", async () => {
   const [metaRoute, telegramRoute, telegramProcessor] = await Promise.all([
     readFile("src/app/api/webhooks/meta/route.ts", "utf8"),

@@ -295,7 +295,10 @@ Mindestens diese Testfälle vor Pilotkundendaten prüfen:
 
 - [ ] Meta/Facebook/Instagram wird nicht als allgemein live verkauft, solange nicht validiert.
 - [ ] Telegram-Senden ist nicht in Gerhards Standarddemo sichtbar, solange es kein explizit freigegebener Pilot ist.
-- [ ] WhatsApp/TikTok/X/Discord bleiben Roadmap/Coming Soon.
+- [ ] WhatsApp Cloud Inbound bleibt standardmäßig deaktiviert und darf nur
+      nach kontrollierter Schema-Prüfung in einer expliziten Non-Production-
+      Laufzeit aktiviert werden; Production, Outbound und Senden bleiben
+      gesperrt. TikTok/X/Discord bleiben Roadmap/Coming Soon.
 - [ ] Keine externe Plattform-Passwörter oder Login-Daten speichern.
 - [ ] Keine Scraper bauen.
 - [ ] Keine automatische Sendefunktion bauen oder bewerben.

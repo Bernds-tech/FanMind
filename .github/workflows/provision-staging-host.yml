@@ -303,16 +303,15 @@ jobs:
               echo "Existing staging TLS state is incomplete or unsafe." >&2
               exit 1
             fi
-            for required_line in \
-              "server_name staging.fanmind.ch" \
-              "proxy_pass http://127.0.0.1:3001" \
-              "ssl_certificate $STAGING_CERTIFICATE" \
-              "ssl_certificate_key $STAGING_CERTIFICATE_KEY"; do
-              if ! sudo grep --fixed-strings --quiet -- "$required_line" "$STAGING_NGINX_CONFIG"; then
-                echo "Existing staging TLS virtual host does not match the isolated target." >&2
-                exit 1
-              fi
-            done
+            WHATSAPP_TLS_BOUNDARY="$(sudo awk \
+              -v expected_certificate="$STAGING_CERTIFICATE" \
+              -v expected_certificate_key="$STAGING_CERTIFICATE_KEY" \
+              -f scripts/operations/verify-staging-nginx-whatsapp-boundary.awk \
+              "$STAGING_NGINX_CONFIG")"
+            if [ "$WHATSAPP_TLS_BOUNDARY" != "valid" ]; then
+              echo "Existing staging TLS virtual host lacks the exact WhatsApp query-redaction boundary." >&2
+              exit 1
+            fi
             echo "STAGING_NGINX_TLS=preserved"
           else
             sudo install -o root -g root -m 0644 \

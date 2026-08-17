@@ -70,7 +70,11 @@ Die zentrale Konfiguration in `src/lib/channelSources.ts` beschreibt pro Kanal F
 - `facebook_comments`: geparkt/vorbereitet, kein Live-Test in diesem PR.
 - `instagram_messages`: implementiert/Beta, inbound/outbound/history-sync, 150er Erstabruf und danach inkrementell; isoliertes Schema angewendet, echter Staging-/Meta-Kontotest und Provider-Freigaben offen; nicht allgemein live und kein automatisches Senden.
 - `instagram_comments`: vorbereitet, API-/Freigabe erforderlich.
-- `whatsapp_messages`: vorbereitet, Cloud-API-Konfiguration später.
+- `whatsapp_messages`: kontrollierter offizieller Inbound-Textpfad mit
+  getrennter HMAC-/Verify-Token-Prüfung, exakter Phone-ID-Tenant-Bindung und
+  atomarem Receipt-/CRM-Store vorbereitet; Flag und Production bleiben aus,
+  Controlled Migration, reales Staging-/Meta-Konto, Provider-/Legal-Freigaben
+  und Cleanup-Abnahme sind offen; kein Outbound.
 - `tiktok_comments`: vorbereitet, offizielle Freigabe erforderlich, kein Scraping.
 - `tiktok_messages`: nicht-live, Export/Data-Portability-Importpfad.
 - `email`, `webform`, `manual`: vorbereitet/manuell ohne Fake-Live-Sync.
