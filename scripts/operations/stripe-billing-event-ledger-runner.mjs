@@ -28,7 +28,7 @@ const CONTROL_PATH = resolve(
   `supabase/controlled/${CONTROL_ID}.sql`,
 );
 const EXPECTED_CONTROL_SHA256 =
-  "a05ed6423e663b26bbe8fe401e2a942d2c2bb8ba774c4c79079ec68bc8678384";
+  "6591b1f865ac7163786dec7556cd93ef58d7c03e5bfeaf1736978484cf8a9271";
 const APPLY_CONFIRMATION = "apply-stripe-billing-event-ledger";
 const MAX_PASSFILE_BYTES = 64 * 1024;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/u;

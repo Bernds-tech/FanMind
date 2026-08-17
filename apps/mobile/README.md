@@ -45,7 +45,9 @@ Gemeinsam mit der Web-Anwendung bleiben ausschließlich:
 - verschlüsselte, maximal 24 Stunden alte Offline-Kontaktübersicht mit höchstens 50 Einträgen im Nur-Lesen-Modus;
 - native Push-Grundlage mit streng validierter Navigation zu Follow-ups sowie
   ausdrücklichem Opt-in für eine verschlüsselte, kontogebundene
-  Ein-Gerät-Registrierung; serverseitiger Versand bleibt deaktiviert;
+  Ein-Gerät-Registrierung; ein getrenntes serverseitiges Staging-Modul für
+  genau eine inhaltsfreie Follow-up-Erinnerung ist synthetisch getestet, aber
+  ohne Route, Timer und persistenten Ledger deaktiviert;
 - checksum-gebundener, strikt Staging-only Kontrollpfad für die vorbereitete
   Push-Tabelle: read-only Ressourcenprüfung, separat bestätigter Apply und
   rollback-only Acceptance ohne echte Tokens oder Zustellung; externe Läufe
@@ -185,6 +187,17 @@ Push-Nachricht, aktiviert Delivery oder verändert EAS-/Signing-Ressourcen. Der
 normale Web-Deploy kann die Migration nicht anwenden. Details und geschützte
 Konfiguration: `docs/operations/MOBILE_PUSH_STAGING_CONTROL.md`.
 
+Der nachgelagerte, weiterhin inaktive Serververtrag ist in
+`docs/mobile/PUSH_DELIVERY.md` beschrieben. Er verlangt vor jedem Providerbyte
+einen atomaren Idempotenz-Ledger, unabhängig geprüfte EAS-, Staging-App-,
+Staging-Supabase- und Production-Supabase-Bindings, ein fälliges offenes
+Follow-up und dieselbe User-/Workspace-/Kontaktgrenze. Der spätere Reserve-RPC
+muss dasselbe validierte Supabase-Binding wie der Loader verwenden und alle
+persistenten Grenzen einschließlich des aktuellen Token-Fingerprints in einer
+Transaktion erneut prüfen; die feste Payload verfällt nach einer Stunde. Da das bestehende Schema keinen solchen
+Ledger besitzt, gibt es keine Sendroute, keinen Timer und keinen realen
+Expo-Aufruf. Eine CI-Invariante sperrt jede vorzeitige Verdrahtung.
+
 ## Kontrollierter signierter interner Build
 
 Nach einem grünen Read-only-Ressourcencheck kann der getrennte manuelle
@@ -288,7 +301,9 @@ Der Recovery-Redirect muss zusätzlich einmalig in der Supabase-Auth-Allowlist d
 5. den getrennten read-only Push-Ressourcencheck, Staging-Apply und die
    rollback-only Acceptance durchführen; erst danach Migration/Secret-
    Konfiguration in einem signierten Development-/Preview-Build real testen;
-   serverseitige Zustellung separat implementieren und abnehmen.
+   den separat zu genehmigenden Delivery-Ledger entwerfen, migrieren und
+   rollback-only abnehmen; danach genau einen synthetischen Send-/Receipt-Test
+   ausführen.
 6. Android Internal Testing und iOS TestFlight durchführen.
 7. Die vorbereiteten Store-Texte, technischen Datenschutzentwürfe und
    Screenshot-Matrix nach realen Gerätetests sowie externer

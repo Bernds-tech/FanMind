@@ -199,8 +199,13 @@ keinen echten Gerätetest und läuft ausschließlich mit privaten Nachweisen.
 - [x] checksum-pinned, main-/reviewed-commit- and protected-Staging-bound
       push resource, migration and rollback-only acceptance controls prepared;
       Production targets, real tokens and every delivery action fail closed;
+- [x] default-disabled server-side single-reminder policy, minimal payload,
+      one-hour TTL, tenant/resource authorization, common server-only target
+      binding, bounded retry and Expo ticket/receipt handling covered with a
+      synthetic provider only; CI preserves the no-route/worker/migration state;
 - [ ] controlled push migration/key activation, signed-device registration
-      proof and server-side follow-up delivery;
+      proof, separately approved atomic delivery ledger with transactional
+      target revalidation and one explicit Staging send/receipt proof;
 
 ### Phase B — external verification
 

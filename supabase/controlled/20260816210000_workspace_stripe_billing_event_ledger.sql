@@ -1755,7 +1755,10 @@ begin
     from public.workspace_stripe_billing_events as event
    where event.event_id = any(p_resolved_event_ids);
   v_cutoff := floor(extract(epoch from p_snapshot_observed_at))::bigint;
-  if v_cutoff <= coalesce(v_pending_max, v_stream.last_event_created_at, -1) then
+  if v_cutoff <= greatest(
+    coalesce(v_pending_max, -1),
+    coalesce(v_stream.last_event_created_at, -1)
+  ) then
     raise exception using errcode = '22023',
       message = 'workspace_stripe_billing_reconciliation_snapshot_too_old';
   end if;
@@ -2833,7 +2836,7 @@ begin
       ('public.apply_workspace_stripe_billing_projection(uuid,jsonb)', 'e8a552e775a53c44c49f71b02a09a7af97cc07e5de32819e0d46b397ea27dc23'),
       ('public.mark_workspace_stripe_billing_reconciliation(uuid)', '11a56b37595e03967263a658e8752611d3239022661b6bd2a0573cc7e9d00478'),
       ('public.apply_workspace_stripe_billing_event(boolean,boolean,text,bigint,text,text,text,uuid,boolean,text,text,text,text,text,text,text,text,text,text,jsonb)', '59d9389658f797f711fa77f283b635ffa6c7ceb16f91325522c437d14237330b'),
-      ('public.reconcile_workspace_stripe_billing_projection(uuid,text,text,timestamp with time zone,text,bigint,text,text,jsonb,text[],jsonb)', '5d7f3d6749af7306d049baed265225f7faf50c185a76bacc5a792cb53378834d')
+      ('public.reconcile_workspace_stripe_billing_projection(uuid,text,text,timestamp with time zone,text,bigint,text,text,jsonb,text[],jsonb)', '868a07f91840f1e91e40dc0ff2c3af581238e80ac84a312961982f1ce9829fa9')
     ) as expected(signature, body_sha256)
   loop
     select encode(pg_catalog.sha256(convert_to(

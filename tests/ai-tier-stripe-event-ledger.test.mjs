@@ -113,6 +113,18 @@ test("a duplicate only reopens an unresolved reconciliation", async () => {
   );
 });
 
+test("event identity conflicts persist and fail-close every identified tenant", async () => {
+  const sql = await readFile(sqlPath, "utf8");
+  assert.match(
+    sql,
+    /if v_identity_conflict then[\s\S]*workspace_ai_tier_stripe_events[\s\S]*processing_state = 'reconciliation_needed'[\s\S]*processing_reason = 'event_identity'/u,
+  );
+  assert.match(
+    sql,
+    /workspace_id in \(\s*p_workspace_id,\s*v_existing_event\.workspace_id\s*\)[\s\S]*result_reason := 'event_identity'/u,
+  );
+});
+
 test("a reconciliation requires a provider request identity and exact revision", async () => {
   const sql = await readFile(sqlPath, "utf8");
   assert.match(

@@ -82,14 +82,28 @@ Development-/Preview-Build; Expo Go ist dafür nicht der Freigabenachweis.
 
 ## Separate spätere Zustellungsphase
 
-Erst nach erfolgreicher Staging- und Datenschutzabnahme darf ein kleiner,
-gesonderter Delivery-Baustein entworfen werden. Er muss:
+Ein kleiner, standardmäßig deaktivierter Delivery-Baustein ist inzwischen als
+synthetisch getesteter Staging-Vertrag vorbereitet. Er besitzt keine Route,
+keinen Timer/Worker und keinen persistenten Ledger und sendet daher nichts.
+Seine verbindlichen Grenzen stehen in `docs/mobile/PUSH_DELIVERY.md`. Er:
 
 - nur fällige, offene Follow-ups des gebundenen Workspace berücksichtigen;
 - generische Titel/Texte ohne Kontaktname, Nachricht, Notiz oder CRM-Inhalt
-  verwenden;
+  mit fester einstündiger TTL verwenden;
 - nur Payloads mit `type=followup_reminder` und `followupId` senden;
 - abgelaufene, abgemeldete oder fremde Registrierungen fail-closed verwerfen;
 - Expo-/FCM-/APNs-Fehler redigieren und ungültige Token sicher entfernen;
 - Duplikate und wiederholte Zustellung verhindern;
 - ohne automatische Nachricht an Kontakte auskommen.
+
+Vor dem ersten realen Staging-Send bleibt ein separat genehmigter atomarer
+Delivery-Ledger samt kontrollierter Migration und rollback-only Acceptance
+Pflicht. Seine Reserve-RPC muss Membership, Workspace-Verarbeitung, Kontakt,
+Follow-up und Registrierung innerhalb derselben Datenbanktransaktion erneut
+prüfen. Ein Provider-Ergebnis `DeviceNotRegistered` muss Attempt und konkrete
+Registrierung unter derselben Send- oder Receipt-Lease atomar terminalisieren
+beziehungsweise deaktivieren. Zusätzlich müssen EAS-Projekt,
+`staging.fanmind.ch`, die Staging-
+Supabase-Ref und die davon verschiedene Production-Supabase-Ref unabhängig
+geprüft und serverseitig gebunden sein. Production-Aktivierung ist weiterhin
+ausgeschlossen.

@@ -28,7 +28,7 @@ const CONTROL_PATH = resolve(
   `supabase/controlled/${CONTROL_ID}.sql`,
 );
 const EXPECTED_CONTROL_SHA256 =
-  "b9bbf0c822f23b65fa62c21b9391412178fa7fcdeb081237f5d253a298fc12a5";
+  "83e82425dfedac6286280613459d234c387cf3b89fa71bd6ed81f257efdab2f0";
 const APPLY_CONFIRMATION = "apply-ai-tier-stripe-event-ledger";
 const MAX_PASSFILE_BYTES = 64 * 1024;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/u;

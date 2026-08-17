@@ -455,7 +455,10 @@ test("canonical reconciliation is request-id idempotent, snapshot-fresh and CAS-
   assert.match(sql, /snapshot_fingerprint.*\^\[a-f0-9\]\{64\}\$/u);
   assert.match(sql, /duplicate_reconciliation/u);
   assert.match(sql, /workspace_stripe_billing_reconciliation_cas_conflict/u);
-  assert.match(sql, /v_cutoff <= coalesce\(v_pending_max, v_stream\.last_event_created_at, -1\)/u);
+  assert.match(
+    sql,
+    /v_cutoff <= greatest\(\s*coalesce\(v_pending_max, -1\),\s*coalesce\(v_stream\.last_event_created_at, -1\)\s*\)/u,
+  );
   assert.match(sql, /workspace_stripe_billing_reconciliation_pending_omitted/u);
   assert.match(sql, /resolved_event_ids/u);
   assert.match(sql, /snapshot_observed_at < statement_timestamp\(\) - interval '15 minutes'/u);

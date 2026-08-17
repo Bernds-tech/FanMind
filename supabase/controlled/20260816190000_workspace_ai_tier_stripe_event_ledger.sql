@@ -475,22 +475,31 @@ begin
      and reconciliation.stripe_customer_id = p_customer_id;
 
   if v_identity_conflict then
-    if v_current.workspace_id is not null then
-      update public.workspace_ai_tier_entitlements
-         set stripe_sync_state = 'reconciliation_needed',
-             stripe_sync_revision = stripe_sync_revision + 1
-       where workspace_id = p_workspace_id
-         and stripe_sync_revision = v_expected_revision;
-      get diagnostics v_rows = row_count;
-      if v_rows <> 1 then
-        raise exception using
-          errcode = '40001',
-          message = 'workspace_ai_tier_event_cas_failed';
-      end if;
-      result_revision := v_expected_revision + 1;
-    else
-      result_revision := 0;
-    end if;
+    -- A reused Stripe event ID is durable reconciliation evidence, not only
+    -- a transient return value. Preserve that conflict on the original event
+    -- and fail-close both the requested tenant and the tenant already bound
+    -- to the event. This also gives the canonical reconciliation RPC a real
+    -- unresolved row to consume instead of leaving it permanently blocked.
+    update public.workspace_ai_tier_stripe_events
+       set processing_state = 'reconciliation_needed',
+           processing_reason = 'event_identity',
+           processed_at = statement_timestamp(),
+           reconciled_by_request_id = null
+     where event_id = p_event_id;
+
+    update public.workspace_ai_tier_entitlements
+       set stripe_sync_state = 'reconciliation_needed',
+           stripe_sync_revision = stripe_sync_revision + 1
+     where workspace_id in (
+       p_workspace_id,
+       v_existing_event.workspace_id
+     );
+
+    select entitlement.stripe_sync_revision
+      into result_revision
+      from public.workspace_ai_tier_entitlements as entitlement
+     where entitlement.workspace_id = p_workspace_id;
+    result_revision := coalesce(result_revision, 0);
     result_status := 'reconciliation_needed';
     result_reason := 'event_identity';
     return next;
