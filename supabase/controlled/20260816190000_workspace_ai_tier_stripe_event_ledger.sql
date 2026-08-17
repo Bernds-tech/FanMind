@@ -883,10 +883,10 @@ begin
            v_snapshot_event_created_cutoff
        and v_existing.snapshot_fingerprint = p_snapshot_fingerprint
        and v_existing.expected_revision = p_expected_revision
-       and v_existing.snapshot_kind = case
+       and v_existing.snapshot_kind = (case
          when p_has_paid_item then 'paid_item'
          else 'no_paid_item'
-       end then
+       end) then
       result_status := 'ignored';
       result_reason := 'duplicate_event';
       result_revision := v_existing.resulting_revision;
