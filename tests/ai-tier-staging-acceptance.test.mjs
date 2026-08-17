@@ -291,6 +291,11 @@ test("manual workflow is staging-only and never applies a migration", async () =
 
   assert.match(script, /set local role authenticated/u);
   assert.match(script, /set local role service_role/u);
+  assert.match(script, /AI_TIER_STAGING_SERVICE_ROLE_LEDGER=PASS/u);
+  assert.match(
+    script,
+    /apply_workspace_ai_tier_stripe_event[\s\S]*ledgerMode === "ledger"/u,
+  );
   assert.match(script, /rollback;/u);
   assert.match(
     script,

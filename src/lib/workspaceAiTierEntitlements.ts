@@ -71,6 +71,8 @@ export async function getResolvedWorkspaceAiTier(
         "expires_at",
         "last_stripe_event_id",
         "last_stripe_event_created_at",
+        "stripe_sync_state",
+        "stripe_sync_revision",
       ].join(","),
     );
     url.searchParams.set("workspace_id", `eq.${workspaceId}`);

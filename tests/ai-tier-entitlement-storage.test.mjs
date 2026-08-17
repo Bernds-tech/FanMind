@@ -9,6 +9,8 @@ import {
 const migrationPath =
   "supabase/migrations/20260727090000_workspace_ai_tier_entitlements.sql";
 const loaderPath = "src/lib/workspaceAiTierEntitlements.ts";
+const migrationRunnerPath =
+  "scripts/operations/ai-tier-entitlement-migration-runner.mjs";
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 
 function validRow(overrides = {}) {
@@ -24,6 +26,8 @@ function validRow(overrides = {}) {
     expires_at: "2026-08-01T00:00:00.000Z",
     last_stripe_event_id: "evt_DO_NOT_PRINT",
     last_stripe_event_created_at: 1_753_056_000,
+    stripe_sync_state: "in_sync",
+    stripe_sync_revision: 1,
     ...overrides,
   };
 }
@@ -63,6 +67,8 @@ test("missing row means Standard while ambiguous or corrupt state is unavailable
     [[validRow({ workspace_id: "22222222-2222-4222-8222-222222222222" })], "invalid_row"],
     [[validRow({ tier_id: "standard" })], "invalid_row"],
     [[validRow({ status: "unknown" })], "invalid_row"],
+    [[validRow({ stripe_sync_state: "reconciliation_needed" })], "invalid_row"],
+    [[validRow({ stripe_sync_revision: 0 })], "invalid_row"],
     [[validRow({ source: "client" })], "invalid_row"],
     [[validRow({ stripe_subscription_item_id: "" })], "invalid_row"],
     [[validRow({ expires_at: "2026-06-01T00:00:00.000Z" })], "invalid_row"],
@@ -124,6 +130,37 @@ test("migration creates a service-role-only Stripe entitlement boundary", async 
   assert.doesNotMatch(
     migration,
     /grant (?:select|insert|update|delete)[\s\S]*to (?:public|anon|authenticated)/u,
+  );
+});
+
+test("base entitlement postflight distinguishes exact pre-ledger, post-ledger and partial ACL states", async () => {
+  const runner = await readFile(migrationRunnerPath, "utf8");
+  assert.match(
+    runner,
+    /ledger_object_count = 0 and ledger_function_count = 0[\s\S]*pre_ledger/u,
+  );
+  assert.match(
+    runner,
+    /ledger_object_count = 6 and ledger_function_count = 2[\s\S]*post_ledger/u,
+  );
+  assert.match(runner, /raise exception 'ledger_state_partial'/u);
+  assert.match(
+    runner,
+    /ledger_state = 'pre_ledger'[\s\S]*not has_table_privilege\('service_role', entitlements_table, 'INSERT'\)[\s\S]*UPDATE[\s\S]*DELETE/u,
+  );
+  assert.match(
+    runner,
+    /ledger_state = 'post_ledger'[\s\S]*has_table_privilege\([\s\S]*'INSERT,UPDATE,DELETE'/u,
+  );
+  assert.match(
+    runner,
+    /ledger_state = 'post_ledger'[\s\S]*has_column_privilege\([\s\S]*'service_role'[\s\S]*'INSERT,UPDATE,REFERENCES'/u,
+  );
+  assert.match(runner, /stripe_sync_state[\s\S]*reconciliation_needed[\s\S]*::text/u);
+  assert.match(runner, /stripe_sync_revision[\s\S]*pg_get_expr[\s\S]*= '0'/u);
+  assert.match(
+    runner,
+    /case when ledger_state = 'post_ledger' then 12 else 10 end/u,
   );
 });
 

@@ -39,6 +39,9 @@ declare
   entitlements_table oid :=
     to_regclass('public.workspace_ai_tier_entitlements');
   entitlement_column record;
+  ledger_object_count integer;
+  ledger_function_count integer;
+  ledger_state text;
 begin
   if entitlements_table is null then
     raise exception 'table_missing';
@@ -77,6 +80,78 @@ begin
     raise exception 'browser_table_privilege_invalid';
   end if;
 
+  select
+    (case when exists (
+      select 1 from pg_attribute
+       where attrelid = entitlements_table
+         and attname = 'stripe_sync_state'
+         and attnum > 0 and not attisdropped
+    ) then 1 else 0 end) +
+    (case when exists (
+      select 1 from pg_attribute
+       where attrelid = entitlements_table
+         and attname = 'stripe_sync_revision'
+         and attnum > 0 and not attisdropped
+    ) then 1 else 0 end) +
+    (case when to_regclass(
+      'public.workspace_ai_tier_stripe_events'
+    ) is not null then 1 else 0 end) +
+    (case when to_regclass(
+      'public.workspace_ai_tier_stripe_reconciliations'
+    ) is not null then 1 else 0 end) +
+    (case when to_regprocedure(
+      'public.apply_workspace_ai_tier_stripe_event(uuid,boolean,text,bigint,text,text,text,text,boolean,text,text,text,text,timestamp with time zone,timestamp with time zone)'
+    ) is not null then 1 else 0 end) +
+    (case when to_regprocedure(
+      'public.reconcile_workspace_ai_tier_stripe_subscription(uuid,text,text,text,text,timestamp with time zone,text,bigint,boolean,text,text,text,text,timestamp with time zone,timestamp with time zone)'
+    ) is not null then 1 else 0 end)
+    into ledger_object_count;
+  select count(*)::integer
+    into ledger_function_count
+    from pg_proc as definition
+    join pg_namespace as namespace on namespace.oid = definition.pronamespace
+   where namespace.nspname = 'public'
+     and definition.proname in (
+       'apply_workspace_ai_tier_stripe_event',
+       'reconcile_workspace_ai_tier_stripe_subscription'
+     );
+  if ledger_object_count = 0 and ledger_function_count = 0 then
+    ledger_state := 'pre_ledger';
+  elsif ledger_object_count = 6 and ledger_function_count = 2 then
+    ledger_state := 'post_ledger';
+  else
+    raise exception 'ledger_state_partial';
+  end if;
+
+  if ledger_state = 'post_ledger' and (
+    not exists (
+      select 1
+        from pg_attribute as attribute
+        join pg_attrdef as default_value
+          on default_value.adrelid = attribute.attrelid
+         and default_value.adnum = attribute.attnum
+       where attribute.attrelid = entitlements_table
+         and attribute.attname = 'stripe_sync_state'
+         and format_type(attribute.atttypid, attribute.atttypmod) = 'text'
+         and attribute.attnotnull
+         and pg_get_expr(default_value.adbin, default_value.adrelid) =
+             '''reconciliation_needed''::text'
+    ) or not exists (
+      select 1
+        from pg_attribute as attribute
+        join pg_attrdef as default_value
+          on default_value.adrelid = attribute.attrelid
+         and default_value.adnum = attribute.attnum
+       where attribute.attrelid = entitlements_table
+         and attribute.attname = 'stripe_sync_revision'
+         and format_type(attribute.atttypid, attribute.atttypmod) = 'bigint'
+         and attribute.attnotnull
+         and pg_get_expr(default_value.adbin, default_value.adrelid) = '0'
+    )
+  ) then
+    raise exception 'ledger_projection_columns_invalid';
+  end if;
+
   for entitlement_column in
     select attribute.attname::text as column_name
       from pg_attribute as attribute
@@ -95,18 +170,38 @@ begin
          entitlements_table,
          entitlement_column.column_name,
          'SELECT,INSERT,UPDATE,REFERENCES'
+       )
+       or (
+         ledger_state = 'post_ledger'
+         and has_column_privilege(
+           'service_role',
+           entitlements_table,
+           entitlement_column.column_name,
+           'INSERT,UPDATE,REFERENCES'
+         )
        ) then
-      raise exception 'browser_column_privilege_invalid';
+      raise exception 'runtime_column_privilege_invalid';
     end if;
   end loop;
 
   if not has_table_privilege('service_role', entitlements_table, 'SELECT')
-     or not has_table_privilege('service_role', entitlements_table, 'INSERT')
-     or not has_table_privilege('service_role', entitlements_table, 'UPDATE')
-     or not has_table_privilege('service_role', entitlements_table, 'DELETE')
      or has_table_privilege('service_role', entitlements_table, 'TRUNCATE')
      or has_table_privilege('service_role', entitlements_table, 'REFERENCES')
-     or has_table_privilege('service_role', entitlements_table, 'TRIGGER') then
+     or has_table_privilege('service_role', entitlements_table, 'TRIGGER')
+     or (
+       ledger_state = 'pre_ledger'
+       and (
+         not has_table_privilege('service_role', entitlements_table, 'INSERT')
+         or not has_table_privilege('service_role', entitlements_table, 'UPDATE')
+         or not has_table_privilege('service_role', entitlements_table, 'DELETE')
+       )
+     )
+     or (
+       ledger_state = 'post_ledger'
+       and has_table_privilege(
+         'service_role', entitlements_table, 'INSERT,UPDATE,DELETE'
+       )
+     ) then
     raise exception 'service_role_privilege_invalid';
   end if;
 
@@ -124,10 +219,12 @@ begin
          'workspace_ai_tier_entitlements_event_check',
          'workspace_ai_tier_entitlements_event_created_check',
          'workspace_ai_tier_entitlements_period_check',
-         'workspace_ai_tier_entitlements_item_unique'
+         'workspace_ai_tier_entitlements_item_unique',
+         'workspace_ai_tier_entitlements_sync_state_check',
+         'workspace_ai_tier_entitlements_sync_revision_check'
        )
        and convalidated
-  ) <> 10 then
+  ) <> case when ledger_state = 'post_ledger' then 12 else 10 end then
     raise exception 'constraints_invalid';
   end if;
 

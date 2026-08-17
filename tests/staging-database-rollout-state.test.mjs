@@ -19,13 +19,18 @@ import {
   evaluateStagingDatabaseRolloutStateEnvironment,
 } from "../src/lib/stagingDatabaseRolloutStatePolicy.mjs";
 import {
+  AI_TIER_STRIPE_LEDGER_STATE_SQL,
   AI_TIER_STATE_SQL,
   LEDGER_STATE_SQL,
   META_CATCHUP_STATE_SQL,
   META_CONTINUATION_STATE_SQL,
   MOBILE_PUSH_STATE_SQL,
+  STRIPE_BILLING_LEDGER_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
   WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
+  exactAiTierStripeLedgerPostflight,
+  exactControlledObjectState,
+  exactStripeBillingLedgerPostflight,
   ledgerManagedMetaMigrations,
   ledgerSql,
   psqlFailureCategory,
@@ -54,6 +59,7 @@ const serviceRolePrivilegeRepair = readFileSync(
   "utf8",
 );
 const controlledStagingDatabaseWorkflowPaths = [
+  "ai-tier-stripe-event-ledger-staging.yml",
   "internal-daily-test-workspace-provisioning-staging-apply.yml",
   "internal-daily-test-workspace-provisioning-staging-verify.yml",
   "meta-catchup-queue-staging-apply.yml",
@@ -66,6 +72,7 @@ const controlledStagingDatabaseWorkflowPaths = [
   "mobile-push-staging-migration.yml",
   "mobile-push-staging-resource-readiness.yml",
   "staging-database-rollout-state.yml",
+  "stripe-billing-event-ledger-staging.yml",
   "trigger-function-hardening-staging-apply.yml",
   "trigger-function-hardening-staging-verify.yml",
   "workspace-member-data-boundary-staging-apply.yml",
@@ -73,6 +80,7 @@ const controlledStagingDatabaseWorkflowPaths = [
   "workspace-processing-staging-acceptance.yml",
 ];
 const tlsStagingDatabaseWorkflowPaths = [
+  "ai-tier-stripe-event-ledger-staging.yml",
   "internal-daily-test-workspace-provisioning-staging-apply.yml",
   "internal-daily-test-workspace-provisioning-staging-verify.yml",
   "meta-catchup-queue-staging-apply.yml",
@@ -82,6 +90,7 @@ const tlsStagingDatabaseWorkflowPaths = [
   "meta-content-staging-migration.yml",
   "meta-content-staging-resource-readiness.yml",
   "staging-database-rollout-state.yml",
+  "stripe-billing-event-ledger-staging.yml",
   "trigger-function-hardening-staging-apply.yml",
   "trigger-function-hardening-staging-verify.yml",
   "workspace-member-data-boundary-staging-apply.yml",
@@ -168,6 +177,8 @@ test("action derivation prevents every ledger and object double-apply", () => {
       actions: {
         workspaceMemberBoundary: "apply",
         aiTier: "verify",
+        aiTierStripeLedger: "apply",
+        stripeBillingLedger: "apply",
         mobilePush: "verify",
         metaContent: "apply",
         metaCatchup: "apply",
@@ -201,6 +212,8 @@ test("action derivation prevents every ledger and object double-apply", () => {
     {
       workspaceMemberBoundary: "verify",
       aiTier: "skip",
+      aiTierStripeLedger: "apply",
+      stripeBillingLedger: "apply",
       mobilePush: "skip",
       metaContent: "skip",
       metaCatchup: "verify",
@@ -278,6 +291,86 @@ test("partial ledgers, missing applied objects and invalid metadata block", () =
   }
 });
 
+test("AI and general event ledgers expose only absent, complete or blocking partial states", () => {
+  assert.match(
+    AI_TIER_STRIPE_LEDGER_STATE_SQL,
+    /object_count = 0 and function_count = 0 then 'absent'[\s\S]*object_count = 6 and function_count = 2 then 'present'[\s\S]*else 'invalid'/u,
+  );
+  assert.match(
+    STRIPE_BILLING_LEDGER_STATE_SQL,
+    /case object_count when 0 then 'absent' when 10 then 'present' else 'invalid'/u,
+  );
+  const current = deriveStagingDatabaseRolloutActions({
+    objects: {
+      aiTier: "current",
+      aiTierStripeLedger: "current",
+      stripeBillingLedger: "current",
+    },
+  });
+  assert.equal(current.actions.aiTierStripeLedger, "verify");
+  assert.equal(current.actions.stripeBillingLedger, "verify");
+  const partial = deriveStagingDatabaseRolloutActions({
+    objects: {
+      aiTier: "current",
+      aiTierStripeLedger: "invalid",
+      stripeBillingLedger: "invalid",
+    },
+  });
+  assert.equal(partial.actions.aiTierStripeLedger, "block");
+  assert.equal(partial.actions.stripeBillingLedger, "block");
+  assert.equal(partial.blocked, true);
+});
+
+test("ledger rollout probes reject ambiguous state and postflight transcripts", () => {
+  const marker = "STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT";
+  assert.equal(
+    exactControlledObjectState(`${marker}=absent\n`, marker),
+    "absent",
+  );
+  assert.equal(
+    exactControlledObjectState(`${marker}=present\n`, marker),
+    "present",
+  );
+  assert.equal(
+    exactControlledObjectState(
+      `${marker}=absent\n${marker}=present\n`,
+      marker,
+    ),
+    "invalid",
+  );
+  assert.equal(
+    exactAiTierStripeLedgerPostflight(
+      "AI_TIER_STRIPE_EVENT_LEDGER_POSTFLIGHT=PASS\n",
+    ),
+    true,
+  );
+  assert.equal(
+    exactAiTierStripeLedgerPostflight(
+      "AI_TIER_STRIPE_EVENT_LEDGER_POSTFLIGHT=PASS\nspoofed\n",
+    ),
+    false,
+  );
+  assert.equal(
+    exactStripeBillingLedgerPostflight(
+      [
+        "STRIPE_BILLING_EVENT_LEDGER_POSTFLIGHT=PASS",
+        "STRIPE_BILLING_EVENT_LEDGER_CUTOVER_PENDING=0",
+        "STRIPE_BILLING_EVENT_LEDGER_CUTOVER_UNINVENTORIED=0",
+      ].join("\n"),
+    ),
+    true,
+  );
+  assert.equal(
+    exactStripeBillingLedgerPostflight(
+      [
+        "STRIPE_BILLING_EVENT_LEDGER_POSTFLIGHT=PASS",
+        "STRIPE_BILLING_EVENT_LEDGER_CUTOVER_PENDING=0",
+      ].join("\n"),
+    ),
+    false,
+  );
+});
+
 test("member boundary requires the exact prerequisite and absence from generic ledger", () => {
   for (const ledgerBoundary of [
     {
@@ -341,9 +434,11 @@ test("ledger and object probes are transactionally read-only and exact", () => {
     LEDGER_STATE_SQL,
     ledger,
     AI_TIER_STATE_SQL,
+    AI_TIER_STRIPE_LEDGER_STATE_SQL,
     META_CATCHUP_STATE_SQL,
     META_CONTINUATION_STATE_SQL,
     MOBILE_PUSH_STATE_SQL,
+    STRIPE_BILLING_LEDGER_STATE_SQL,
     TRIGGER_HARDENING_STATE_SQL,
     WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
   ]) {
@@ -554,6 +649,8 @@ case "$input" in
   *STAGING_DATABASE_LEDGER=*) echo 'STAGING_DATABASE_LEDGER=1:1:0:0:1:0' ;;
   *STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=*) echo 'STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=absent' ;;
   *STAGING_DATABASE_AI_TIER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_OBJECT=present' ;;
+  *STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT=absent' ;;
+  *STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT=absent' ;;
   *AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS*) echo 'AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS' ;;
   *STAGING_DATABASE_MOBILE_PUSH_OBJECT=*) echo 'STAGING_DATABASE_MOBILE_PUSH_OBJECT=present' ;;
   *MOBILE_PUSH_REGISTRATION_MIGRATION_POSTFLIGHT=PASS*) echo 'MOBILE_PUSH_REGISTRATION_MIGRATION_POSTFLIGHT=PASS' ;;
@@ -597,6 +694,14 @@ esac
       /STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=apply/u,
     );
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_AI_TIER=verify/u);
+    assert.match(
+      result.stdout,
+      /STAGING_DATABASE_ROLLOUT_AI_TIER_STRIPE_LEDGER=apply/u,
+    );
+    assert.match(
+      result.stdout,
+      /STAGING_DATABASE_ROLLOUT_STRIPE_BILLING_LEDGER=apply/u,
+    );
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=verify/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CONTENT=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply/u);
@@ -632,6 +737,8 @@ case "$input" in
   *STAGING_DATABASE_LEDGER=*) exit 91 ;;
   *STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=*) echo 'STAGING_DATABASE_WORKSPACE_MEMBER_BOUNDARY_OBJECT=absent' ;;
   *STAGING_DATABASE_AI_TIER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_OBJECT=absent' ;;
+  *STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT=absent' ;;
+  *STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT=*) echo 'STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT=absent' ;;
   *STAGING_DATABASE_MOBILE_PUSH_OBJECT=*) echo 'STAGING_DATABASE_MOBILE_PUSH_OBJECT=absent' ;;
   *META_CONTENT_MIGRATION_STATE=*) echo 'META_CONTENT_MIGRATION_STATE=absent' ;;
   *STAGING_DATABASE_META_CATCHUP_OBJECT=*) echo 'STAGING_DATABASE_META_CATCHUP_OBJECT=absent' ;;
@@ -673,6 +780,14 @@ esac
       /STAGING_DATABASE_ROLLOUT_WORKSPACE_MEMBER_BOUNDARY=block/u,
     );
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_AI_TIER=apply/u);
+    assert.match(
+      result.stdout,
+      /STAGING_DATABASE_ROLLOUT_AI_TIER_STRIPE_LEDGER=block/u,
+    );
+    assert.match(
+      result.stdout,
+      /STAGING_DATABASE_ROLLOUT_STRIPE_BILLING_LEDGER=apply/u,
+    );
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CONTENT=apply/u);
     assert.match(result.stdout, /STAGING_DATABASE_ROLLOUT_META_CATCHUP=apply/u);

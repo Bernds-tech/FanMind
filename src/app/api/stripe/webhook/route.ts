@@ -3,6 +3,11 @@ import { syncWorkspaceAiTierStripeEntitlement } from "@/lib/aiTierStripeEntitlem
 import { AI_TIER_STRIPE_EVENT_TYPES } from "@/lib/aiTierStripeLifecycle.mjs";
 import { syncReferralAutomationForWorkspace } from "@/lib/referralAutomation";
 import {
+  isStripeBillingEventLedgerCaptureEnabled,
+  isStripeBillingEventLedgerEnabled,
+} from "@/lib/stripeBillingEventLedger.mjs";
+import { syncStripeBillingEvent } from "@/lib/stripeBillingEventSync.mjs";
+import {
   billingStatusFromInvoiceFailure,
   billingStatusFromStripeSubscriptionStatus,
   referralBillingStatusFromStripeEvent,
@@ -82,7 +87,7 @@ function metadataWorkspaceIdCandidate(
   return objectField(object, "metadata")?.workspace_id;
 }
 
-function subscriptionStatusFields(object: StripeObject) {
+function subscriptionStatusFields(object: StripeObject, occurredAt: string) {
   const status = stringField(object, "status");
   const billingStatus =
     billingStatusFromStripeSubscriptionStatus(status) ?? undefined;
@@ -96,13 +101,11 @@ function subscriptionStatusFields(object: StripeObject) {
     billing_next_invoice_at: stripeTs(numberField(object, "current_period_end")),
     subscription_cancel_at_period_end: Boolean(object.cancel_at_period_end),
     subscription_effective_end_at: stripeTs(numberField(object, "cancel_at")) ?? (object.cancel_at_period_end ? stripeTs(numberField(object, "current_period_end")) : undefined),
-    subscription_cancel_requested_at: object.cancel_at_period_end || numberField(object, "cancel_at") ? nowIso() : undefined,
+    subscription_cancel_requested_at: object.cancel_at_period_end || numberField(object, "cancel_at") ? occurredAt : undefined,
     workspace_access_mode: status === "canceled" ? "archived_readonly" : undefined,
     billing_note: status ? `Stripe-Subscription-Status: ${status}` : undefined,
   };
 }
-
-function nowIso() { return new Date().toISOString(); }
 
 function invoiceFields(object: StripeObject) {
   return {
@@ -115,9 +118,9 @@ function invoiceFields(object: StripeObject) {
   };
 }
 
-function graceUntil(object: StripeObject): string {
+function graceUntil(object: StripeObject, eventCreated?: number): string {
   const start =
-    numberField(object, "created") ?? Math.floor(Date.now() / 1000);
+    numberField(object, "created") ?? eventCreated ?? Math.floor(Date.now() / 1000);
   return new Date((start + 10 * 24 * 60 * 60) * 1000).toISOString();
 }
 
@@ -232,69 +235,133 @@ async function updateOrWarn(input: {
   fields: Record<string, string | number | boolean | null | undefined>;
   referralBillingStatus?: string | null;
 }): Promise<void> {
-  const workspaceResolution = await resolveWorkspaceId(
-    input.object,
-    input.eventType,
-  );
-  if (workspaceResolution.status === "retryable_error") {
-    console.error("Stripe webhook workspace lookup needs retry", {
-      eventType: input.eventType,
-      eventId: input.eventId,
+  let workspaceId: string;
+  if (isStripeBillingEventLedgerCaptureEnabled()) {
+    const ledgerResult = await syncStripeBillingEvent({
+      event: input.event,
+      projection: input.fields,
+      referralBillingStatus: input.referralBillingStatus,
+      signedEventVerified: true,
     });
-    throw new StripeWebhookRetryableError();
-  }
-  if (workspaceResolution.status === "not_found") {
-    console.warn("Stripe webhook without workspace mapping", {
-      eventType: input.eventType,
-      eventId: input.eventId,
-      objectId: stringField(input.object, "id"),
-    });
-    return;
-  }
-  const workspaceId = workspaceResolution.workspaceId;
-
-  if (input.eventType?.startsWith("customer.subscription.") === true) {
-    const bindingDecision =
-      await verifyStripeSubscriptionWorkspaceBinding({
-        workspaceId,
-        customerId: stripeId(input.object.customer),
-        subscriptionId: objectIdWithPrefix(input.object, "sub_"),
+    if (ledgerResult.status === "retry") {
+      console.error("Stripe webhook billing ledger needs retry", {
+        eventType: input.eventType,
+        eventId: input.eventId,
+        reason: ledgerResult.reason,
       });
-    if (bindingDecision !== STRIPE_BILLING_ALLOWED) {
-      console.error("Stripe subscription workspace binding needs retry", {
+      throw new StripeWebhookRetryableError();
+    }
+    if (
+      ledgerResult.status === "unresolved" ||
+      ledgerResult.status === "reconciliation_needed"
+    ) {
+      // The signed event is durable. Replaying it cannot resolve an absent
+      // object binding or same-second ordering ambiguity, so acknowledge only
+      // after the RPC has persisted an operator task. Bound lifecycle
+      // conflicts are additionally made fail closed inside that transaction.
+      console.warn("Stripe webhook billing reconciliation required", {
+        eventType: input.eventType,
+        eventId: input.eventId,
+        reason: ledgerResult.reason,
+      });
+      return;
+    }
+    if (
+      ledgerResult.status === "ignored" &&
+      (ledgerResult.reason === "stale_event" ||
+        ledgerResult.reason === "reconciled_event" ||
+        ledgerResult.reason === "protected_workspace")
+    ) {
+      return;
+    }
+    if (
+      (ledgerResult.status !== "applied" &&
+        !(
+          ledgerResult.status === "ignored" &&
+          ledgerResult.reason === "duplicate_event"
+        )) ||
+      !ledgerResult.workspaceId
+    ) {
+      throw new StripeWebhookRetryableError();
+    }
+    workspaceId = ledgerResult.workspaceId;
+  } else {
+    // Dormant-by-default bridge. This legacy path remains unchanged until the
+    // controlled SQL, canonical reconciliation and postflight are confirmed.
+    const workspaceResolution = await resolveWorkspaceId(
+      input.object,
+      input.eventType,
+    );
+    if (workspaceResolution.status === "retryable_error") {
+      console.error("Stripe webhook workspace lookup needs retry", {
         eventType: input.eventType,
         eventId: input.eventId,
       });
       throw new StripeWebhookRetryableError();
     }
+    if (workspaceResolution.status === "not_found") {
+      console.warn("Stripe webhook without workspace mapping", {
+        eventType: input.eventType,
+        eventId: input.eventId,
+        objectId: stringField(input.object, "id"),
+      });
+      return;
+    }
+    workspaceId = workspaceResolution.workspaceId;
+
+    if (input.eventType?.startsWith("customer.subscription.") === true) {
+      const bindingDecision =
+        await verifyStripeSubscriptionWorkspaceBinding({
+          workspaceId,
+          customerId: stripeId(input.object.customer),
+          subscriptionId: objectIdWithPrefix(input.object, "sub_"),
+        });
+      if (bindingDecision !== STRIPE_BILLING_ALLOWED) {
+        console.error("Stripe subscription workspace binding needs retry", {
+          eventType: input.eventType,
+          eventId: input.eventId,
+        });
+        throw new StripeWebhookRetryableError();
+      }
+    }
+
+    const billingUpdateDecision = await updateWorkspaceBillingDefensively(
+      workspaceId,
+      input.fields,
+    );
+    if (billingUpdateDecision === STRIPE_BILLING_BLOCKED) {
+      console.warn("Stripe webhook workspace update blocked", {
+        eventType: input.eventType,
+        eventId: input.eventId,
+      });
+      return;
+    }
+    if (billingUpdateDecision === STRIPE_BILLING_RETRYABLE_ERROR) {
+      console.error("Stripe webhook workspace update needs retry", {
+        eventType: input.eventType,
+        eventId: input.eventId,
+      });
+      throw new StripeWebhookRetryableError();
+    }
+    if (billingUpdateDecision !== STRIPE_BILLING_UPDATED) {
+      throw new StripeWebhookRetryableError();
+    }
   }
 
-  const billingUpdateDecision = await updateWorkspaceBillingDefensively(
-    workspaceId,
-    input.fields,
-  );
-  if (billingUpdateDecision === STRIPE_BILLING_BLOCKED) {
-    console.warn("Stripe webhook workspace update blocked", {
-      eventType: input.eventType,
-      eventId: input.eventId,
-    });
+  // Capture-only may return a duplicate from an earlier active phase. It must
+  // still never replay AI/referral side effects while projection is disabled.
+  if (
+    isStripeBillingEventLedgerCaptureEnabled() &&
+    !isStripeBillingEventLedgerEnabled()
+  ) {
     return;
-  }
-  if (billingUpdateDecision === STRIPE_BILLING_RETRYABLE_ERROR) {
-    console.error("Stripe webhook workspace update needs retry", {
-      eventType: input.eventType,
-      eventId: input.eventId,
-    });
-    throw new StripeWebhookRetryableError();
-  }
-  if (billingUpdateDecision !== STRIPE_BILLING_UPDATED) {
-    throw new StripeWebhookRetryableError();
   }
 
   if (AI_TIER_STRIPE_EVENT_TYPES.includes(input.eventType ?? "")) {
     const aiTierSync = await syncWorkspaceAiTierStripeEntitlement({
       workspaceId,
       event: input.event,
+      signedEventVerified: true,
     });
     if (aiTierSync.status === "retry") {
       console.error("Stripe webhook AI tier update needs retry", {
@@ -303,6 +370,17 @@ async function updateOrWarn(input: {
         reason: aiTierSync.reason,
       });
       throw new StripeWebhookRetryableError();
+    }
+    if (aiTierSync.status === "reconciliation_needed") {
+      // Stripe event timestamps have only second precision. The atomic
+      // ledger RPC acknowledges a same-second collision after making the
+      // paid tier fail closed; retrying this immutable signed event cannot
+      // establish an order and would only create a permanent webhook retry.
+      console.warn("Stripe webhook AI tier needs reconciliation", {
+        eventType: input.eventType,
+        eventId: input.eventId,
+        reason: aiTierSync.reason,
+      });
     }
   }
 
@@ -346,7 +424,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   }
   const object = event.data?.object ?? {};
-  const now = new Date().toISOString();
+  const eventLedgerCaptureEnabled = isStripeBillingEventLedgerCaptureEnabled();
+  const ledgerEventCreated = eventLedgerCaptureEnabled
+    ? event.created
+    : undefined;
+  const now = eventLedgerCaptureEnabled
+    ? stripeTs(event.created) ?? new Date().toISOString()
+    : new Date().toISOString();
+  const decisionTimeMs = eventLedgerCaptureEnabled
+    ? (event.created ?? 0) * 1000
+    : Date.now();
   const defaultReferralBillingStatus = referralBillingStatusFromStripeEvent({
     eventType: event.type,
     paymentStatus: stringField(object, "payment_status"),
@@ -360,7 +447,8 @@ export async function POST(request: NextRequest) {
     attemptCount: numberField(object, "attempt_count"),
     graceExpired:
       event.type === "invoice.payment_failed"
-        ? Date.now() > Date.parse(graceUntil(object))
+        ? decisionTimeMs >
+          Date.parse(graceUntil(object, ledgerEventCreated))
         : false,
   });
   const update = (
@@ -417,7 +505,7 @@ export async function POST(request: NextRequest) {
       billing_status: "payment_failed",
       billing_last_payment_failed_at: now,
       billing_retry_count: retryCount(object),
-      billing_grace_until: graceUntil(object),
+      billing_grace_until: graceUntil(object, ledgerEventCreated),
       stripe_customer_id: stringField(object, "customer"),
       stripe_subscription_id: stringField(object, "subscription"),
       stripe_checkout_session_id: stringField(object, "id"),
@@ -459,7 +547,7 @@ export async function POST(request: NextRequest) {
       billing_status: "payment_failed",
       billing_last_payment_failed_at: now,
       billing_retry_count: retryCount(object),
-      billing_grace_until: graceUntil(object),
+      billing_grace_until: graceUntil(object, ledgerEventCreated),
       stripe_customer_id: stringField(object, "customer"),
       stripe_payment_intent_id: stringField(object, "id"),
       billing_note: "Einmalzahlung ist fehlgeschlagen.",
@@ -493,10 +581,10 @@ export async function POST(request: NextRequest) {
 
   if (event.type === "invoice.payment_failed") {
     const attempts = retryCount(object);
-    const grace = graceUntil(object);
+    const grace = graceUntil(object, ledgerEventCreated);
     const billingStatus = billingStatusFromInvoiceFailure({
       attemptCount: attempts,
-      graceExpired: Date.now() > Date.parse(grace),
+      graceExpired: decisionTimeMs > Date.parse(grace),
     });
     const suspend = billingStatus === "suspended";
     await update({
@@ -523,7 +611,7 @@ export async function POST(request: NextRequest) {
     event.type === "customer.subscription.resumed" ||
     event.type === "customer.subscription.paused"
   ) {
-    await update(subscriptionStatusFields(object));
+    await update(subscriptionStatusFields(object, now));
   }
 
   if (event.type === "customer.subscription.deleted") {
