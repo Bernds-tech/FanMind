@@ -255,6 +255,49 @@ Erst `AI_TIER_STAGING_ACCEPTANCE=PASS` zusammen mit
 Das beweist noch keine Production-Freigabe und aktiviert Plus oder Ultra
 nicht.
 
+Danach bleibt die getrennte Erweiterung `FanMind AI Tier Stripe Event Ledger
+Staging` offen. Ihr kontrolliertes SQL und der checksum-gebundene Runner sind
+vorbereitet, wurden aber nicht ausgeführt. Vor einem Lauf ist die ergänzende
+rollback-only Ledger-Abnahme für Replay, stale Event, gleiche Sekunde,
+Reconciliation und entzogenes direktes Service-Role-Write zu prüfen. Das
+Runtime-Flag `FANMIND_AI_TIER_STRIPE_EVENT_LEDGER_ENABLED` bleibt bis zu diesem
+Nachweis `false`; der Workflow setzt es nicht automatisch.
+
+Danach bleibt auch das allgemeine Basis-Billing-Ledger getrennt. Sein
+kontrolliertes SQL deckt Checkout, Invoice, Subscription, PaymentIntent,
+Refund/Dispute und Tax ab, wurde aber nicht angewandt. Vor Aktivierung müssen
+alle als `controlled_cutover` gesäten bestehenden Stripe-Workspaces mit einem
+frischen kanonischen Snapshot reconciliert und alle `unresolved`-/
+Sekundenkonflikte geschlossen sein. Eine aktive Basis-Projektion setzt zudem
+den abgeschlossenen KI-Tier-/Referral-Abgleich desselben Snapshots voraus;
+dieser gemeinsame Operator ist noch nicht aktiviert. Apply und Aktivierung
+sind getrennt; der manuelle Workflow
+`FanMind Stripe Billing Event Ledger Staging` setzt keine Runtime-Flags. Nach
+Apply ersetzt zunächst die zweifach bestätigte Capture-only-Stufe den Legacy-
+PATCH; die dritte Projektionsfreigabe bleibt bis nach dem vollständigen
+Cutover `false`. Vollständiger Ablauf:
+`docs/operations/STRIPE_BILLING_EVENT_LEDGER.md`.
+
+Zwischen SQL-Apply und bestätigter Capture-Umschaltung ist ein dokumentierter
+Billing-Write-Freeze Pflicht. Danach wird das Stripe-Workspace-Inventar erneut
+DB-basiert gegen Lifecycle-Streams und aktuelle Objektbindungen geprüft. Die
+Postflight-Werte `STRIPE_BILLING_EVENT_LEDGER_CUTOVER_PENDING` und
+`STRIPE_BILLING_EVENT_LEDGER_CUTOVER_UNINVENTORIED` müssen vor dem dritten Gate
+beide exakt `0` sein. Unabhängig davon darf ein fehlender Stream mit bestehender
+Stripe-Identität nie automatisch projektionsfähig werden.
+
+Beide Ledger-Apply-Workflows verlangen den exakt geprüften `main`-Commit und
+verwenden den Staging-Session-Pooler nur mit projektqualifiziertem Benutzer,
+einem tatsächlich gegen das Ziel verglichenen Production-Host als negativem
+Vergleichsanker und TLS `verify-full` gegen die
+eingecheckte Supabase-Root-CA. Unmittelbar vor dem jeweiligen Apply führen sie
+den gemeinsamen read-only Rollout-State mit demselben Commit, Ziel und
+Passfile aus. Der KI-Workflow verlangt exakt
+`STAGING_DATABASE_ROLLOUT_AI_TIER_STRIPE_LEDGER=apply`, der Basis-Workflow
+`STAGING_DATABASE_ROLLOUT_STRIPE_BILLING_LEDGER=apply`; beide verlangen
+zusätzlich den Gesamtzustand `PASS`. `present` plus grüner exakter Postflight
+wird zu `verify`, jede partielle Objektmenge zu `block`.
+
 ## Freigabekriterien
 
 Staging gilt erst als tatsächlich eingerichtet, wenn:

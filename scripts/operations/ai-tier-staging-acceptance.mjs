@@ -434,6 +434,131 @@ select 'AI_TIER_STAGING_ROLLBACK=PASS';
 `;
 }
 
+function ledgerAvailabilitySql() {
+  return String.raw`
+\set ON_ERROR_STOP on
+begin;
+set transaction read only;
+select case
+  when to_regprocedure(
+    'public.apply_workspace_ai_tier_stripe_event(uuid,boolean,text,bigint,text,text,text,text,boolean,text,text,text,text,timestamp with time zone,timestamp with time zone)'
+  ) is not null then 'ledger'
+  else 'legacy'
+end;
+rollback;
+`;
+}
+
+function parseLedgerAvailability(output) {
+  const mode = clean(output);
+  if (mode !== "ledger" && mode !== "legacy") {
+    fail("ledger_state");
+  }
+  return mode;
+}
+
+function serviceRoleLedgerSql(workspaceId, mutation, ultraPriceId) {
+  const workspace = sqlString(workspaceId, UUID_PATTERN);
+  const plusItem = sqlString(
+    mutation.stripeSubscriptionItemId,
+    STRIPE_ID_PATTERN,
+  );
+  const plusPrice = sqlString(mutation.stripePriceId, STRIPE_ID_PATTERN);
+  const plusEvent = sqlString(
+    mutation.lastStripeEventId,
+    STRIPE_ID_PATTERN,
+  );
+  const ultraPrice = sqlString(ultraPriceId, STRIPE_ID_PATTERN);
+  const effectiveAt = new Date(mutation.effectiveAt).toISOString();
+  const createdAt = mutation.lastStripeEventCreatedAt;
+  if (!Number.isSafeInteger(createdAt) || createdAt < 0) {
+    fail("synthetic_contract");
+  }
+  return String.raw`
+\set ON_ERROR_STOP on
+begin;
+set local role service_role;
+
+do $ledger_acceptance$
+declare
+  v_customer_id text;
+  v_subscription_id text;
+  v_result record;
+begin
+  select workspace.stripe_customer_id, workspace.stripe_subscription_id
+    into v_customer_id, v_subscription_id
+    from public.workspaces as workspace
+   where workspace.id = ${workspace};
+  if v_customer_id is null or v_subscription_id is null then
+    raise exception 'ledger_acceptance_workspace_binding_missing';
+  end if;
+
+  select * into v_result
+    from public.apply_workspace_ai_tier_stripe_event(
+      ${workspace}, true, ${plusEvent}, ${createdAt},
+      'customer.subscription.updated', v_customer_id, v_subscription_id,
+      repeat('1', 64), true, 'plus', 'active', ${plusItem},
+      ${plusPrice}, '${effectiveAt}'::timestamptz, null
+    );
+  if v_result.result_status <> 'applied' then
+    raise exception 'ledger_acceptance_plus_failed';
+  end if;
+
+  select * into v_result
+    from public.apply_workspace_ai_tier_stripe_event(
+      ${workspace}, true, 'evt_fanmind_staging_ultra', ${createdAt + 1},
+      'customer.subscription.updated', v_customer_id, v_subscription_id,
+      repeat('2', 64), true, 'ultra', 'paused',
+      'si_fanmind_staging_ultra', ${ultraPrice},
+      '${effectiveAt}'::timestamptz, null
+    );
+  if v_result.result_status <> 'applied' then
+    raise exception 'ledger_acceptance_ultra_failed';
+  end if;
+
+  select * into v_result
+    from public.apply_workspace_ai_tier_stripe_event(
+      ${workspace}, true, 'evt_fanmind_staging_starter', ${createdAt + 2},
+      'customer.subscription.updated', v_customer_id, v_subscription_id,
+      repeat('3', 64), false, null, null, null, null, null, null
+    );
+  if v_result.result_status <> 'applied' then
+    raise exception 'ledger_acceptance_starter_failed';
+  end if;
+
+  if exists (
+    select 1 from public.workspace_ai_tier_entitlements
+     where workspace_id = ${workspace}
+  ) then
+    raise exception 'ledger_acceptance_projection_cleanup_failed';
+  end if;
+end
+$ledger_acceptance$;
+
+rollback;
+do $verify_rollback$
+begin
+  if exists (
+    select 1 from public.workspace_ai_tier_entitlements
+     where workspace_id = ${workspace}
+  ) or exists (
+    select 1 from public.workspace_ai_tier_stripe_events
+     where workspace_id = ${workspace}
+       and event_id in (
+         ${plusEvent},
+         'evt_fanmind_staging_ultra',
+         'evt_fanmind_staging_starter'
+       )
+  ) then
+    raise exception 'service_role_rollback_failed';
+  end if;
+end
+$verify_rollback$;
+select 'AI_TIER_STAGING_SERVICE_ROLE_LEDGER=PASS';
+select 'AI_TIER_STAGING_ROLLBACK=PASS';
+`;
+}
+
 async function fetchStripePrice(environment, priceId, expectedUnitAmount) {
   const url = new URL(
     `https://api.stripe.com/v1/prices/${encodeURIComponent(priceId)}`,
@@ -550,8 +675,23 @@ async function runAcceptance(environment) {
       mutation: lifecycle.mutation,
     });
 
+    const ledgerState = runPsql(
+      ledgerAvailabilitySql(),
+      environment,
+      snapshotPath,
+    );
+    if (ledgerState.error || ledgerState.status !== 0) {
+      fail("ledger_state");
+    }
+    const ledgerMode = parseLedgerAvailability(ledgerState.stdout);
     const serviceRole = runPsql(
-      serviceRoleCrudSql(workspaceId, lifecycle.mutation),
+      ledgerMode === "ledger"
+        ? serviceRoleLedgerSql(
+            workspaceId,
+            lifecycle.mutation,
+            environment.STRIPE_PRICE_AI_ULTRA,
+          )
+        : serviceRoleCrudSql(workspaceId, lifecycle.mutation),
       environment,
       snapshotPath,
     );
@@ -559,13 +699,19 @@ async function runAcceptance(environment) {
       serviceRole.error ||
       serviceRole.status !== 0 ||
       !serviceRole.stdout.includes(
-        "AI_TIER_STAGING_SERVICE_ROLE_CRUD=PASS",
+        ledgerMode === "ledger"
+          ? "AI_TIER_STAGING_SERVICE_ROLE_LEDGER=PASS"
+          : "AI_TIER_STAGING_SERVICE_ROLE_CRUD=PASS",
       ) ||
       !serviceRole.stdout.includes("AI_TIER_STAGING_ROLLBACK=PASS")
     ) {
       fail("service_role_crud");
     }
-    console.log("AI_TIER_STAGING_SERVICE_ROLE_CRUD=PASS");
+    console.log(
+      ledgerMode === "ledger"
+        ? "AI_TIER_STAGING_SERVICE_ROLE_LEDGER=PASS"
+        : "AI_TIER_STAGING_SERVICE_ROLE_CRUD=PASS",
+    );
     console.log("AI_TIER_STAGING_TRANSACTION=ROLLED_BACK");
   } finally {
     rmSync(snapshotDirectory, { recursive: true, force: true });

@@ -26,6 +26,10 @@ durch die zentrale Readiness blockiert.
 Der checksum-gebundene Runner bereitet ausschließlich einen kontrollierten
 manuellen Datenbankschritt vor. Web-Deploy und Merge enthalten keine automatische Production-Migration.
 
+Die getrennte, noch nicht angewendete Ledger-/RPC-Erweiterung ist in
+`AI_TIER_STRIPE_EVENT_LEDGER.md` beschrieben. Sie ersetzt den bisherigen
+optimistischen REST-Write erst nach eigener Staging-Anwendung und Abnahme.
+
 ## Sicherheitsvertrag
 
 - Nur `plus` oder `ultra` dürfen gespeichert werden; Standard benötigt keine
@@ -36,7 +40,9 @@ manuellen Datenbankschritt vor. Web-Deploy und Merge enthalten keine automatisch
 - RLS und `FORCE ROW LEVEL SECURITY` sind aktiv.
 - Es gibt keine Policy für `public`, `anon` oder `authenticated`.
 - Tabellen- und Spaltenrechte für Browserrollen werden vollständig entzogen.
-- Nur `service_role` erhält `SELECT`, `INSERT`, `UPDATE` und `DELETE`.
+- Vor der Ledger-Erweiterung erhält nur `service_role` `SELECT`, `INSERT`,
+  `UPDATE` und `DELETE`. Nach dem kontrollierten Ledger-Upgrade behält die
+  Rolle nur `SELECT`; alle Mutationen laufen über zwei exakt freigegebene RPCs.
 - `workspace_id` ist nach dem Insert unveränderlich.
 - Der Loader fragt mit `limit=2` ab und akzeptiert exakt null oder eine Zeile.
 - Stripe-IDs, Price-IDs und Event-IDs verlassen den Loader nicht.
@@ -53,8 +59,10 @@ manuellen Datenbankschritt vor. Web-Deploy und Merge enthalten keine automatisch
    prüfen.
 4. Mit einem normalen Owner-JWT und Mitglieder-JWT negative
    `SELECT`-/`INSERT`-/`UPDATE`-/`DELETE`-Tests durchführen.
-5. Mit Service Role einen synthetischen Plus-Datensatz anlegen, lesen,
-   ändern und löschen; keine echte Stripe- oder Kundennummer verwenden.
+5. Vor dem getrennten Ledger-Upgrade mit Service Role einen synthetischen
+   Plus-Datensatz anlegen, lesen, ändern und löschen; nach dem Upgrade sind
+   direkte Writes absichtlich entzogen und derselbe Nachweis läuft nur über
+   die beiden Ledger-RPCs. Keine echte Stripe- oder Kundennummer verwenden.
 6. Nachweisen, dass null Zeilen KI Standard ergeben, exakt eine gültige Zeile
    redigiert wird und zwei beziehungsweise beschädigte Zeilen fail-closed
    sind.
@@ -64,9 +72,10 @@ manuellen Datenbankschritt vor. Web-Deploy und Merge enthalten keine automatisch
    Übereinstimmung aller direkten Workspace-IDs, gespeicherte Customer- und
    Basis-Subscription-Bindung, Price-Allowlist, vollständige Item-Zuordnung,
    Entfernen des Add-ons,
-   Ereignisreihenfolge, idempotente Wiederholungen und optimistische
-   Schreibkonflikte. Starter-only Subscriptions müssen ein schreibfreies No-op
-   bleiben.
+   Ereignisreihenfolge, idempotente Wiederholungen und Schreibkonflikte. Nach
+   dem getrennten Ledger-Upgrade werden auch vollständige Starter-only
+   Snapshots ohne bezahlte Projektion erfasst, damit eine Add-on-Entfernung
+   atomar erkannt werden kann.
 8. Erst nach grüner Staging-Abnahme darf die Migration kontrolliert auf
    Production angewendet werden.
 9. Produktive KI-Endpunkte werden erst in einem weiteren PR auf den Speicher
@@ -113,7 +122,11 @@ AI_TIER_ENTITLEMENT_MIGRATION_POSTFLIGHT=PASS
 Der Postflight liest keine Workspace-, Stripe- oder Kundendatensätze. Er prüft
 nur PostgreSQL-Metadaten zu Tabelle, RLS/`FORCE RLS`, fehlenden
 Browser-Policies, Tabellen- und Spaltenrechten, Constraints, Indizes, Trigger
-und Triggerfunktion.
+und Triggerfunktion. Er erkennt den Ledger-Zustand über die beiden Sync-
+Spalten, beide Ledger-Tabellen und beide exakt signierten RPCs als
+`pre_ledger`, `post_ledger` oder partiell. Pre-Ledger verlangt weiterhin das
+alte Service-Role-CRUD; Post-Ledger verlangt exakt `SELECT` ohne direkte
+Mutation sowie beide zusätzlichen Constraints. Jede Mischform blockiert.
 
 ## Synthetische Staging-Abnahme
 
@@ -122,8 +135,10 @@ Nach einem kontrollierten Staging-Apply:
 1. Postflight erneut mit `npm run db:ai-tier-entitlements:verify` ausführen.
 2. Als normaler Owner und als Mitglied nachweisen, dass `SELECT`, `INSERT`,
    `UPDATE` und `DELETE` blockiert bleiben.
-3. Mit Service Role genau einen vollständig synthetischen Plus-Datensatz
-   anlegen, lesen, ändern und löschen.
+3. Vor dem Ledger-Upgrade mit Service Role genau einen vollständig
+   synthetischen Plus-Datensatz anlegen, lesen, ändern und löschen; nach dem
+   Upgrade denselben atomaren Mutationsnachweis ausschließlich über die
+   freigegebenen Ledger-RPCs führen.
 4. Nachweisen, dass der Loader keine Stripe-Referenz zurückgibt.
 5. Null Zeilen, zwei Zeilen und beschädigte Werte müssen fail-closed auf KI
    Standard fallen.
@@ -244,15 +259,16 @@ Erwartet:
 - Verdrahtung mit Antwortvorschlägen und Nutzungsgrenzen;
 - abschließende Production-Abnahme.
 
-Die bestehende Tabelle kann die letzte Event-ID und -Zeit dauerhaft speichern
-und per Compare-and-swap gegen paralleles Überschreiben schützen. Sie besitzt
-aber kein vollständiges Event-Ledger. Zwei verschiedene Stripe-Events mit
-derselben Sekunden-Zeit bleiben deshalb bewusst `retry`, statt willkürlich
-geordnet zu werden. Der sichere Folgeschritt ist eine getrennt freizugebende,
-service-role-only Event-Tabelle mit eindeutiger Event-ID sowie eine
-transaktionale Datenbankfunktion, die Event-Insert, Subscription-Lock und
-Entitlement-Mutation gemeinsam ausführt. Bei gleicher Zeit oder einem
-Subscription-Wechsel muss der Worker zusätzlich den kanonischen aktuellen
-Subscription-Stand von Stripe abrufen und abgleichen. Diese Migration wird
-erst nach Testmode-Design, RLS-/Rechteprüfung, Rollback-Abnahme und eigener
-Production-Freigabe erstellt.
+Die kontrollierte, noch nicht angewendete Erweiterung unter
+`supabase/controlled/20260816190000_workspace_ai_tier_stripe_event_ledger.sql`
+bereitet jetzt das vollständige Event-Ledger, die atomare CAS/RPC-Grenze und
+den dauerhaften Zustand `reconciliation_needed` vor. Bei gleicher Sekunde
+wird keine Event-ID-Reihenfolge erfunden. Der Loader fällt auf Standard
+zurück, während ein späterer Worker den kanonischen aktuellen
+Stripe-Subscription-Stand abrufen und über eine Request-ID- und
+Revisions-gebundene Reconciliation-RPC abgleichen muss. Dieser Worker, der
+echte Stripe-Testmode-Lauf und jeder Datenbank-Apply bleiben offen. Das
+separate Basis-Billing auf `workspaces` besitzt inzwischen einen vorbereiteten,
+kontrollierten gemeinsamen Event-Ledger-Vertrag; Apply, Cutover,
+Reconciliation-Operator und echte Staging-Abnahme bleiben eigene
+Release-Blocker.

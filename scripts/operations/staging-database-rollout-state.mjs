@@ -32,6 +32,13 @@ import {
   STATE_SQL as META_CONTINUATION_STATE_SQL,
 } from "./meta-conversation-continuation-migration-runner.mjs";
 import {
+  CONTROL_PATH as STRIPE_BILLING_LEDGER_CONTROL_PATH,
+  materializeStripeBillingEventLedgerPostflight,
+} from "./stripe-billing-event-ledger-runner.mjs";
+import {
+  POSTFLIGHT_SQL as AI_TIER_STRIPE_LEDGER_POSTFLIGHT_SQL,
+} from "./ai-tier-stripe-event-ledger-runner.mjs";
+import {
   deriveStagingDatabaseRolloutActions,
   evaluateStagingDatabaseRolloutStateEnvironment,
 } from "../../src/lib/stagingDatabaseRolloutStatePolicy.mjs";
@@ -70,6 +77,13 @@ const OFFLINE_CONTROLS = Object.freeze([
   Object.freeze({
     path: resolve(
       process.cwd(),
+      "scripts/operations/ai-tier-stripe-event-ledger-runner.mjs",
+    ),
+    arguments: ["--check"],
+  }),
+  Object.freeze({
+    path: resolve(
+      process.cwd(),
       "scripts/operations/ai-tier-entitlement-migration-runner.mjs",
     ),
     arguments: ["--check"],
@@ -99,6 +113,13 @@ const OFFLINE_CONTROLS = Object.freeze([
     path: resolve(
       process.cwd(),
       "scripts/operations/meta-conversation-continuation-migration-runner.mjs",
+    ),
+    arguments: ["--check"],
+  }),
+  Object.freeze({
+    path: resolve(
+      process.cwd(),
+      "scripts/operations/stripe-billing-event-ledger-runner.mjs",
     ),
     arguments: ["--check"],
   }),
@@ -235,6 +256,82 @@ set transaction read only;
 select 'STAGING_DATABASE_AI_TIER_OBJECT=' ||
   case when to_regclass('public.workspace_ai_tier_entitlements') is null
     then 'absent' else 'present' end;
+rollback;
+`;
+
+const AI_TIER_STRIPE_LEDGER_STATE_SQL = String.raw`
+\set ON_ERROR_STOP on
+begin;
+set transaction read only;
+with topology as (
+  select
+    (case when exists (
+      select 1 from pg_attribute
+       where attrelid = to_regclass('public.workspace_ai_tier_entitlements')
+         and attname = 'stripe_sync_state'
+         and attnum > 0 and not attisdropped
+    ) then 1 else 0 end) +
+    (case when exists (
+      select 1 from pg_attribute
+       where attrelid = to_regclass('public.workspace_ai_tier_entitlements')
+         and attname = 'stripe_sync_revision'
+         and attnum > 0 and not attisdropped
+    ) then 1 else 0 end) +
+    (case when to_regclass('public.workspace_ai_tier_stripe_events')
+      is not null then 1 else 0 end) +
+    (case when to_regclass('public.workspace_ai_tier_stripe_reconciliations')
+      is not null then 1 else 0 end) +
+    (case when to_regprocedure(
+      'public.apply_workspace_ai_tier_stripe_event(uuid,boolean,text,bigint,text,text,text,text,boolean,text,text,text,text,timestamp with time zone,timestamp with time zone)'
+    ) is not null then 1 else 0 end) +
+    (case when to_regprocedure(
+      'public.reconcile_workspace_ai_tier_stripe_subscription(uuid,text,text,text,text,timestamp with time zone,text,bigint,boolean,text,text,text,text,timestamp with time zone,timestamp with time zone)'
+    ) is not null then 1 else 0 end) as object_count,
+    (
+      select count(*)::integer
+        from pg_proc as definition
+        join pg_namespace as namespace
+          on namespace.oid = definition.pronamespace
+       where namespace.nspname = 'public'
+         and definition.proname in (
+           'apply_workspace_ai_tier_stripe_event',
+           'reconcile_workspace_ai_tier_stripe_subscription'
+         )
+    ) as function_count
+)
+select 'STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT=' ||
+  case
+    when object_count = 0 and function_count = 0 then 'absent'
+    when object_count = 6 and function_count = 2 then 'present'
+    else 'invalid'
+  end
+  from topology;
+rollback;
+`;
+
+const STRIPE_BILLING_LEDGER_STATE_SQL = String.raw`
+\set ON_ERROR_STOP on
+begin;
+set transaction read only;
+with topology as (
+  select count(*)::integer as object_count
+    from unnest(array[
+      to_regclass('public.workspace_stripe_billing_streams')::oid,
+      to_regclass('public.workspace_stripe_billing_object_bindings')::oid,
+      to_regclass('public.workspace_stripe_billing_reconciliations')::oid,
+      to_regclass('public.workspace_stripe_billing_events')::oid,
+      to_regprocedure('public.workspace_stripe_billing_projection_valid(jsonb)')::oid,
+      to_regprocedure('public.apply_workspace_stripe_billing_projection(uuid,jsonb)')::oid,
+      to_regprocedure('public.mark_workspace_stripe_billing_reconciliation(uuid)')::oid,
+      to_regprocedure('public.apply_workspace_stripe_billing_event(boolean,boolean,text,bigint,text,text,text,uuid,boolean,text,text,text,text,text,text,text,text,text,text,jsonb)')::oid,
+      to_regprocedure('public.reconcile_workspace_stripe_billing_projection(uuid,text,text,timestamp with time zone,text,bigint,text,text,jsonb,text[],jsonb)')::oid,
+      to_regprocedure('public.verify_workspace_stripe_billing_ledger_schema()')::oid
+    ]::oid[]) as installed(oid)
+   where installed.oid is not null
+)
+select 'STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT=' ||
+  case object_count when 0 then 'absent' when 10 then 'present' else 'invalid' end
+  from topology;
 rollback;
 `;
 
@@ -517,10 +614,53 @@ function ensurePsqlAvailable() {
   if (result.error || result.status !== 0) fail("psql_unavailable");
 }
 
-function successfulProbe(sql, environment, passfilePath, marker) {
+function probeLines(output) {
+  return String(output ?? "")
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function exactControlledObjectState(output, marker) {
+  const lines = probeLines(output);
+  if (lines.length !== 1) return "invalid";
+  if (lines[0] === `${marker}=absent`) return "absent";
+  if (lines[0] === `${marker}=present`) return "present";
+  return "invalid";
+}
+
+function exactAiTierStripeLedgerPostflight(output) {
+  const lines = probeLines(output);
+  return (
+    lines.length === 1 &&
+    lines[0] === "AI_TIER_STRIPE_EVENT_LEDGER_POSTFLIGHT=PASS"
+  );
+}
+
+function exactStripeBillingLedgerPostflight(output) {
+  const lines = probeLines(output);
+  return (
+    lines.length === 3 &&
+    lines[0] === "STRIPE_BILLING_EVENT_LEDGER_POSTFLIGHT=PASS" &&
+    /^STRIPE_BILLING_EVENT_LEDGER_CUTOVER_PENDING=\d+$/u.test(lines[1]) &&
+    /^STRIPE_BILLING_EVENT_LEDGER_CUTOVER_UNINVENTORIED=\d+$/u.test(
+      lines[2],
+    )
+  );
+}
+
+function successfulProbe(
+  sql,
+  environment,
+  passfilePath,
+  marker,
+  outputValidator = (output) => output.includes(marker),
+) {
   const result = runPsql(sql, environment, passfilePath);
   return Boolean(
-    !result.error && result.status === 0 && result.stdout.includes(marker),
+    !result.error &&
+      result.status === 0 &&
+      outputValidator(String(result.stdout ?? "")),
   );
 }
 
@@ -557,6 +697,7 @@ function tableObjectState({
   stateMarker,
   postflightSql,
   postflightMarker,
+  postflightOutputValidator,
   environment,
   passfilePath,
 }) {
@@ -566,13 +707,15 @@ function tableObjectState({
     passfilePath,
     `${stateMarker.toLowerCase()}_state`,
   );
-  if (state.includes(`${stateMarker}=absent`)) return "absent";
-  if (!state.includes(`${stateMarker}=present`)) return "invalid";
+  const objectState = exactControlledObjectState(state, stateMarker);
+  if (objectState === "absent") return "absent";
+  if (objectState !== "present") return "invalid";
   return successfulProbe(
     postflightSql,
     environment,
     passfilePath,
     postflightMarker,
+    postflightOutputValidator,
   )
     ? "current"
     : "invalid";
@@ -703,6 +846,26 @@ async function inspectDatabase(environment) {
         environment,
         passfilePath: snapshotPath,
       }),
+      aiTierStripeLedger: tableObjectState({
+        stateSql: AI_TIER_STRIPE_LEDGER_STATE_SQL,
+        stateMarker: "STAGING_DATABASE_AI_TIER_STRIPE_LEDGER_OBJECT",
+        postflightSql: AI_TIER_STRIPE_LEDGER_POSTFLIGHT_SQL,
+        postflightMarker: "AI_TIER_STRIPE_EVENT_LEDGER_POSTFLIGHT=PASS",
+        postflightOutputValidator: exactAiTierStripeLedgerPostflight,
+        environment,
+        passfilePath: snapshotPath,
+      }),
+      stripeBillingLedger: tableObjectState({
+        stateSql: STRIPE_BILLING_LEDGER_STATE_SQL,
+        stateMarker: "STAGING_DATABASE_STRIPE_BILLING_LEDGER_OBJECT",
+        postflightSql: materializeStripeBillingEventLedgerPostflight(
+          readFileSync(STRIPE_BILLING_LEDGER_CONTROL_PATH, "utf8"),
+        ),
+        postflightMarker: "STRIPE_BILLING_EVENT_LEDGER_POSTFLIGHT=PASS",
+        postflightOutputValidator: exactStripeBillingLedgerPostflight,
+        environment,
+        passfilePath: snapshotPath,
+      }),
       mobilePush: tableObjectState({
         stateSql: MOBILE_PUSH_STATE_SQL,
         stateMarker: "STAGING_DATABASE_MOBILE_PUSH_OBJECT",
@@ -756,6 +919,12 @@ async function main() {
   );
   console.log(`STAGING_DATABASE_ROLLOUT_AI_TIER=${result.actions.aiTier}`);
   console.log(
+    `STAGING_DATABASE_ROLLOUT_AI_TIER_STRIPE_LEDGER=${result.actions.aiTierStripeLedger}`,
+  );
+  console.log(
+    `STAGING_DATABASE_ROLLOUT_STRIPE_BILLING_LEDGER=${result.actions.stripeBillingLedger}`,
+  );
+  console.log(
     `STAGING_DATABASE_ROLLOUT_MOBILE_PUSH=${result.actions.mobilePush}`,
   );
   console.log(
@@ -799,14 +968,19 @@ if (
 }
 
 export {
+  AI_TIER_STRIPE_LEDGER_STATE_SQL,
   AI_TIER_STATE_SQL,
   LEDGER_STATE_SQL,
   META_CATCHUP_STATE_SQL,
   META_CONTINUATION_STATE_SQL,
   MOBILE_PUSH_STATE_SQL,
+  STRIPE_BILLING_LEDGER_STATE_SQL,
   TRIGGER_HARDENING_STATE_SQL,
   WORKSPACE_MEMBER_BOUNDARY_STATE_SQL,
   WHATSAPP_CLOUD_INBOUND_STATE_SQL,
+  exactAiTierStripeLedgerPostflight,
+  exactControlledObjectState,
+  exactStripeBillingLedgerPostflight,
   ledgerManagedMetaMigrations,
   ledgerSql,
   psqlFailureCategory,

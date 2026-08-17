@@ -133,6 +133,8 @@ export function deriveStagingDatabaseRolloutActions({
   ledger = {},
   objects = {},
 } = {}) {
+  const aiTierStripeLedgerState = objects.aiTierStripeLedger ?? "absent";
+  const stripeBillingLedgerState = objects.stripeBillingLedger ?? "absent";
   const actions = Object.freeze({
     workspaceMemberBoundary: deriveWorkspaceMemberBoundaryAction({
       prerequisiteApplied: ledger.workspaceMemberPrerequisite,
@@ -148,6 +150,13 @@ export function deriveStagingDatabaseRolloutActions({
       ledgerApplied: ledger.aiTier,
       objectState: objects.aiTier,
     }),
+    aiTierStripeLedger:
+      objects.aiTier === "current"
+        ? deriveControlledObjectAction(aiTierStripeLedgerState)
+        : "block",
+    stripeBillingLedger: deriveControlledObjectAction(
+      stripeBillingLedgerState,
+    ),
     mobilePush: deriveMigrationBlockAction({
       ledgerApplied: ledger.mobilePush,
       objectState: objects.mobilePush,
