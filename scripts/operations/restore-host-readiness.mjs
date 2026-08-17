@@ -157,19 +157,19 @@ export const TOOL_CONTRACT = Object.freeze([
     name: "psql",
     path: "/usr/lib/postgresql/17/bin/psql",
     args: ["--version"],
-    version: /psql \(PostgreSQL\) 17\.10(?:\s|$)/u,
+    version: /psql \(PostgreSQL\) 17\.11(?:\s|$)/u,
   },
   {
     name: "pg_restore",
     path: "/usr/lib/postgresql/17/bin/pg_restore",
     args: ["--version"],
-    version: /pg_restore \(PostgreSQL\) 17\.10(?:\s|$)/u,
+    version: /pg_restore \(PostgreSQL\) 17\.11(?:\s|$)/u,
   },
   {
     name: "pg_dump",
     path: "/usr/lib/postgresql/17/bin/pg_dump",
     args: ["--version"],
-    version: /pg_dump \(PostgreSQL\) 17\.10(?:\s|$)/u,
+    version: /pg_dump \(PostgreSQL\) 17\.11(?:\s|$)/u,
   },
 ]);
 const COREUTILS = Object.freeze([
@@ -600,7 +600,7 @@ export async function verifyRestoreHostReadiness(
   return Object.freeze({
     ageVersion: "1.1.1",
     nodeVersion: "24.19.0",
-    postgresqlVersion: "17.10",
+    postgresqlVersion: "17.11",
     tarVersion: "1.35",
   });
 }

@@ -10,8 +10,8 @@ const SETUP_JAVA_V5_7_0_SHA =
 const HOSTED_CHECKOUT_V7_0_1_SHA =
   "3d3c42e5aac5ba805825da76410c181273ba90b1";
 const PG17_SERVICE_IMAGE =
-  "postgres:17.10-trixie@sha256:" +
-  "a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d";
+  "postgres:17.11-trixie@sha256:" +
+  "e38411452a464af89e5adadb8d223bf53b898d47d6ef918b2d58c08707350449";
 const RESTORE_CHECKOUT_V4_SHA =
   "11d5960a326750d5838078e36cf38b85af677262";
 const STAGING_DEPLOY_WORKFLOW = "deploy-staging.yml";
