@@ -615,6 +615,14 @@ test("manual database restore workflow is exact-commit-bound and receipt-only", 
     workflow.indexOf("  verify-restore-host:"),
     workflow.indexOf("  restore-isolated-database:"),
   );
+  const compatibilityStep = protectedJob.slice(
+    protectedJob.indexOf(
+      "      - name: Verify isolated PostgreSQL 17 target read-only",
+    ),
+    protectedJob.indexOf(
+      "      - name: Decrypt privately and restore the exact database dump",
+    ),
+  );
 
   assert.match(workflow, /workflow_dispatch:/u);
   assert.match(workflow, /REVIEWED_COMMIT: \$\{\{ inputs\.reviewed_commit \}\}/u);
@@ -638,6 +646,17 @@ test("manual database restore workflow is exact-commit-bound and receipt-only", 
   );
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/u);
   assert.match(workflow, /FANMIND_ENABLE_RESTORE_DRILL: 'false'/u);
+  assert.match(
+    compatibilityStep,
+    /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'false'/u,
+  );
+  assert.match(compatibilityStep, /FANMIND_NON_PRODUCTION_WRITE_ACK: ''/u);
+  assert.match(compatibilityStep, /FANMIND_ENABLE_RESTORE_DRILL: 'false'/u);
+  assert.match(compatibilityStep, /FANMIND_RESTORE_TARGET_ACK: ''/u);
+  assert.match(
+    compatibilityStep,
+    /FANMIND_RESTORE_READINESS_CONFIRM: verify-isolated-restore-resources/u,
+  );
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'/u);
   assert.match(workflow, /FANMIND_ENABLE_RESTORE_DRILL: 'true'/u);
   assert.match(workflow, /node scripts\/operations\/restore-drill-resource-readiness\.mjs/u);
