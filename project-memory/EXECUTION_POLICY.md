@@ -1,28 +1,30 @@
-# Execution Policy
+# Execution Policy v5
 
-Mandatory default for all substantive agent/Codex/automation work.
+Mandatory default for substantive FanMind agent/Codex/automation work.
 
-## First-pass preflight
-Before acting, read `AGENTS.md` and the relevant `project-memory/` sources: current state, task ledger, change requests, decisions, failed attempts, open loops, dependencies, evidence, do-not-assume, session handoff, project/cross-project status, authorizations, `STARTED_WORK.md`, `WORK_LOCKS.md`, `EXECUTION_RECEIPTS.md` and `RECONCILIATION.md`. Then verify the actual branch/head, open PRs/checks and current implementation/runtime evidence.
+## Automatic preflight
+Read `AGENTS.md` and relevant project-memory sources including current state, task ledger, change requests, decisions, failed attempts, open loops, dependencies, evidence, do-not-assume, handoff/status, authorizations, STARTED_WORK, WORK_LOCKS, EXECUTION_RECEIPTS, RECONCILIATION, QUALITY_CONTROL, ASSUMPTIONS and CONTRADICTIONS. Verify actual branch/head, PR/CI/security/workflow state, runtime/target state and prior attempts.
 
-Do not wait for the owner to say "check first". This preflight is automatic.
+Assign `Risk: R1|R2|R3|R4`; uncertainty defaults upward. Record and freshly verify critical assumptions, especially Production/Staging/restore target, runner, migration, deployment commit, Stripe/provider, external approvals and mobile build/signing state. Define success evidence, negative/fail-closed evidence and recovery expectations for R3/R4 state-changing work.
 
 ## Started-work rule
-As soon as substantive work starts, record it in `STARTED_WORK.md` and acquire/update the Task-ID lock in `WORK_LOCKS.md`. Unfinished restore/mobile/AI/billing/social/security work remains visible with completed-so-far, still-open and exact-next-step fields until explicitly closed or superseded.
+As soon as substantive work begins, record it in STARTED_WORK with Risk, acquire/update the Task-ID lock and open an execution receipt. Unfinished restore/mobile/AI/billing/social/security/infra work remains visible until explicitly closed, superseded or transferred with exact next step.
 
-## Duplicate/regression check
-Confirm the work is not already implemented, the same approach was not already rejected/failed without new evidence, the scope belongs here, dependencies are satisfied, and success evidence is defined before editing.
+## Duplicate/regression and scope guard
+Confirm the work is not already implemented, previously failed/rejected without new evidence, in the wrong domain or blocked by unresolved dependencies. Unexpected workflows, permissions, migrations, dependencies, secrets/config handling, generated output or unrelated files force `RECONCILIATION_REQUIRED`.
 
-## Independent second-pass countercheck
-Before completion/merge/reporting success: re-read the goal, inspect the final diff, verify tests/evidence, check unrelated changes/regressions, re-check dependencies/open loops, reconcile Task Ledger/Started Work/Work Locks/PR/CI/runtime/Evidence, write an execution receipt, release or refresh the lock, and update project memory. Never equate implemented with accepted without evidence.
+## Independent countercheck
+Before merge/completion/success reporting: re-read goal; inspect final diff; verify fresh commit/PR/workflow/target evidence; test meaningful negative/regression/fail-closed paths; answer `What observation would prove our conclusion wrong?`; re-check assumptions/dependencies/open loops/contradictions; reconcile memory with PR/CI/security/runtime state; apply QUALITY_CONTROL quorum. R3/R4 require at least two independent evidence classes. R4 also requires all applicable FanMind CI/security/supply-chain/operations gates green and exact target-bound evidence. Record rollback/recovery proof, finish receipt, and release/update lock.
 
-Any mismatch creates a reconciliation finding and prevents a clean completion claim.
+## Completion state machine
+`TODO -> IN_PROGRESS -> IMPLEMENTED -> VERIFIED -> COUNTERCHECKED -> ACCEPTED -> PRODUCTION_CONFIRMED` as applicable. Side states include `BLOCKED`, `PARTIAL`, `IMPLEMENTED_NOT_VERIFIED`, `RECONCILIATION_REQUIRED`, `REJECTED`, `SUPERSEDED`, `DEFERRED`, `DUPLICATE`. Never jump from implementation to acceptance without quorum.
 
 ## Stop conditions
-Do not bypass red governance/security/supply-chain checks, missing dependencies/secrets, contradictory verified evidence, production/billing/destructive/compliance boundaries, or previously failed approaches without new justification.
+Do not bypass red governance/security/supply-chain/operations checks, invalid assumptions, contradictory verified evidence, missing dependencies/secrets, Production/billing/restore/destructive/compliance/publishing boundaries, or previous failed approaches without new evidence.
 
-## Standing permissions
-Reuse permissions documented in `AUTHORIZATIONS.md` without asking again where technically and safely allowed. Platform confirmations and protected/destructive boundaries still apply.
+## Milestone closeout
+Before a FanMind phase/milestone is complete, reconcile all related tasks, started work, locks, loops, dependencies, failed attempts, change requests, PRs, CI/security/operations gates, assumptions, contradictions and evidence. Carry every unresolved item forward explicitly.
 
-## Invariant
-**Project memory -> actual Git/runtime state -> previous attempts -> started-work/lock -> dependency/evidence check -> action -> independent countercheck -> reconciliation -> execution receipt -> memory update.**
+Standing permissions in AUTHORIZATIONS are reused where technically/safely allowed; existing protected-environment and destructive-action confirmation requirements remain in force.
+
+**Invariant: Project memory -> actual Git/runtime/target state -> prior attempts -> Risk/assumptions -> started-work/lock -> dependencies/evidence plan -> action -> falsification/negative check -> independent countercheck -> quorum/reconciliation -> receipt -> memory update.**
