@@ -1,0 +1,23 @@
+name: Project Memory Quality
+
+on:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '27 5 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  project-memory-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate V6 controls
+        run: python3 scripts/project_memory_quality_check.py
+      - name: Validate FanMind sales readiness state
+        run: python3 scripts/fanmind_sales_readiness.py
+      - name: Scan FanMind canonical truth drift
+        run: python3 scripts/fanmind_truth_drift_check.py

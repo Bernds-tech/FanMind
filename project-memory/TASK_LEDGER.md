@@ -9,17 +9,141 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 - Starting state: Git/code history existed, but micro-attempts and conversational decisions were not systematically tracked in one operational ledger.
 - Action: Added Project Memory Protocol v1 structure and PR guard.
 - Result: Repository-level operational memory established.
-- Evidence: `project-memory/` and `.github/workflows/project-memory-guard.yml`.
-- Next step: Import/record new implementation attempts as work continues.
-- Do not repeat: Do not create a second competing memory system; extend this one.
+- Evidence: `project-memory/` and `.github/workflows/project-memory-guard.yml`; V1 merged via PR #972.
+- Next step: Extend the same system rather than creating a competing ledger.
+- Do not repeat: Do not create a second competing memory system.
+
+## FM-MEM-002
+- Date: 2026-08-19
+- Status: SUPERSEDED
+- Goal: Add V2 open-loop/dependency/evidence/stale-scan model.
+- Action: Built V2 in PR #973.
+- Result: Functionality was retained but PR #973 was not merged independently; it was superseded by consolidated PR #975 to avoid stacked/divergent governance branches.
+- Evidence: PR #973 history and V2 files now included in PR #975.
+- Next step: Use PR #975 as the only active FanMind memory integration path.
+- Do not repeat: Do not reopen #973 as a parallel source of truth.
+
+## FM-MEM-003
+- Date: 2026-08-19
+- Status: SUPERSEDED
+- Goal: Add V3 standing authorizations and generated project status.
+- Action: Built V3 in PR #974 and fixed generator/status drift plus hosted-checkout SHA pinning.
+- Result: PR #974 was superseded by consolidated PR #975 rather than merged separately.
+- Evidence: PR #974 history and V3 files now included in #975.
+- Next step: Maintain V3 capabilities inside the consolidated memory system.
+- Do not repeat: Do not merge/revive #974 independently.
+
+## FM-MEM-004
+- Date: 2026-08-19
+- Status: SUPERSEDED
+- Goal: Add mandatory execution policy, started-work tracking and stronger counterchecks.
+- Action: V4 work was developed on the governance branch and then folded into later versions.
+- Result: No separate final V4 integration; V4 is a historical stage inside PR #975.
+- Evidence: `EXECUTION_POLICY.md`, STARTED_WORK/WORK_LOCK/receipt structures in PR #975 history.
+- Next step: Use current protocol rules.
+- Do not repeat: Do not create another V4-only branch/PR.
+
+## FM-MEM-005
+- Date: 2026-08-19
+- Status: IMPLEMENTED_NOT_VERIFIED
+- Goal: Consolidate V2-V6 into one auditable FanMind Project Memory/governance and finishline-control system with independent counterchecks.
+- Starting state: V2/V3/V4 work existed on stacked/divergent branches and FanMind had stricter CI/supply-chain controls.
+- Action: Consolidated into PR #975; added authorizations, status/stale automation, STARTED_WORK, WORK_LOCKS, EXECUTION_RECEIPTS, ASSUMPTIONS, CONTRADICTIONS, QUALITY_CONTROL, Risk R1-R4, quorum, evidence freshness, negative/fail-closed paths, scope-diff guard, rollback/recovery proof, falsification and milestone closeout. Fixed SHA pinning, generated status drift and hosted checkout count expectations without weakening policy. Added exhaustive FanMind finishline audit. V6 adds machine-readable `FINISHLINE_STATE.json`, `FANMIND_FINISHLINE.md`, Restore R4 state machine, external-acceptance register, derived sales-readiness gate, canonical-truth drift scanner and scheduled/PR V6 CI.
+- Result: Consolidated V2-V6 governance is implemented on PR #975 but not yet accepted/merged to main because all exact-head checks must be terminal green.
+- Evidence: PR #975, `project-memory/CHAT_RECONCILIATION_2026-08-19.md`, `project-memory/FANMIND_DEEP_AUDIT_2026-08-19.md`, V6 files/scripts/workflow.
+- Next step: Run/reconcile all relevant checks for the exact current head; merge only if green; then record ACCEPTED/merged evidence and release the active work record.
+- Do not repeat: Do not bypass a red/pending FanMind gate and do not create another parallel memory/finishline PR.
+
+## FM-STG-001
+- Date: 2026-08-09 to 2026-08-19
+- Status: ACCEPTED
+- Goal: Establish and technically accept isolated Staging foundations without Production/Test mixing.
+- Result: Separate Supabase Staging, separate web Staging runtime/runner path, DNS/TLS, required Staging schema foundations, Stripe Test Mode resources, synthetic isolated workspaces/users, Workspace/Daily contract, admin/browser acceptance and rollback-protected Referral/Billing lifecycle are recorded as completed in finishline #874.
+- Evidence: Issue #874 Gate 1, Staging run references recorded there, current Source of Truth and merged Staging commits.
+- Limitations: This acceptance does not imply Mobile signing, Plus/Ultra activation, Meta external E2E, Social E2E or Production social activation.
+- Next step: Reuse this Staging foundation for the remaining acceptance gates; do not rebuild it.
+- Do not repeat: Do not recreate Staging host/Supabase/Stripe test baseline absent verified drift.
 
 ## FM-RST-001
 - Date: 2026-08-17 to 2026-08-19
 - Status: PARTIAL
 - Goal: Complete isolated real restore drill.
 - Starting state: Dedicated restore host, PostgreSQL 17 target, runner group/workflows and protected environment already exist.
-- Action: Host-readiness, TLS, PostgreSQL compatibility, runner/JIT and workflow setup were iterated.
-- Result: Foundation exists; the complete real restore drill is not yet recorded as DONE here.
-- Evidence: Current restore workflows/docs and recent main commits including PostgreSQL 17.11 pinning and restore compatibility fixes.
-- Next step: Inspect current restore workflow/run state and continue from the first unproven gate.
-- Do not repeat: Do not rebuild the restore host, runner group, TLS baseline or database target from zero unless verified drift requires it.
+- Action: Host-readiness, TLS, PostgreSQL compatibility, runner/JIT and workflow setup were iterated. ACL/Default-ACL/Owner/Role/DB-container/Extension backup+restore contract was hardened in PR #943; real PG17 two-cluster CI passed; Worker v6 was deployed; one new encrypted Schema-2 Full Backup and checksum-only verification were accepted.
+- Result: Recovery code/backup/host foundation is advanced, but the real end-to-end isolated Restore/Storage/Server-Config/Cleanup/Evidence chain is not yet accepted.
+- Evidence: PR #943 merge `14a1e2d0e100f2ec8cfa14486c96f128fb431878`; Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c`; Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1`; issue #944 comments; issue #874; restore operator-session evidence summarized in the deep audit.
+- Next step: Revalidate current Organization runner-group/workflow-allowlist/JIT policy, host/toolchain/target/TLS and exact backup binding; then follow `RESTORE_STATE_MACHINE.md` from `BACKUP_ACCEPTED` without skipping a state.
+- Do not repeat: Do not build another restore server or recreate TLS/PostgreSQL/runner foundations unless verified drift requires it. Never restore against Production or Supabase Staging.
+
+## FM-MOB-001
+- Date: through 2026-08-19
+- Status: IMPLEMENTED_NOT_VERIFIED
+- Goal: Deliver the native FanMind Mobile app through signed Android/iOS builds and real-device/store acceptance.
+- Result: Native Expo/React-Native core, auth/recovery, SecureStore/Purge, contact CRUD/knowledge, AI, follow-ups, offline cache, push foundation, icon/splash/privacy/store metadata and CI/build-control paths are implemented and repository-verified. External signed-build/device/store acceptance is not complete.
+- Evidence: Issues #584/#690; `apps/mobile`; mobile docs; current Source of Truth.
+- Next step: verify Supabase redirect and EAS project/environments, establish signing credentials, produce signed internal Android build and real-device evidence, then iOS/TestFlight and remaining push/store evidence.
+- Do not repeat: Do not restart the mobile app or replace it with a WebView.
+
+## FM-AI-001
+- Date: through 2026-08-19
+- Status: PARTIAL
+- Goal: Close KI Standard/Plus/Ultra product, quality, cost, Stripe-lifecycle and activation evidence.
+- Result: Standard is part of the active core. Plus/Ultra pricing/policy, fail-closed entitlement foundation, Staging storage, Test catalog foundation, lifecycle/ledger controls and monitoring/eval tooling exist. Plus/Ultra remain intentionally not productively active.
+- Evidence: `src/config/aiTiers.mjs`, Source of Truth, issue #560, issue #874 Gate 4, recent AI/ledger/Staging commits.
+- Next step: close written model/quota/overage/switching/refund decisions, private quality/cost evidence and full current Staging Upgrade/Downgrade/Cancellation/Failed-Payment/Webhook/Entitlement lifecycle; then legal/tax and explicit Production activation if approved.
+- Do not repeat: Do not invent models/quotas or activate Plus/Ultra through a merge alone.
+
+## FM-META-001
+- Date: through 2026-08-19
+- Status: PARTIAL
+- Goal: Finish Meta Events Manager, Meta external acceptance and final Meta/Security evidence.
+- Result: Consent-gated PageView-only Pixel code is production-confirmed; Meta Facebook/Instagram data/token/content/conversation foundations are advanced and Staging foundations exist. External Events Manager/Test Events, App Review/permissions, real account/webhook/conversation E2E and required legal acceptance remain open.
+- Evidence: Issue #714, Source of Truth, Meta migration/tests and recent Meta commits.
+- Next step: complete normal-browser Events Manager negative/positive evidence and final security check; later perform real Facebook/Instagram E2E in Social Gate.
+- Do not repeat: Do not re-add CompleteRegistration/Lead, Advanced Matching or CAPI without new technical/legal approval.
+
+## FM-SOC3-001
+- Date: 2026-08-19 reconciliation of prior work
+- Status: PARTIAL
+- Goal: Real technical acceptance of Phase 3 — Facebook, Instagram and WhatsApp.
+- Result: Facebook/Instagram foundations are advanced; WhatsApp dormant inbound foundation is merged. None of the three has the final real external Phase-3 E2E acceptance required for sales handoff.
+- Evidence: Source of Truth, issue #874 Gate 6, Meta/WhatsApp commits including dormant WhatsApp merge `e7b46bd...`.
+- Next step: after non-Social gates are sufficiently closed, perform Facebook E2E/App Review, Instagram E2E/App Review and WhatsApp Staging/Meta/E2E/Production acceptance with tenant/idempotency/revocation/reconnect/no-auto-send evidence.
+- Do not repeat: Do not rebuild Facebook/Instagram foundation from zero; do not expose fake active badges before real acceptance.
+
+## FM-SOC7-001
+- Date: 2026-08-19 reconciliation of prior work
+- Status: PARTIAL
+- Goal: Real technical acceptance of Phase 7 — TikTok, X/Twitter, Discord and conditional OnlyFans.
+- Result: Platform feasibility has been partially researched/documented; no complete real Phase-7 connector acceptance exists.
+- Evidence: Issue #874 and its platform-feasibility comment.
+- Next step: after Phase 3/non-Social gates, verify official TikTok scope, X Developer/API prerequisites/cost approval, implement official Discord bot/guild connector, and decide OnlyFans feasibility strictly from official/contractual basis.
+- Do not repeat: No scraping, self-bot, reverse engineering or unofficial bypass.
+
+## FM-SALES-001
+- Date: 2026-08-19 reconciliation of prior work
+- Status: BLOCKED
+- Goal: Technical sales handoff to Gerhard with production truth aligned to actual sellable scope.
+- Blocked by: real technical acceptance of required Phase-3 and Phase-7 channels and final finishline evidence.
+- Result: Sales materials and demo script exist, but technical sales handoff is not yet valid under the current canonical finishline.
+- Evidence: Source of Truth Roadmap/Go-Live sections, issue #874 Sales Handoff, commit `74c3a6aa357215c52d3a4d9b01ba8513bba1b57f` aligning sales-handoff truth.
+- Next step: close required gates, run final 5-minute Production demo/sales flow on exact release, synchronize sales materials/roadmap, then record handoff.
+- Do not repeat: Do not call Phase 4 or an existing sales document a completed sales handoff.
+
+## FM-LEGAL-001
+- Date: through 2026-08-19
+- Status: BLOCKED
+- Goal: External legal/tax/AVV completion where required.
+- Result: technical/public reader framework and confirmed operator data exist; external legal, tax, registration and final AVV/provider evidence remains incomplete.
+- Evidence: Issue #564 and legal evidence framework.
+- Next step: incorporate only actual advisor/register/provider evidence; no guessing.
+- Do not repeat: Do not treat technical checks as legal approval.
+
+## FM-OPS-001
+- Date: through 2026-08-19
+- Status: VERIFIED
+- Goal: Production operations, monitoring, backups, audit and deployment baseline.
+- Result: Core Operations/backup/deploy/audit/monitoring foundation is production-proven. Optional/destructive follow-ups remain separately controlled.
+- Evidence: Issues #524/#534 and Production operations run history.
+- Limitations: full Restore remains FM-RST-001; Remote offsite delete #658 is not authorized; optional email/failure-matrix items are not blanket-complete.
+- Next step: maintain, do not rebuild.
