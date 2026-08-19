@@ -12,7 +12,9 @@ for name in required:
 started=(PM/"STARTED_WORK.md").read_text(encoding="utf-8") if (PM/"STARTED_WORK.md").exists() else ""
 active={"IN_PROGRESS","PARTIAL","BLOCKED","IMPLEMENTED_NOT_VERIFIED","RECONCILIATION_REQUIRED"}
 for block in re.split(r"(?m)^## ",started)[1:]:
-    title=block.splitlines()[0].strip(); m=re.search(r"(?m)^- Status:\s*([A-Z_]+)",block)
+    title=block.splitlines()[0].strip()
+    if title.startswith("<") or title in {"Rules","Entry template","Active work"}: continue
+    m=re.search(r"(?m)^- Status:\s*([A-Z_]+)",block)
     if m and m.group(1) in active:
         if not re.search(r"(?m)^- Risk:\s*(R[1-4])\s*$",block): errors.append(f"active-started-work-missing-risk:{title}")
         if not re.search(r"(?m)^- Exact next step:\s*\S",block): errors.append(f"active-started-work-missing-next-step:{title}")
