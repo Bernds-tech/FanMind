@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "EV-RUNNER-POLICY",
+      "gate": "restore",
+      "class": "runner_admin_policy",
+      "status": "DEFERRED_BY_OWNER",
+      "observed_at": null,
+      "source": "FM-RST-OWNER-001"
+    },
+    {
+      "id": "EV-RESTORE-BACKUP-SCHEMA2",
+      "gate": "restore",
+      "class": "immutable_commit",
+      "status": "VERIFIED",
+      "observed_at": "2026-08-19T00:00:00+02:00",
+      "source": "Full Backup b74c1c60-1d61-4a39-9f0d-648ec003a12c / verification 006e6ab8-8f5c-43c1-ac68-6570e992a7a1"
+    }
+  ],
+  "rule": "Mutable evidence must carry observed_at when VERIFIED/ACCEPTED/PRODUCTION_CONFIRMED. Deferred or missing evidence stays explicit and does not silently expire into success."
+}
