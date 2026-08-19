@@ -23,7 +23,7 @@ Before substantive code, infrastructure, configuration, workflow or product-stat
 - `FANMIND_FINISHLINE.md` is the human-readable board and must agree with that state.
 - `scripts/fanmind_sales_readiness.py` derives `SALES_READY`; never manually claim sales readiness contrary to the machine state.
 - `scripts/fanmind_truth_drift_check.py` checks canonical roadmap/source-truth invariants and requires known drift to be explicitly recorded in `CONTRADICTIONS.md`.
-- `.github/workflows/fanmind-finishline-v6.yml` runs finishline/readiness/drift controls on PRs and on a schedule.
+- `.github/workflows/project-memory-quality.yml` runs V6 quality, sales-readiness and canonical-truth-drift controls on pull requests, manual dispatch and the daily schedule without adding a second hosted-checkout workflow.
 - Phase 8 must stay `not started` during the current finishline.
 - A known contradiction may remain explicitly `RECONCILIATION_REQUIRED`; an unknown contradiction may not be silently tolerated.
 
