@@ -12,11 +12,11 @@ This register contains started, partially completed or follow-up work that could
 
 ## FM-LOOP-002
 - Related: FM-MEM-005
-- Status: OPEN
+- Status: CLOSED
 - Updated: 2026-08-19
-- Gap: V2-V5 memory/governance plus deep audit is implemented in PR #975 but not yet merged/accepted on `main` for the exact latest head.
-- Close when: all relevant exact-head FanMind/Memory/Security gates are terminal green and PR #975 is merged, followed by main-state reconciliation.
-- Next check: current PR #975 workflow runs after the latest audit commits.
+- Gap: V2-V6 memory/governance and finishline controls required exact-head acceptance and merge.
+- Closed by: PR #975 exact head `2a62dc8337673be0b33acfd4338d0f452224e779` passed all applicable Memory/FanMind/Security/Browser gates and was squash-merged as `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d`.
+- Follow-up: maintain V6; no parallel memory system.
 
 ## FM-LOOP-003
 - Related: FM-MOB-001

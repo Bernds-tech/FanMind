@@ -68,11 +68,12 @@ Track ordering and prerequisites here. Do not mark dependent work accepted while
 
 ## FM-DEP-009
 - From: FM-MEM-005
-- Requires: exact current PR #975 head, terminal green Project Memory Guard/Quality/Status and all applicable FanMind CI/Supply Chain/Landing/CodeQL/Browser E2E gates.
+- Requires: exact PR #975 head and terminal green Project Memory Guard/Quality V6/Status plus FanMind CI/Supply Chain/Landing/CodeQL/Browser E2E gates.
 - Type: repository governance
-- Status: ACTIVE
+- Status: SATISFIED
 - Updated: 2026-08-19
-- Rule: mergeable alone is not acceptance.
+- Evidence: exact head `2a62dc8337673be0b33acfd4338d0f452224e779` passed all applicable checks and PR #975 merged as `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d`.
+- Rule: V6 is now the active mainline system; do not reopen this dependency unless V6 itself materially changes.
 
 ## Dependency states
 `ACTIVE`, `SATISFIED`, `BLOCKED`, `SUPERSEDED`.

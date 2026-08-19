@@ -20,7 +20,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 - Action: Built V2 in PR #973.
 - Result: Functionality was retained but PR #973 was not merged independently; it was superseded by consolidated PR #975 to avoid stacked/divergent governance branches.
 - Evidence: PR #973 history and V2 files now included in PR #975.
-- Next step: Use PR #975 as the only active FanMind memory integration path.
+- Next step: Use the consolidated V6 system on `main`.
 - Do not repeat: Do not reopen #973 as a parallel source of truth.
 
 ## FM-MEM-003
@@ -29,7 +29,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 - Goal: Add V3 standing authorizations and generated project status.
 - Action: Built V3 in PR #974 and fixed generator/status drift plus hosted-checkout SHA pinning.
 - Result: PR #974 was superseded by consolidated PR #975 rather than merged separately.
-- Evidence: PR #974 history and V3 files now included in #975.
+- Evidence: PR #974 history and V3 files incorporated into V6.
 - Next step: Maintain V3 capabilities inside the consolidated memory system.
 - Do not repeat: Do not merge/revive #974 independently.
 
@@ -45,14 +45,14 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-MEM-005
 - Date: 2026-08-19
-- Status: IMPLEMENTED_NOT_VERIFIED
+- Status: ACCEPTED
 - Goal: Consolidate V2-V6 into one auditable FanMind Project Memory/governance and finishline-control system with independent counterchecks.
 - Starting state: V2/V3/V4 work existed on stacked/divergent branches and FanMind had stricter CI/supply-chain controls.
-- Action: Consolidated into PR #975; added authorizations, status/stale automation, STARTED_WORK, WORK_LOCKS, EXECUTION_RECEIPTS, ASSUMPTIONS, CONTRADICTIONS, QUALITY_CONTROL, Risk R1-R4, quorum, evidence freshness, negative/fail-closed paths, scope-diff guard, rollback/recovery proof, falsification and milestone closeout. Fixed SHA pinning, generated status drift and hosted checkout count expectations without weakening policy. Added exhaustive FanMind finishline audit. V6 adds machine-readable `FINISHLINE_STATE.json`, `FANMIND_FINISHLINE.md`, Restore R4 state machine, external-acceptance register, derived sales-readiness gate, canonical-truth drift scanner and scheduled/PR V6 CI.
-- Result: Consolidated V2-V6 governance is implemented on PR #975 but not yet accepted/merged to main because all exact-head checks must be terminal green.
-- Evidence: PR #975, `project-memory/CHAT_RECONCILIATION_2026-08-19.md`, `project-memory/FANMIND_DEEP_AUDIT_2026-08-19.md`, V6 files/scripts/workflow.
-- Next step: Run/reconcile all relevant checks for the exact current head; merge only if green; then record ACCEPTED/merged evidence and release the active work record.
-- Do not repeat: Do not bypass a red/pending FanMind gate and do not create another parallel memory/finishline PR.
+- Action: Consolidated into PR #975; added authorizations, status/stale automation, STARTED_WORK, WORK_LOCKS, EXECUTION_RECEIPTS, ASSUMPTIONS, CONTRADICTIONS, QUALITY_CONTROL, Risk R1-R4, quorum, evidence freshness, negative/fail-closed paths, scope-diff guard, rollback/recovery proof, falsification and milestone closeout. Fixed SHA pinning, generated status drift and hosted checkout count expectations without weakening policy. Added exhaustive FanMind finishline audit. V6 added machine-readable `FINISHLINE_STATE.json`, `FANMIND_FINISHLINE.md`, Restore R4 state machine, external-acceptance register, derived sales-readiness gate, canonical-truth drift scanner and scheduled V6 checks inside the existing Project Memory Quality workflow.
+- Result: V2-V6 governance and finishline controls were fully green on exact PR head `2a62dc8337673be0b33acfd4338d0f452224e779` and merged to `main` as `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d`.
+- Evidence: PR #975; Project Memory Guard, Quality V6 and Status success; FanMind CI success including PG17 authorization roundtrip, Operations tests and Production build; Landing success; Supply Chain success; CodeQL success; Browser E2E success for public no-write and synthetic regular-user core flow.
+- Next step: Maintain V6 as the single memory/finishline system and continue `FM-RST-001` from `BACKUP_ACCEPTED -> HOST_REVALIDATED`.
+- Do not repeat: Do not create a parallel memory/finishline system or bypass V6 gates.
 
 ## FM-STG-001
 - Date: 2026-08-09 to 2026-08-19
