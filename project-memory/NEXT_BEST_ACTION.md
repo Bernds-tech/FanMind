@@ -24,7 +24,6 @@ standing-authorized safe work
 - `NBA-MOBILE-READONLY` priority 20: **EXECUTABLE** — standing-authorized safe work
 - `NBA-AI-LIFECYCLE-RECONCILE` priority 30: **EXECUTABLE** — standing-authorized safe work
 - `NBA-META-TECHNICAL-RECONCILE` priority 40: **EXECUTABLE** — standing-authorized safe work
-- `NBA-LEGACY-ISSUE-RECONCILE` priority 50: **EXECUTABLE** — standing-authorized safe work
 - `NBA-PHASE3-SOCIAL` priority 60: **WAITING_PREREQUISITE** — restore=PARTIAL, mobile=IMPLEMENTED_NOT_VERIFIED, ai_billing=PARTIAL, meta_security=PARTIAL
 - `NBA-PHASE7-SOCIAL` priority 70: **WAITING_PREREQUISITE** — phase3_social=PARTIAL
 - `NBA-SALES-HANDOFF` priority 80: **WAITING_PREREQUISITE** — restore=PARTIAL, mobile=IMPLEMENTED_NOT_VERIFIED, ai_billing=PARTIAL, meta_security=PARTIAL, phase3_social=PARTIAL, phase7_social=PARTIAL
@@ -33,6 +32,6 @@ standing-authorized safe work
 
 - A `DEFERRED_BY_OWNER` action remains open but is skipped for current assistant execution.
 - Skipping a deferred action never marks its gate accepted or lowers its priority permanently.
-- Only `parallel_safe=true` work may proceed around an earlier deferred finishline action.
+- If an earlier unresolved action is owner-required/deferred, only later `parallel_safe=true` actions may be selected.
 - Provider, payment, destructive, legal and protected Production boundaries still require their existing approvals.
 - Phase 8 remains outside the current finishline.
