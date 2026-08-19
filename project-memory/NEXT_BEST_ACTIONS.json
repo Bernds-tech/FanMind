@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "updated": "2026-08-19",
-  "selection_rule": "Choose the lowest-priority-number action whose gate is incomplete, prerequisites are satisfied, the action is not owner-deferred, and the action is safe to execute with current standing authorization. If the earliest finishline action is deferred by owner, select the earliest parallel_safe action instead without closing or downgrading the deferred gate.",
+  "selection_rule": "Choose the lowest-priority-number unresolved action whose prerequisites are satisfied and that is safe under current standing authorization. If an earlier unresolved action is owner-required or DEFERRED_BY_OWNER, only later actions explicitly marked parallel_safe=true may be selected. Deferral never closes or downgrades the earlier gate.",
   "actions": [
     {
       "id": "NBA-RESTORE-ADMIN-HOST",
@@ -51,19 +51,6 @@
       "prerequisite_gates": ["memory_v6", "staging"],
       "done_states": ["ACCEPTED", "PRODUCTION_CONFIRMED"],
       "instruction": "Reconcile Pixel/no-PII/security tests, Meta foundations and current non-Social smoke evidence. Keep Events Manager, App Review and provider-account acceptance external."
-    },
-    {
-      "id": "NBA-LEGACY-ISSUE-RECONCILE",
-      "priority": 50,
-      "task": "FM-STG-001",
-      "gate": "staging",
-      "title": "Historische FanMind-Issues gegen aktuelle Evidence abbauen",
-      "requires_owner": false,
-      "parallel_safe": true,
-      "run_when_gate_done": true,
-      "prerequisite_gates": ["memory_v6", "staging"],
-      "done_states": [],
-      "instruction": "Map stale checkboxes in historical finishline/P1 issues to current evidence, mark genuinely superseded statements and retain only real remaining gaps. Do not recreate implementation merely because an old box is unchecked."
     },
     {
       "id": "NBA-PHASE3-SOCIAL",
