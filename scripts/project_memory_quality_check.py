@@ -26,6 +26,11 @@ required = [
     "DEFERRED_OWNER_ACTIONS.md",
     "NEXT_BEST_ACTIONS.json",
     "NEXT_BEST_ACTION.md",
+    "BRANCH_PROTECTION_CONTRACT.json",
+    "EVIDENCE_TTL_POLICY.json",
+    "EVIDENCE_FRESHNESS.json",
+    "DRIFT_BASELINE.json",
+    "MILESTONE_POLICY.json",
     "FANMIND_DEEP_AUDIT_2026-08-19.md",
 ]
 errors = []
@@ -96,13 +101,25 @@ if catalog_path.exists():
         if action.get("requires_owner") not in {True, False}:
             errors.append(f"next-action-requires-owner-missing:{action_id}")
 
+branch_contract = json.loads((PM / "BRANCH_PROTECTION_CONTRACT.json").read_text(encoding="utf-8"))
+if branch_contract.get("branch") != "main" or branch_contract.get("require_pull_request") is not True:
+    errors.append("branch-protection-contract-invalid")
+if branch_contract.get("owner_activation") != "DEFERRED_OWNER_ACTION":
+    errors.append("branch-protection-owner-boundary-not-recorded")
+deferred = (PM / "DEFERRED_OWNER_ACTIONS.md").read_text(encoding="utf-8")
+if "FM-GOV-OWNER-001" not in deferred:
+    errors.append("branch-protection-deferred-owner-action-missing")
+
 for script_name in [
     "fanmind_sales_readiness.py",
     "fanmind_truth_drift_check.py",
     "fanmind_next_best_action.py",
+    "fanmind_evidence_freshness.py",
+    "fanmind_drift_preflight.py",
+    "fanmind_milestone_snapshot_check.py",
 ]:
     if not (ROOT / "scripts" / script_name).exists():
-        errors.append(f"v6-script-missing:{script_name}")
+        errors.append(f"memory-script-missing:{script_name}")
 
 protocol = (PM / "PROTOCOL.md").read_text(encoding="utf-8") if (PM / "PROTOCOL.md").exists() else ""
 for token in ["NEXT_BEST_ACTIONS.json", "NEXT_BEST_ACTION.md", "DEFERRED_OWNER_ACTIONS.md", "parallel_safe=true"]:
