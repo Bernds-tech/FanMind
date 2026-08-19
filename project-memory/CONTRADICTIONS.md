@@ -53,12 +53,12 @@ Statuses: `OPEN`, `RECONCILIATION_REQUIRED`, `RESOLVED`, `SUPERSEDED`.
 - Risk: R2
 - Source A: historical product/sales statements that treated Phase 4 as sales release/handoff
 - Claim A: sales start/handoff already follows Phase 4.
-- Source B: current Source of Truth and #874
-- Claim B: Phase 4 is production/billing base only; technical sales handoff requires required Phase-3 and Phase-7 channel acceptance.
-- Stronger/current evidence: current canonical reader and later sales-handoff alignment commit.
+- Source B: current Source of Truth, `src/config/roadmap.ts` and #874
+- Claim B: Phase 4 is production/billing base only; Phase 7 is final technical block and sales handoff requires Phase-3+Phase-7 acceptance.
+- Stronger/current evidence: current code/canonical reader and later sales-handoff alignment commit.
 - Status: RESOLVED
 - Resolution/action: never report FanMind as technically handed over for sales until FM-SOC3-001/FM-SOC7-001 and final demo criteria pass.
-- Evidence: commit `74c3a6aa357215c52d3a4d9b01ba8513bba1b57f`; Source of Truth.
+- Evidence: `src/config/roadmap.ts`; commit `74c3a6aa357215c52d3a4d9b01ba8513bba1b57f`; Source of Truth.
 
 ## CTR-FM-005
 - Date: 2026-08-19
@@ -86,6 +86,34 @@ Statuses: `OPEN`, `RECONCILIATION_REQUIRED`, `RESOLVED`, `SUPERSEDED`.
 - Stronger/current evidence: Source of Truth plus #584/#690 external acceptance lists.
 - Status: RESOLVED
 - Resolution/action: report code/CI and external signed/device/store states separately.
-- Evidence: #584/#690, Source of Truth.
+- Evidence: #584/#690, `docs/mobile/BETA_RELEASE.md`, Source of Truth.
+
+## CTR-FM-007
+- Date: 2026-08-19
+- Updated: 2026-08-19
+- Related task/change: FM-AI-001
+- Risk: R3
+- Source A: older #560 recommendation text
+- Claim A: recommendation table used context limits 20/50/100 messages.
+- Source B: current `src/config/aiTiers.mjs` on audited main
+- Claim B: current configured context-message limits are Standard 50, Plus 100, Ultra 150; modelClass, monthlyRequestLimit and monthlyTokenLimit remain `null`; Plus/Ultra remain `Coming Soon`, `not_configured` and not automatically bookable.
+- Stronger/current evidence: current executable policy code.
+- Status: RESOLVED
+- Resolution/action: never reintroduce the older context recommendation as current configuration. Product decisions for model/request/token/overage still remain open and must be recorded separately before activation.
+- Evidence: `src/config/aiTiers.mjs` at audited main.
+
+## CTR-FM-008
+- Date: 2026-08-19
+- Updated: 2026-08-19
+- Related task/change: FM-STG-001
+- Risk: R2
+- Source A: current `src/config/roadmap.ts` Phase-5 line
+- Claim A: production/test-data separation is `partial` with external resources open.
+- Source B: later central finishline #874 Gate 1
+- Claim B: separate Supabase Staging, Web Staging, Stripe Test resources, synthetic workspaces/users and primary Staging acceptance are now recorded complete.
+- Stronger/current evidence: later Gate-1 run/commit evidence; roadmap UI may intentionally be conservative but is no longer sufficient as exact operational status.
+- Status: RECONCILIATION_REQUIRED
+- Resolution/action: before next roadmap/public-truth update, determine whether Phase-5 wording should be advanced without overstating the still-open feature-specific external gates. Do not rebuild Staging merely because roadmap UI remains conservative.
+- Evidence: `src/config/roadmap.ts`; #874 Gate 1; deep audit.
 
 Never resolve a contradiction by deleting the older record. Document which source was stale or wrong and why.
