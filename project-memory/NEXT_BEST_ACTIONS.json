@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "updated": "2026-08-19",
+  "selection_rule": "Choose the lowest-priority-number unresolved action whose prerequisites are satisfied and that is safe under current standing authorization. If an earlier unresolved action is owner-required or DEFERRED_BY_OWNER, only later actions explicitly marked parallel_safe=true may be selected. Deferral never closes or downgrades the earlier gate.",
+  "actions": [
+    {
+      "id": "NBA-RESTORE-ADMIN-HOST",
+      "priority": 10,
+      "task": "FM-RST-001",
+      "gate": "restore",
+      "title": "Restore Admin-Policy und Host revalidieren",
+      "requires_owner": true,
+      "parallel_safe": false,
+      "deferred_owner_id": "FM-RST-OWNER-001",
+      "prerequisite_gates": ["memory_v6", "staging"],
+      "done_states": ["ACCEPTED", "PRODUCTION_CONFIRMED"],
+      "instruction": "Resume the deferred runner-group administrator evidence with the owner, then run secret-free Host Toolchain Readiness and advance only with current evidence."
+    },
+    {
+      "id": "NBA-MOBILE-READONLY",
+      "priority": 20,
+      "task": "FM-MOB-001",
+      "gate": "mobile",
+      "title": "Mobile externen Restpfad read-only reconciliieren",
+      "requires_owner": false,
+      "parallel_safe": true,
+      "prerequisite_gates": ["memory_v6", "staging"],
+      "done_states": ["ACCEPTED", "PRODUCTION_CONFIRMED"],
+      "instruction": "Reconcile current repository, Supabase redirect contract, EAS resource contracts, signing prerequisites and device/store runbooks. Do not create credentials, sign, submit or mutate external resources without the required owner/platform step."
+    },
+    {
+      "id": "NBA-AI-LIFECYCLE-RECONCILE",
+      "priority": 30,
+      "task": "FM-AI-001",
+      "gate": "ai_billing",
+      "title": "KI/Billing Restpunkte gegen aktuellen Staging-Lifecycle abgleichen",
+      "requires_owner": false,
+      "parallel_safe": true,
+      "prerequisite_gates": ["memory_v6", "staging"],
+      "done_states": ["ACCEPTED", "PRODUCTION_CONFIRMED"],
+      "instruction": "Map old Gate-4 checkboxes to current Stripe Test catalog, entitlements, webhook/lifecycle code and existing evidence. Produce only the true remaining product, quality, cost and external-decision gaps; do not activate paid tiers."
+    },
+    {
+      "id": "NBA-META-TECHNICAL-RECONCILE",
+      "priority": 40,
+      "task": "FM-META-001",
+      "gate": "meta_security",
+      "title": "Meta/Security technischen Restpfad vorbereiten",
+      "requires_owner": false,
+      "parallel_safe": true,
+      "prerequisite_gates": ["memory_v6", "staging"],
+      "done_states": ["ACCEPTED", "PRODUCTION_CONFIRMED"],
+      "instruction": "Reconcile Pixel/no-PII/security tests, Meta foundations and current non-Social smoke evidence. Keep Events Manager, App Review and provider-account acceptance external."
+    },
+    {
+      "id": "NBA-PHASE3-SOCIAL",
+      "priority": 60,
+      "task": "FM-SOC3-001",
+      "gate": "phase3_social",
+      "title": "Phase 3 Social real abnehmen",
+      "requires_owner": false,
+      "parallel_safe": false,
+      "prerequisite_gates": ["restore", "mobile", "ai_billing", "meta_security"],
+      "done_states": ["ACCEPTED", "PRODUCTION_CONFIRMED"],
+      "instruction": "Proceed only when non-Social prerequisite gates are accepted; then use existing Facebook/Instagram/WhatsApp foundations and current provider evidence."
+    },
+    {
+      "id": "NBA-PHASE7-SOCIAL",
+      "priority": 70,
+      "task": "FM-SOC7-001",
+      "gate": "phase7_social",
+      "title": "Phase 7 Social real abnehmen",
+      "requires_owner": false,
+      "parallel_safe": false,
+      "prerequisite_gates": ["phase3_social"],
+      "done_states": ["ACCEPTED", "PRODUCTION_CONFIRMED"],
+      "instruction": "Verify current official platform scope before each connector. No scraping, self-bot, reverse engineering or paid X usage without separate approval."
+    },
+    {
+      "id": "NBA-SALES-HANDOFF",
+      "priority": 80,
+      "task": "FM-SALES-001",
+      "gate": "sales_handoff",
+      "title": "Finalen Production-Demo- und Sales-Handoff schließen",
+      "requires_owner": true,
+      "parallel_safe": false,
+      "prerequisite_gates": ["restore", "mobile", "ai_billing", "meta_security", "phase3_social", "phase7_social"],
+      "done_states": ["ACCEPTED", "PRODUCTION_CONFIRMED"],
+      "instruction": "Run exact-release five-minute Production demo, synchronize sales truth and perform technical handoff only after all required gates are accepted."
+    }
+  ]
+}
