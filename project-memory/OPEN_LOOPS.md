@@ -6,9 +6,89 @@ This register contains started, partially completed or follow-up work that could
 - Related: FM-RST-001
 - Status: OPEN
 - Updated: 2026-08-19
-- Gap: The isolated restore foundation exists, but the complete real restore drill is not yet recorded as accepted end-to-end evidence.
-- Close when: The exact reviewed restore path has completed with required evidence and the corresponding task reaches the appropriate verified/accepted state.
-- Next check: Inspect the current restore workflow/run state before any new restore attempt.
+- Gap: Recovery code/backup/host foundation is advanced, but the complete isolated DB/Storage/Server-config/Cleanup/Evidence drill is not accepted end-to-end.
+- Close when: exact artifact-bound isolated restore has passed current R4 quorum and independent countercheck, including cleanup and final evidence.
+- Next check: revalidate Organization runner-group/workflow allowlist/JIT policy, host/toolchain/TLS/target and exact Schema-2 backup before any write.
+
+## FM-LOOP-002
+- Related: FM-MEM-005
+- Status: OPEN
+- Updated: 2026-08-19
+- Gap: V2-V5 memory/governance plus deep audit is implemented in PR #975 but not yet merged/accepted on `main` for the exact latest head.
+- Close when: all relevant exact-head FanMind/Memory/Security gates are terminal green and PR #975 is merged, followed by main-state reconciliation.
+- Next check: current PR #975 workflow runs after the latest audit commits.
+
+## FM-LOOP-003
+- Related: FM-MOB-001
+- Status: OPEN
+- Updated: 2026-08-19
+- Gap: native app repository/CI exists; signed Android/iOS, real-device Recovery/Login/Purge, TestFlight, push and store evidence remain external.
+- Close when: required Android/iOS signed-build and device/store acceptance is evidence-bound to exact builds/commit.
+- Next check: Supabase redirect and read-only EAS resource state before build/signing.
+
+## FM-LOOP-004
+- Related: FM-AI-001
+- Status: OPEN
+- Updated: 2026-08-19
+- Gap: Plus/Ultra foundation exists but final product decisions, quality/cost proof, full current Staging lifecycle and activation evidence are incomplete.
+- Close when: tier-specific risk quorum is satisfied and any Production activation is explicit and current.
+- Next check: reconcile #560/#874 Gate 4 against current Test catalog/lifecycle runs to avoid repeating completed Staging setup.
+
+## FM-LOOP-005
+- Related: FM-META-001
+- Status: OPEN
+- Updated: 2026-08-19
+- Gap: Pixel technical path is production-proven but external Events Manager/browser, no-PII, App Review/permissions and real Meta account E2E remain incomplete.
+- Close when: all applicable Meta external/security/legal acceptance evidence is current.
+- Next check: normal-browser Events Manager acceptance under #714.
+
+## FM-LOOP-006
+- Related: FM-SOC3-001
+- Status: OPEN
+- Updated: 2026-08-19
+- Gap: Phase 3 foundations exist but Facebook, Instagram and WhatsApp have not all passed real external E2E acceptance.
+- Close when: all three required channels pass tenant/idempotency/auth/revocation/reconnect/no-auto-send acceptance.
+- Next check: do not start until earlier non-Social gates are sufficiently closed per #874.
+
+## FM-LOOP-007
+- Related: FM-SOC7-001
+- Status: OPEN
+- Updated: 2026-08-19
+- Gap: Phase 7 real connectors are not accepted; OnlyFans remains conditional feasibility.
+- Close when: TikTok/X/Discord have approved official connector scope and E2E evidence, and OnlyFans is either officially/contractually implemented+accepted or explicitly documented unavailable without bypass.
+- Next check: current official API/platform capability immediately before implementation.
+
+## FM-LOOP-008
+- Related: FM-SALES-001
+- Status: BLOCKED
+- Updated: 2026-08-19
+- Gap: sales material exists, but technical sales handoff is blocked by required Phase-3/Phase-7 acceptance and final Production demo truth.
+- Close when: #874 Sales Handoff criteria pass on the exact final release.
+- Next check: after Social finishline.
+
+## FM-LOOP-009
+- Related: FM-LEGAL-001
+- Status: BLOCKED
+- Updated: 2026-08-19
+- Gap: external tax/legal/register/AVV/provider evidence is incomplete.
+- Close when: only genuine external evidence/approvals have been recorded; no technical self-approval.
+- Next check: when advisor/register/provider evidence arrives.
+
+## FM-LOOP-010
+- Related: FM-RST-001
+- Status: OPEN
+- Updated: 2026-08-19
+- Gap: canonical restore documentation still contains pre-transfer `user-owned`/`future-org` wording although the current repository is Organization-owned `FanMind/FanMind`.
+- Close when: canonical restore readers are safely updated after the current live runner-group/workflow-allowlist state is independently revalidated; no guess about current Admin policy.
+- Next check: verify runner-group policy through a supported administrator path before changing the operational assertion.
+
+## FM-LOOP-011
+- Related: FM-AI-001 / Referral controls
+- Status: OPEN
+- Updated: 2026-08-19
+- Gap: older issues #642/#643/#644 contain stale Staging prerequisites or unchecked items that newer #874 evidence partially/fully supersedes.
+- Close when: each old checkbox has been mapped to current evidence or retained as a genuine remaining gate; then close/supersede stale issues deliberately.
+- Next check: issue-level reconciliation, not code reimplementation.
 
 ## Rules
 - Every `PARTIAL`, `BLOCKED` or `IMPLEMENTED_NOT_VERIFIED` task must have either an open-loop entry or an explicit reason why no follow-up is required.
