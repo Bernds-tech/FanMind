@@ -29,3 +29,5 @@ jobs:
         run: python3 scripts/fanmind_drift_preflight.py
       - name: Validate milestone snapshots
         run: python3 scripts/fanmind_milestone_snapshot_check.py
+      - name: Validate cross-chat, impact and automatic handoff controls
+        run: python3 scripts/fanmind_memory_v8.py --check
