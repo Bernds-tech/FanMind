@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "baseline_commit": "cdf4a59517b5ea1c34e672b207878b95145d2d01",
+  "captured": "2026-08-19",
+  "watched_files": {
+    "docs/SOURCE_OF_TRUTH.md": "2191fe784dc08ee7eebeeb5137d714d68991dde6",
+    "src/config/roadmap.ts": "89f1aa05b83dfec14b3948904f12004742934bed",
+    "src/config/aiTiers.mjs": "00d61fa256e90538c8f67d20a74722d73c85ec06",
+    ".github/workflows/restore-drill-host-readiness.yml": "fbfa6308274eaae9e033e672840d8f0473087fe8",
+    ".github/workflows/restore-drill-resource-readiness.yml": "73425290effaabed1dd339e33a6e3ce01cca62f1",
+    ".github/workflows/restore-drill-database.yml": "2a465d89523286b0767c15ab3ed28a9645d1f560"
+  },
+  "rule": "A watched-file fingerprint change is not automatically a defect, but it creates DRIFT_REVIEW_REQUIRED before relying on prior acceptance evidence. Update this baseline only in the same reviewed change that reconciles the affected gate."
+}
