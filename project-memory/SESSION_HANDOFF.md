@@ -3,12 +3,14 @@
 Update this file at the end of a substantial work session or whenever work is paused at a non-obvious state. It is the fastest safe restart point, but it never overrides code, tests or canonical source-of-truth documents.
 
 ## Current handoff
-- Updated: 2026-08-19
+- Updated: 2026-08-19 11:47 Europe/Vienna
 - Active focus: Project Memory V5 consolidation plus isolated restore/release-readiness continuation
-- Start here: read `EXECUTION_POLICY.md`, `CURRENT_STATE.md`, `STARTED_WORK.md`, `WORK_LOCKS.md`, `OPEN_LOOPS.md`, `TASK_LEDGER.md`, `DEPENDENCIES.md`, `ASSUMPTIONS.md`, `CONTRADICTIONS.md`, `DECISIONS.md`, `FAILED_ATTEMPTS.md`, then inspect current Git/PR/workflow state
+- Start here: read `EXECUTION_POLICY.md`, `project-memory/CHAT_RECONCILIATION_2026-08-19.md`, `CURRENT_STATE.md`, `STARTED_WORK.md`, `WORK_LOCKS.md`, `OPEN_LOOPS.md`, `TASK_LEDGER.md`, `DEPENDENCIES.md`, `ASSUMPTIONS.md`, `CONTRADICTIONS.md`, `DECISIONS.md`, `FAILED_ATTEMPTS.md`, then inspect current Git/PR/workflow state
+- Active IDs: `FM-MEM-005` (V5 governance, not yet merged) and `FM-RST-001` (real restore drill, PARTIAL)
 - Known open loop: FM-LOOP-001
 - Do not restart: restore host, runner-group, TLS/database target foundations without verified drift
-- Next safe action: finish V5 governance consolidation and then continue the first unproven restore gate from current evidence
+- Last verified governance state before latest reconciliation commits: PR #975 was mergeable; Memory Guard, Quality, Status, Supply Chain, Landing CI, FanMind CI and CodeQL were green while Browser E2E was still running. Because this handoff/reconciliation changed the head, all exact-head gates must be checked again before merge.
+- Next safe action: inspect exact current head/checks for PR #975; merge only if fully green, then close FM-MEM-005. After that, continue FM-RST-001 from the first unproven restore gate.
 
 ## Mandatory handoff fields for future sessions
 - Updated date/time
