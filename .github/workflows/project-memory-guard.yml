@@ -28,6 +28,12 @@ jobs:
             project-memory/CHANGE_REQUESTS.md
             project-memory/DECISIONS.md
             project-memory/FAILED_ATTEMPTS.md
+            project-memory/OPEN_LOOPS.md
+            project-memory/DEPENDENCIES.md
+            project-memory/EVIDENCE.md
+            project-memory/SESSION_HANDOFF.md
+            project-memory/DO_NOT_ASSUME.md
+            project-memory/PROJECT_REGISTRY.md
           )
           for file in "${required[@]}"; do
             test -s "$file" || { echo "Missing or empty required project-memory file: $file"; exit 1; }
@@ -43,21 +49,18 @@ jobs:
           set -euo pipefail
           changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
           printf '%s\n' "$changed"
-
           meaningful=0
           memory_changed=0
           while IFS= read -r file; do
             test -n "$file" || continue
             case "$file" in
               project-memory/*) memory_changed=1 ;;
-              .github/workflows/project-memory-guard.yml) ;;
+              .github/workflows/project-memory-guard.yml|.github/workflows/project-memory-stale-scan.yml) ;;
               *) meaningful=1 ;;
             esac
           done <<< "$changed"
-
           if [[ "$meaningful" -eq 1 && "$memory_changed" -ne 1 ]]; then
             echo "Meaningful repository changes require a project-memory update."
-            echo "Run the mandatory preflight and record the resulting task/state/decision/failed-attempt/change-request update."
             exit 1
           fi
 
@@ -65,10 +68,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ids="$(grep -hE '^## [A-Z][A-Z0-9-]+$' project-memory/{TASK_LEDGER,CHANGE_REQUESTS,DECISIONS,FAILED_ATTEMPTS}.md | sed 's/^## //' || true)"
+          ids="$(grep -hE '^## [A-Z][A-Z0-9-]+$' project-memory/{TASK_LEDGER,CHANGE_REQUESTS,DECISIONS,FAILED_ATTEMPTS,OPEN_LOOPS,DEPENDENCIES,EVIDENCE}.md | sed 's/^## //' || true)"
           duplicates="$(printf '%s\n' "$ids" | sed '/^$/d' | sort | uniq -d)"
           if [[ -n "$duplicates" ]]; then
-            echo "Duplicate project-memory IDs detected:"
+            echo "Duplicate primary project-memory IDs detected:"
             printf '%s\n' "$duplicates"
             exit 1
           fi
+
+      - name: Validate acceptance and open-loop hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re, sys
+          task = Path('project-memory/TASK_LEDGER.md').read_text()
+          loops = Path('project-memory/OPEN_LOOPS.md').read_text()
+          errors=[]
+          sections=re.split(r'(?m)^## ', task)[1:]
+          for sec in sections:
+              ident=sec.splitlines()[0].strip()
+              status=re.search(r'(?m)^- Status: (.+)$', sec)
+              if not status: continue
+              s=status.group(1).strip()
+              if s in {'VERIFIED','ACCEPTED','PRODUCTION_CONFIRMED'} and not re.search(r'(?m)^- Evidence: .+', sec):
+                  errors.append(f'{ident}: {s} requires Evidence')
+              if s in {'PARTIAL','BLOCKED','IMPLEMENTED_NOT_VERIFIED'} and ident not in loops and 'No follow-up required:' not in sec:
+                  errors.append(f'{ident}: unfinished status requires OPEN_LOOPS reference or explicit no-follow-up rationale')
+          if errors:
+              print('\n'.join(errors)); sys.exit(1)
+          PY
