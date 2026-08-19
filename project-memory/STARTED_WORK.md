@@ -16,14 +16,14 @@ Canonical register for FanMind work that has started but is not yet fully comple
 - Updated: 2026-08-19
 - Status: IMPLEMENTED_NOT_VERIFIED
 - Risk: R3
-- Scope: Consolidated Project Memory V2-V5 plus exhaustive FanMind finishline audit.
+- Scope: Consolidated Project Memory V2-V6 plus exhaustive FanMind finishline audit and machine-enforced finishline controls.
 - Branch/PR: `project-memory-v4-started-work` / PR #975
-- Work lock: PR #975 is the only active FanMind memory integration path.
-- Dependencies: exact-head FanMind CI, Browser E2E, Landing, Supply Chain, CodeQL and all Project Memory gates.
-- Assumptions: mergeable is not equivalent to accepted; evidence must match latest head.
-- Completed so far: V2-V5 consolidated, #973/#974 superseded, V5 controls added, chat reconciliation and `FANMIND_DEEP_AUDIT_2026-08-19.md` recorded.
+- Work lock: PR #975 is the only active FanMind memory/finishline integration path.
+- Dependencies: exact-head FanMind CI, Browser E2E, Landing, Supply Chain, CodeQL, Project Memory gates and `FanMind Finishline V6`.
+- Assumptions: mergeable is not equivalent to accepted; evidence must match latest head; sales readiness is derived, never asserted manually.
+- Completed so far: V2-V6 consolidated; #973/#974 superseded; V5 controls and deep audit added; V6 adds `FINISHLINE_STATE.json`, `FANMIND_FINISHLINE.md`, `RESTORE_STATE_MACHINE.md`, `EXTERNAL_ACCEPTANCE.md`, sales-readiness and truth-drift scripts plus V6 CI.
 - Still open: exact-head full CI and merge; then close receipt/lock and mark accepted on main.
-- Evidence so far: PR #975 and Project Memory files.
+- Evidence so far: PR #975, Project Memory files and V6 scripts/workflow.
 - Exact next step: inspect latest-head checks, fix only actual failures, merge only fully green.
 - Owner action needed: no unless GitHub/platform requires protected approval.
 
@@ -40,7 +40,7 @@ Canonical register for FanMind work that has started but is not yet fully comple
 - Completed so far: ACL/default-ACL/Owner/Role/DB-container/Extension recovery contract merged/deployed; real PG17 two-cluster CI passed; new Schema-2 encrypted Full Backup validated and offsite; checksum verification passed; isolated Ubuntu/PG17.11/Node24.19/TLS/target/runner foundation established in operator session.
 - Still open: live policy/host/target/artifact revalidation; Resource Readiness; Target Compatibility; DB Restore; DB postcheck; Storage; Server Config; Cleanup; final evidence/acceptance.
 - Evidence so far: PR #943, issue #944, issue #874, Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c`, Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1`, deep audit.
-- Exact next step: read-only live revalidation from the first unproven gate; do not reprovision the server.
+- Exact next step: follow `RESTORE_STATE_MACHINE.md` from current `BACKUP_ACCEPTED` state with fresh read-only revalidation; do not reprovision the server.
 - Owner action needed: only for platform/environment/mutating gate confirmations that remain required.
 
 ## FM-MOB-001
