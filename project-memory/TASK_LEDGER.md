@@ -30,29 +30,29 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 - Action: Built V3 in PR #974 and fixed generator/status drift plus hosted-checkout SHA pinning.
 - Result: PR #974 was superseded by consolidated PR #975 rather than merged separately.
 - Evidence: PR #974 history and V3 files now included in #975.
-- Next step: Maintain V3 capabilities inside consolidated V5.
+- Next step: Maintain V3 capabilities inside the consolidated memory system.
 - Do not repeat: Do not merge/revive #974 independently.
 
 ## FM-MEM-004
 - Date: 2026-08-19
 - Status: SUPERSEDED
 - Goal: Add mandatory execution policy, started-work tracking and stronger counterchecks.
-- Action: V4 work was developed on the governance branch and then folded into V5.
+- Action: V4 work was developed on the governance branch and then folded into later versions.
 - Result: No separate final V4 integration; V4 is a historical stage inside PR #975.
 - Evidence: `EXECUTION_POLICY.md`, STARTED_WORK/WORK_LOCK/receipt structures in PR #975 history.
-- Next step: Use V5 rules.
+- Next step: Use current protocol rules.
 - Do not repeat: Do not create another V4-only branch/PR.
 
 ## FM-MEM-005
 - Date: 2026-08-19
 - Status: IMPLEMENTED_NOT_VERIFIED
-- Goal: Consolidate V2-V5 into one auditable FanMind Project Memory/governance system with independent counterchecks.
+- Goal: Consolidate V2-V6 into one auditable FanMind Project Memory/governance and finishline-control system with independent counterchecks.
 - Starting state: V2/V3/V4 work existed on stacked/divergent branches and FanMind had stricter CI/supply-chain controls.
-- Action: Consolidated into PR #975; added authorizations, status/stale automation, STARTED_WORK, WORK_LOCKS, EXECUTION_RECEIPTS, ASSUMPTIONS, CONTRADICTIONS, QUALITY_CONTROL, Risk R1-R4, quorum, evidence freshness, negative/fail-closed paths, scope-diff guard, rollback/recovery proof, falsification and milestone closeout. Fixed SHA pinning, generated status drift and hosted checkout count expectations without weakening policy. Added exhaustive FanMind finishline audit `FANMIND_DEEP_AUDIT_2026-08-19.md`.
-- Result: Consolidated governance is implemented on PR #975 but not yet accepted/merged to main because exact-head checks must be revalidated after the latest audit commits.
-- Evidence: PR #975, `project-memory/CHAT_RECONCILIATION_2026-08-19.md`, `project-memory/FANMIND_DEEP_AUDIT_2026-08-19.md`.
+- Action: Consolidated into PR #975; added authorizations, status/stale automation, STARTED_WORK, WORK_LOCKS, EXECUTION_RECEIPTS, ASSUMPTIONS, CONTRADICTIONS, QUALITY_CONTROL, Risk R1-R4, quorum, evidence freshness, negative/fail-closed paths, scope-diff guard, rollback/recovery proof, falsification and milestone closeout. Fixed SHA pinning, generated status drift and hosted checkout count expectations without weakening policy. Added exhaustive FanMind finishline audit. V6 adds machine-readable `FINISHLINE_STATE.json`, `FANMIND_FINISHLINE.md`, Restore R4 state machine, external-acceptance register, derived sales-readiness gate, canonical-truth drift scanner and scheduled/PR V6 CI.
+- Result: Consolidated V2-V6 governance is implemented on PR #975 but not yet accepted/merged to main because all exact-head checks must be terminal green.
+- Evidence: PR #975, `project-memory/CHAT_RECONCILIATION_2026-08-19.md`, `project-memory/FANMIND_DEEP_AUDIT_2026-08-19.md`, V6 files/scripts/workflow.
 - Next step: Run/reconcile all relevant checks for the exact current head; merge only if green; then record ACCEPTED/merged evidence and release the active work record.
-- Do not repeat: Do not bypass a red/pending FanMind gate and do not create another parallel memory PR.
+- Do not repeat: Do not bypass a red/pending FanMind gate and do not create another parallel memory/finishline PR.
 
 ## FM-STG-001
 - Date: 2026-08-09 to 2026-08-19
@@ -72,7 +72,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 - Action: Host-readiness, TLS, PostgreSQL compatibility, runner/JIT and workflow setup were iterated. ACL/Default-ACL/Owner/Role/DB-container/Extension backup+restore contract was hardened in PR #943; real PG17 two-cluster CI passed; Worker v6 was deployed; one new encrypted Schema-2 Full Backup and checksum-only verification were accepted.
 - Result: Recovery code/backup/host foundation is advanced, but the real end-to-end isolated Restore/Storage/Server-Config/Cleanup/Evidence chain is not yet accepted.
 - Evidence: PR #943 merge `14a1e2d0e100f2ec8cfa14486c96f128fb431878`; Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c`; Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1`; issue #944 comments; issue #874; restore operator-session evidence summarized in the deep audit.
-- Next step: Revalidate current Organization runner-group/workflow-allowlist/JIT policy, host/toolchain/target/TLS and exact backup binding; then continue Readiness -> Compatibility -> DB Restore -> DB Postcheck -> Storage -> Server Config -> Cleanup -> final evidence.
+- Next step: Revalidate current Organization runner-group/workflow-allowlist/JIT policy, host/toolchain/target/TLS and exact backup binding; then follow `RESTORE_STATE_MACHINE.md` from `BACKUP_ACCEPTED` without skipping a state.
 - Do not repeat: Do not build another restore server or recreate TLS/PostgreSQL/runner foundations unless verified drift requires it. Never restore against Production or Supabase Staging.
 
 ## FM-MOB-001
@@ -113,7 +113,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-SOC7-001
 - Date: 2026-08-19 reconciliation of prior work
-- Status: TODO
+- Status: PARTIAL
 - Goal: Real technical acceptance of Phase 7 — TikTok, X/Twitter, Discord and conditional OnlyFans.
 - Result: Platform feasibility has been partially researched/documented; no complete real Phase-7 connector acceptance exists.
 - Evidence: Issue #874 and its platform-feasibility comment.
