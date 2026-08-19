@@ -4,10 +4,10 @@ Machine source: `FINISHLINE_STATE.json`. Human-readable closeout board for the c
 
 | Gate | Task | Current state | What is already proven | What still closes the gate |
 |---|---|---|---|---|
-| Project Memory V6 | FM-MEM-005 | IMPLEMENTED_NOT_VERIFIED | V1-V6 governance, deep audit, controls and reconciliation are in PR #975 | exact-head full CI, merge to `main`, close receipt/lock |
+| Project Memory V6 | FM-MEM-005 | ACCEPTED | exact PR #975 head passed Memory Guard/Quality V6/Status, FanMind CI, Landing, Supply Chain, CodeQL and Browser E2E; merged as `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d` | maintain V6; no parallel memory system |
 | Production/Ops | FM-OPS-001 | VERIFIED | production deploy, health/version, audit, monitoring, encrypted backups and checksum verification | maintain; optional/destructive follow-ups remain separate |
 | Isolated Staging | FM-STG-001 | ACCEPTED | separate Supabase/Web Staging, DNS/TLS, synthetic workspaces, test resources and primary acceptance | reuse; feature-specific acceptance stays in its own gate |
-| Restore | FM-RST-001 | PARTIAL | ACL/Owner recovery contract, PG17 roundtrip, Schema-2 Full Backup, checksum, isolated host foundation | policy/host revalidation -> readiness -> compatibility -> DB -> postcheck -> Storage -> config -> cleanup -> final evidence |
+| Restore | FM-RST-001 | PARTIAL | ACL/Owner recovery contract, PG17 roundtrip, Schema-2 Full Backup, checksum, isolated host foundation; current V6 state `BACKUP_ACCEPTED` | host/policy revalidation -> readiness -> compatibility -> DB -> postcheck -> Storage -> config -> cleanup -> final evidence |
 | Mobile | FM-MOB-001 | IMPLEMENTED_NOT_VERIFIED | native app and repository/CI foundation | redirect/EAS/signing -> signed Android/device -> iOS/TestFlight/device -> Push/Store evidence |
 | AI/Billing | FM-AI-001 | PARTIAL | Standard active; Plus/Ultra fail-closed policy, test/storage/lifecycle foundations | written tier decisions, quality/cost, complete Staging lifecycle, legal/tax, explicit activation |
 | Meta/Security | FM-META-001 | PARTIAL | PageView-only Pixel production path; advanced Meta foundation | Events Manager/no-PII, App Review/real E2E, final security/legal evidence |
@@ -19,6 +19,7 @@ Machine source: `FINISHLINE_STATE.json`. Human-readable closeout board for the c
 ## Hard finishline rules
 
 - `SALES_READY=true` is never set manually. It is derived by `scripts/fanmind_sales_readiness.py`.
+- Current machine result remains `SALES_READY=false` because required finishline gates are still open.
 - Phase 4 is the completed Production/Billing base, not sales handoff.
 - Phase 3 is Facebook + Instagram + WhatsApp.
 - Phase 7 is TikTok + X/Twitter + Discord + conditional OnlyFans.
@@ -30,11 +31,10 @@ Machine source: `FINISHLINE_STATE.json`. Human-readable closeout board for the c
 
 ## Closeout order
 
-1. Project Memory V6 accepted on `main`.
-2. Restore accepted end-to-end.
-3. Mobile signed/device/store acceptance.
-4. AI/Billing tier decisions and lifecycle acceptance.
-5. Meta Events/Security external acceptance.
-6. Phase 3 real Social acceptance.
-7. Phase 7 real Social acceptance / OnlyFans feasibility resolution.
-8. Final Production demo and technical Sales Handoff.
+1. Restore accepted end-to-end.
+2. Mobile signed/device/store acceptance.
+3. AI/Billing tier decisions and lifecycle acceptance.
+4. Meta Events/Security external acceptance.
+5. Phase 3 real Social acceptance.
+6. Phase 7 real Social acceptance / OnlyFans feasibility resolution.
+7. Final Production demo and technical Sales Handoff.
