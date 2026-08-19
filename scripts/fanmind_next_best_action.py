@@ -14,6 +14,7 @@ DEFERRED_PATH = PM / "DEFERRED_OWNER_ACTIONS.md"
 OUTPUT_PATH = PM / "NEXT_BEST_ACTION.md"
 
 ACCEPTED_STATES = {"ACCEPTED", "PRODUCTION_CONFIRMED"}
+OWNER_BLOCKING_STATES = {"DEFERRED_BY_OWNER", "OWNER_ACTION_REQUIRED"}
 
 
 def load_json(path: Path):
@@ -46,8 +47,6 @@ def prerequisites_satisfied(action: dict, state: dict) -> tuple[bool, list[str]]
 
 
 def action_complete(action: dict, state: dict) -> bool:
-    if action.get("run_when_gate_done") is True:
-        return False
     return gate_state(state, action["gate"]) in set(action.get("done_states", []))
 
 
@@ -67,18 +66,30 @@ def classify(action: dict, state: dict, deferred: set[str]) -> tuple[str, str]:
 
 def select(state: dict, catalog: dict, deferred: set[str]):
     classified = []
-    for action in sorted(catalog["actions"], key=lambda x: (x["priority"], x["id"])):
+    ordered = sorted(catalog["actions"], key=lambda x: (x["priority"], x["id"]))
+    for action in ordered:
         status, reason = classify(action, state, deferred)
         classified.append((action, status, reason))
 
-    for action, status, reason in classified:
-        if status == "EXECUTABLE":
-            return action, classified
+    earliest_owner_block_priority = None
+    for action, status, _ in classified:
+        if status in OWNER_BLOCKING_STATES:
+            earliest_owner_block_priority = action["priority"]
+            break
 
-    # If nothing is assistant-executable, surface the earliest unresolved owner action
-    # instead of pretending there is safe work to do.
-    for action, status, reason in classified:
-        if status in {"DEFERRED_BY_OWNER", "OWNER_ACTION_REQUIRED"}:
+    for action, status, _ in classified:
+        if status != "EXECUTABLE":
+            continue
+        if (
+            earliest_owner_block_priority is not None
+            and action["priority"] > earliest_owner_block_priority
+            and action.get("parallel_safe") is not True
+        ):
+            continue
+        return action, classified
+
+    for action, status, _ in classified:
+        if status in OWNER_BLOCKING_STATES:
             return action, classified
     return None, classified
 
@@ -125,7 +136,7 @@ def render(state: dict, catalog: dict, deferred: set[str]) -> str:
         "",
         "- A `DEFERRED_BY_OWNER` action remains open but is skipped for current assistant execution.",
         "- Skipping a deferred action never marks its gate accepted or lowers its priority permanently.",
-        "- Only `parallel_safe=true` work may proceed around an earlier deferred finishline action.",
+        "- If an earlier unresolved action is owner-required/deferred, only later `parallel_safe=true` actions may be selected.",
         "- Provider, payment, destructive, legal and protected Production boundaries still require their existing approvals.",
         "- Phase 8 remains outside the current finishline.",
         "",
@@ -144,7 +155,7 @@ def main() -> int:
     deferred_text = DEFERRED_PATH.read_text(encoding="utf-8") if DEFERRED_PATH.exists() else ""
     deferred = deferred_owner_ids(deferred_text)
 
-    selected, classified = select(state, catalog, deferred)
+    selected, _ = select(state, catalog, deferred)
     if selected:
         status, _ = classify(selected, state, deferred)
         print(f"FANMIND_NEXT_ACTION={selected['id']}")
