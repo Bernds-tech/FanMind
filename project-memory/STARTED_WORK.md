@@ -11,22 +11,6 @@ Canonical register for FanMind work that has started but is not yet fully comple
 
 ## Active work
 
-## FM-MEM-005
-- Started: 2026-08-19 08:40 Europe/Vienna
-- Updated: 2026-08-19
-- Status: IMPLEMENTED_NOT_VERIFIED
-- Risk: R3
-- Scope: Consolidated Project Memory V2-V6 plus exhaustive FanMind finishline audit and machine-enforced finishline controls.
-- Branch/PR: `project-memory-v4-started-work` / PR #975
-- Work lock: PR #975 is the only active FanMind memory/finishline integration path.
-- Dependencies: exact-head FanMind CI, Browser E2E, Landing, Supply Chain, CodeQL, Project Memory gates and `FanMind Finishline V6`.
-- Assumptions: mergeable is not equivalent to accepted; evidence must match latest head; sales readiness is derived, never asserted manually.
-- Completed so far: V2-V6 consolidated; #973/#974 superseded; V5 controls and deep audit added; V6 adds `FINISHLINE_STATE.json`, `FANMIND_FINISHLINE.md`, `RESTORE_STATE_MACHINE.md`, `EXTERNAL_ACCEPTANCE.md`, sales-readiness and truth-drift scripts plus V6 CI.
-- Still open: exact-head full CI and merge; then close receipt/lock and mark accepted on main.
-- Evidence so far: PR #975, Project Memory files and V6 scripts/workflow.
-- Exact next step: inspect latest-head checks, fix only actual failures, merge only fully green.
-- Owner action needed: no unless GitHub/platform requires protected approval.
-
 ## FM-RST-001
 - Started: 2026-08-17
 - Updated: 2026-08-19
@@ -154,3 +138,16 @@ Canonical register for FanMind work that has started but is not yet fully comple
 - Evidence so far: issue #564.
 - Exact next step: incorporate only confirmed external evidence when received.
 - Owner action needed: yes/external advisors.
+
+## Closed work
+
+## FM-MEM-005
+- Started: 2026-08-19 08:40 Europe/Vienna
+- Closed: 2026-08-19
+- Status: ACCEPTED
+- Risk: R3
+- Scope: Project Memory V2-V6, exhaustive FanMind finishline audit and machine-enforced finishline controls.
+- Branch/PR: `project-memory-v4-started-work` / PR #975
+- Result: exact head `2a62dc8337673be0b33acfd4338d0f452224e779` passed Project Memory Guard/Quality V6/Status, FanMind CI, Supply Chain, Landing, CodeQL and Browser E2E; merged as `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d`.
+- Evidence: PR #975, merge commit and exact-head workflow runs.
+- Follow-up: maintain V6; continue `FM-RST-001`.
