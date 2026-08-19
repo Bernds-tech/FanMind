@@ -122,4 +122,14 @@ Implementation status and acceptance status are deliberately separate.
 - Limitations: external/live mutable resources must still be revalidated at execution time
 - Acceptance: COUNTERCHECKED
 
+## FM-EV-012
+- Related: FM-MEM-005
+- Date: 2026-08-19
+- Target: FanMind repository governance / finishline controls
+- Type: exact-head CI + merged V6 governance
+- Reference: PR #975 exact head `2a62dc8337673be0b33acfd4338d0f452224e779`; merge commit `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d`
+- Result: Project Memory Guard, Project Memory Status, Project Memory Quality V6 including Sales Readiness and Canonical Truth Drift, FanMind CI including PG17/Operations/Stripe policies/Production build, Landing Language CI, Supply Chain Security, CodeQL and both Browser E2E jobs all passed before merge
+- Limitations: acceptance covers the V6 memory/finishline governance system only; it does not close Restore, Mobile, AI/Billing, Meta/Security, Social or Sales Handoff gates
+- Acceptance: ACCEPTED
+
 Never store secrets, private credentials, plaintext sensitive payloads, or unsafe diagnostic material here.
