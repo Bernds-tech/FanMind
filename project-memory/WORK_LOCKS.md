@@ -9,20 +9,17 @@ Prevents two agents/sessions from independently working the same task.
 - Locks older than 24h are STALE, not free: reconcile `STARTED_WORK.md`, PRs, commits and receipts before replacing.
 - Release only after updating `STARTED_WORK.md` and the execution receipt.
 
-## Template
-```text
-## LOCK-<TASK-ID>
-- Task: <TASK-ID>
-- Status: ACTIVE|STALE|RELEASED|SUPERSEDED
-- Holder: agent/session identifier
-- Branch/PR:
-- Acquired: YYYY-MM-DD HH:MM TZ
-- Updated: YYYY-MM-DD HH:MM TZ
-- Scope:
-- Resume from:
-- Released:
-```
-
 ## Active locks
 
-None recorded yet.
+## LOCK-FM-MEM-005
+- Task: FM-MEM-005
+- Status: ACTIVE
+- Holder: ChatGPT FanMind audit session 2026-08-19
+- Branch/PR: `project-memory-v4-started-work` / #975
+- Acquired: 2026-08-19 12:14 Europe/Vienna
+- Updated: 2026-08-19 12:14 Europe/Vienna
+- Scope: exhaustive FanMind-only reconciliation, Project Memory V5 integration and exact-head countercheck
+- Resume from: `FANMIND_DEEP_AUDIT_2026-08-19.md`, then exact current PR #975 workflow state
+- Released:
+
+All product workstreams remain tracked in `STARTED_WORK.md`; this governance lock does not authorize simultaneous external Restore/Mobile/Provider mutations.
