@@ -1,6 +1,6 @@
 # FanMind Current State
 
-Last reconciled: 2026-08-19
+Last reconciled: 2026-08-20
 
 ## Mandatory restart point
 
@@ -8,9 +8,9 @@ Before substantive FanMind work, read in this order:
 
 1. `AGENTS.md` and `docs/SOURCE_OF_TRUTH.md`;
 2. `project-memory/PROTOCOL.md`, `FANMIND_DEEP_AUDIT_2026-08-19.md`, `FANMIND_FINISHLINE.md`, `FINISHLINE_STATE.json`, `EXTERNAL_ACCEPTANCE.md`;
-3. `project-memory/STARTED_WORK.md`, `TASK_LEDGER.md`, `OPEN_LOOPS.md`, `DEPENDENCIES.md`, `ASSUMPTIONS.md`, `CONTRADICTIONS.md`, `FAILED_ATTEMPTS.md`;
+3. `project-memory/STARTED_WORK.md`, `TASK_LEDGER.md`, `OPEN_LOOPS.md`, `DEPENDENCIES.md`, `EVIDENCE.md`, `ASSUMPTIONS.md`, `CONTRADICTIONS.md`, `FAILED_ATTEMPTS.md`;
 4. for Restore work, `RESTORE_STATE_MACHINE.md` plus the canonical Restore runbook;
-5. central finishline issue #874 and the exact current Git/PR/CI/runtime/provider state.
+5. central finishline issue #874, security issue #982 and the exact current Git/PR/CI/runtime/provider state.
 
 Older percentages, issue checkboxes and chat statements are historical until reconciled against current evidence.
 
@@ -18,23 +18,22 @@ Older percentages, issue checkboxes and chat statements are historical until rec
 
 FanMind is the production CRM/fan-communication product. Canonical product truth is `docs/SOURCE_OF_TRUTH.md`. Project Memory records execution truth and discovered drift without silently overriding canonical docs.
 
-## V6 governance status
+## Project Memory governance status
 
-Project Memory V6 is **ACCEPTED on `main`**.
+Project Memory V8 is **ACCEPTED on `main`**.
 
-- PR #975 exact head: `2a62dc8337673be0b33acfd4338d0f452224e779`.
-- Merge commit: `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d`.
-- Project Memory Guard, Quality V6 and Status: green.
-- FanMind CI including PG17 authorization roundtrip, Operations/Stripe policies and Production build: green.
-- Landing, Supply Chain, CodeQL and both Browser E2E flows: green.
-- `FINISHLINE_STATE.json` is the machine-readable finishline state.
-- `sales_ready=false` remains correct; Sales Handoff is not yet complete.
+- V6 baseline: PR #975 exact head `2a62dc8337673be0b33acfd4338d0f452224e779`, merge `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d`.
+- V8: PR #980 final exact head `704fec4b6264dd5a0dd83cc8e0029352672485d0`, merge `22eb6aed5da4fde47860bbe12b118d3780c8a4a0`.
+- Final V8 head passed Project Memory Guard, Quality, Status, FanMind CI, Landing Language CI, Supply Chain Security, CodeQL and Browser E2E run #915.
+- An earlier cancelled Browser E2E was explicitly rejected as insufficient R3 countercheck evidence.
+- `FINISHLINE_STATE.json` remains the machine-readable finishline state.
+- `sales_ready=false` remains correct; Sales Handoff is not complete.
 
 ## Audited finishline state
 
 ### Built/accepted foundations — do not rebuild
 
-- Project Memory V6 finishline governance and counterchecks;
+- Project Memory V8 governance/counterchecks and cross-chat handoff;
 - production Web/CRM core;
 - Production deploy, health/version, PM2/nginx, read-only audit, monitoring and backup foundation;
 - isolated Staging infrastructure and primary technical Staging acceptance;
@@ -48,13 +47,35 @@ Project Memory V6 is **ACCEPTED on `main`**.
 ### Active incomplete finishline
 
 1. **Restore — FM-RST-001, R4:** real isolated DB/Storage/Server-config/Cleanup/Evidence acceptance still open.
-2. **Mobile — FM-MOB-001:** signed Android/iOS builds, redirect/EAS/signing, real devices, TestFlight/store/push acceptance open.
-3. **AI/Billing — FM-AI-001:** Plus/Ultra product decisions, quality/cost evidence, full current Staging lifecycle and explicit activation open.
-4. **Meta/Security — FM-META-001:** external Events Manager/browser evidence, remaining external Meta/App Review E2E and final finishline security evidence open.
-5. **Phase 3 — FM-SOC3-001:** Facebook/Instagram/WhatsApp final real E2E not accepted.
-6. **Phase 7 — FM-SOC7-001:** TikTok/X/Discord/conditional OnlyFans real connectors not accepted.
-7. **Sales handoff — FM-SALES-001:** blocked until required Phase-3/Phase-7 technical acceptance and final Production demo truth.
-8. **Legal/Tax/AVV — FM-LEGAL-001:** external approvals remain separate; do not guess.
+2. **Mobile — FM-MOB-001, R3:** signed Android/iOS builds, redirect/EAS/signing, real devices, TestFlight/store/push acceptance open.
+3. **AI/Billing — FM-AI-001, R3:** Plus/Ultra product decisions, quality/cost evidence, full current Staging lifecycle and explicit activation open.
+4. **Meta/Security — FM-META-001, R3:** external Events Manager/browser evidence, remaining external Meta/App Review E2E and final finishline security evidence open.
+5. **Phase 3 — FM-SOC3-001, R3:** Facebook/Instagram/WhatsApp final real E2E not accepted.
+6. **Phase 7 — FM-SOC7-001, R3:** TikTok/X/Discord/conditional OnlyFans real connectors not accepted.
+7. **Sales handoff — FM-SALES-001, R2:** blocked until required Phase-3/Phase-7 acceptance and final Production demo truth.
+8. **Legal/Tax/AVV — FM-LEGAL-001, R3:** external approvals remain separate; do not guess.
+9. **Live Supabase security reconciliation — FM-SEC-001, R3:** issue #982; provider warnings are current and not yet accepted/remediated.
+
+## Live Supabase target/security evidence — 2026-08-20
+
+Both Supabase projects are currently `ACTIVE_HEALTHY` in `eu-west-3`.
+
+### Production
+
+Fresh advisors report:
+
+- mutable `search_path` on `set_social_connections_updated_at`, `set_referral_updated_at`, `set_demo_start_session_updated_at`;
+- retired `trim_conversation_messages_to_latest_50()` still reported as `SECURITY DEFINER` executable by `anon` and `authenticated`;
+- leaked-password protection disabled;
+- RLS-enabled/no-policy INFO findings on multiple service-only/internal tables.
+
+Repository truth already contains the checksum-pinned transactional control `supabase/controlled/20260806203023_harden_trigger_function_privileges.sql` and `docs/operations/TRIGGER_FUNCTION_HARDENING_PRODUCTION.md`. That runbook explicitly states merge/deploy does **not** auto-apply the Production DB mutation. Therefore code-present is not live-accepted. Do not rebuild the hardening path; first run its existing read-only exact-commit verify, then use only the protected Apply if separately authorized, followed by postflight/advisor re-scan.
+
+### Staging
+
+Fresh advisors report authenticated execution of `ensure_current_user_workspace(...)` as `SECURITY DEFINER` and leaked-password protection disabled. The migration intentionally grants this RPC to authenticated users, pins search path, checks `auth.uid()`/`auth.role()` and derives commercial terms server-side. Treat it as an intentional-exception candidate requiring explicit current security review, not as permission to revoke blindly.
+
+Do not create artificial browser RLS policies merely to silence INFO advisories for service-only tables.
 
 ## Restore-drill exact known state
 
@@ -65,7 +86,7 @@ Project Memory V6 is **ACCEPTED on `main`**.
 - New encrypted Schema-2 Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c` succeeded, validated and uploaded offsite.
 - Checksum-only Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1` succeeded/passed.
 - Historical privilege-less backups are not valid Gate-2 recovery evidence.
-- V6 Restore state machine current highest proven state: `BACKUP_ACCEPTED`.
+- Current highest proven Restore state: `BACKUP_ACCEPTED`.
 
 ### Operator-session foundation — revalidate before use
 
@@ -84,9 +105,10 @@ Project Memory V6 is **ACCEPTED on `main`**.
 
 These live facts can drift. Revalidate runner group/workflow allowlist/JIT state, host gate/toolchain, target, TLS and artifact binding immediately before the next R4 step.
 
-## Important contradiction
+## Important contradictions
 
-The actual GitHub repository is organization-owned as `FanMind/FanMind`. Older restore prose in `docs/SOURCE_OF_TRUTH.md`, `AGENTS.md` and `docs/operations/RESTORE_DRILL.md` still contains pre-transfer `user-owned`/`future-org` wording. Treat that wording as stale. Do **not** infer that the current runner-group policy is still correct solely from ownership; remote admin-policy state must be revalidated before dispatch.
+- Actual GitHub repository is organization-owned `FanMind/FanMind`; older Restore prose still contains pre-transfer `user-owned`/`future-org` wording. Do not repeat transfer work. Runner-group Admin policy must still be revalidated before dispatch.
+- Production trigger-hardening implementation exists in code, but fresh live advisors show the pre-accepted privilege/search-path warnings. Treat implementation and live acceptance separately until exact target verify/postflight is complete.
 
 ## Canonical roadmap boundary
 
@@ -96,11 +118,19 @@ The actual GitHub repository is organization-owned as `FanMind/FanMind`. Older r
 - Phase 4 = completed production/billing base, **not** sales handoff.
 - Technical sales handoff occurs only after required Phase-3 and Phase-7 channel acceptance.
 
+## Governance posture
+
+GitHub `main` is currently **not branch-protected**. This is known and remains a deferred owner/governance action; do not falsely report enforced PR/status-check protection.
+
 ## Do not repeat by default
 
 - no second restore server;
 - no Restore against Production or Supabase Staging;
 - no re-provisioning of restore TLS/PostgreSQL/runner foundation absent verified drift;
+- no rebuild of the existing trigger-hardening control;
+- no blind revoke of intentional Staging RPC access;
+- no artificial browser RLS policies solely to silence service-only INFO advisories;
+- no Production DB/Auth mutation without exact read-only evidence and existing protected approval path;
 - no old Cloudzy/systemd production deploy assumptions;
 - no rebuild of Facebook/Instagram foundation;
 - no Mobile restart/WebView rewrite;
@@ -115,10 +145,11 @@ The actual GitHub repository is organization-owned as `FanMind/FanMind`. Older r
 
 ## Exact next safe sequence
 
-1. continue Restore from `BACKUP_ACCEPTED -> HOST_REVALIDATED` using fresh read-only revalidation;
-2. Mobile external signing/device/store acceptance;
-3. Plus/Ultra product/quality/cost/Stripe lifecycle closure;
-4. Meta Events Manager + final non-Social security acceptance;
-5. real Phase-3 channels;
-6. real Phase-7 channels / OnlyFans feasibility;
-7. final Production sales demo + sales handoff.
+1. **FM-SEC-001:** read-only Production trigger-hardening verify on exact deployed commit; classify Staging RPC/leaked-password settings; no mutation yet.
+2. Continue Restore from `BACKUP_ACCEPTED -> HOST_REVALIDATED` only when the deferred owner/admin gate is resumed.
+3. Mobile external read-only resource reconciliation, then signing/device/store acceptance.
+4. Plus/Ultra product/quality/cost/Stripe lifecycle closure.
+5. Meta Events Manager + final non-Social security acceptance.
+6. Real Phase-3 channels.
+7. Real Phase-7 channels / OnlyFans feasibility.
+8. Final Production sales demo + sales handoff.

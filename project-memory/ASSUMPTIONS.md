@@ -100,4 +100,28 @@ Statuses: `NEEDS_VERIFICATION`, `VERIFIED`, `INVALIDATED`, `SUPERSEDED`.
 - Recheck trigger: every planning/status session.
 - Action if false: current Git/CI/runtime/provider evidence first; preserve older trackers as history.
 
+## ASM-FM-009
+- Date: 2026-08-20
+- Updated: 2026-08-20
+- Related task: FM-SEC-001
+- Risk: R3
+- Assumption: Production trigger-function hardening is already accepted/applied because the controlled SQL and runbook exist on `main`.
+- Why it matters: would falsely close live privilege/search-path warnings and could skip required protected Production evidence.
+- Verification source/evidence: fresh Production Supabase advisors still report the three mutable-search-path warnings and browser execution of `trim_conversation_messages_to_latest_50()`; the Production runbook explicitly states merge/deploy does not auto-apply the database mutation.
+- Status: INVALIDATED
+- Recheck trigger: before any claim that Production trigger hardening is complete and after any controlled Apply/Verify.
+- Action if false: treat code as implementation evidence only; require exact target read-only verify, protected Apply if authorized, postflight and fresh advisor scan.
+
+## ASM-FM-010
+- Date: 2026-08-20
+- Updated: 2026-08-20
+- Related task: FM-SEC-001
+- Risk: R3
+- Assumption: The Staging `ensure_current_user_workspace(...)` authenticated `SECURITY DEFINER` exposure is safe and intentionally accepted merely because the migration grants it to `authenticated`.
+- Why it matters: intentional code design is not equivalent to current security acceptance of a privileged RPC.
+- Verification source/evidence: migration sets a pinned search path, checks `auth.uid()`/`auth.role()`, constrains commercial options and derives server-owned values, but the live Staging advisor still flags the authenticated SECURITY DEFINER call.
+- Status: NEEDS_VERIFICATION
+- Recheck trigger: before accepting the advisor exception, changing its grants, or promoting equivalent behavior to Production.
+- Action if false: keep fail-closed; review current catalog ACL/function behavior and tests, then either document an explicit accepted exception or remediate through a separately reviewed migration.
+
 Do not delete invalid assumptions; preserve them so the same mistaken premise is not reused later.

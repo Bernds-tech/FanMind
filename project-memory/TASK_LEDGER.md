@@ -150,14 +150,32 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-MEM-008
 - Date: 2026-08-19 to 2026-08-20
-- Status: IMPLEMENTED_NOT_VERIFIED
+- Status: ACCEPTED
 - Risk: R3
 - Goal: Add Project Memory V8 cross-chat reconciliation, impact-scoped revalidation, owner-action inbox and automatic handoff without weakening existing V6/V7 finishline controls.
 - Branch/PR: `project-memory-v8-crosschat-impact` / PR #980.
-- Implementation evidence: exact head `ba48a7cab55ca45a98b62713bbc07989073589fc` added V8 controls and passed Project Memory Guard/Quality/Status, FanMind CI, Supply Chain Security, Landing Language CI and CodeQL.
-- Countercheck evidence: Browser E2E on that exact head was cancelled while installing Chromium; the public and synthetic flow steps were skipped. A cancelled required evidence class cannot satisfy R3 completion quorum.
-- Negative/fail-closed path: chat claims remain non-evidence; stale success downgrades to revalidation; owner/provider-only actions remain deferred; V8 must not bypass V6/V7 gates or mutate product/runtime/provider state.
-- Rollback/recovery: V8 is governance-only; if V8 checks/handoff logic proves inconsistent, revert the isolated V8 PR/merge without altering product/runtime state and retain V6/V7 as the last accepted baseline.
-- Reconciliation state: the original PR omitted this active task from TASK_LEDGER/STARTED_WORK/WORK_LOCKS/EXECUTION_RECEIPTS/EVIDENCE; this omission is being corrected before acceptance.
-- Next step: complete V5 bookkeeping on the PR branch, obtain fresh exact-head Browser E2E plus existing governance/security checks, then advance only IMPLEMENTED -> VERIFIED -> COUNTERCHECKED -> ACCEPTED.
-- Falsification question: What observation would prove our conclusion wrong? A fresh exact-head Browser E2E failure, V8-induced status drift, or evidence that V8 weakens an existing finishline/security invariant would block merge and require reconciliation or rollback.
+- Implementation evidence: final exact PR head `704fec4b6264dd5a0dd83cc8e0029352672485d0` contained the V8 controls plus corrected V5 bookkeeping and generated status.
+- Verification evidence: Project Memory Guard, Project Memory Quality, Project Memory Status, FanMind CI, Landing Language CI, Supply Chain Security and CodeQL all passed on that exact head.
+- Independent countercheck evidence: Browser E2E run #915 passed on the same exact head after the earlier cancelled-browser attempt was explicitly rejected as insufficient evidence.
+- Result: PR #980 squash-merged to `main` as `22eb6aed5da4fde47860bbe12b118d3780c8a4a0` only after the complete exact-head gate set was terminal green.
+- Status path: IMPLEMENTED -> VERIFIED -> COUNTERCHECKED -> ACCEPTED.
+- Negative/fail-closed path: chat claims remain non-evidence; stale success downgrades to revalidation; owner/provider-only actions remain deferred; V8 does not bypass V6/V7 gates or mutate product/runtime/provider state.
+- Rollback/recovery: governance-only changes can be reverted to the last accepted V6/V7 baseline without altering product/runtime/provider state.
+- Falsification question: What observation would prove our conclusion wrong? A current V8 quality/status failure, evidence that automatic handoff contradicts stronger repository/runtime truth, or evidence that V8 weakens an existing finishline/security invariant would reopen the task as `RECONCILIATION_REQUIRED`.
+- Next step: maintain V8; do not reopen PR #980 or create a parallel memory system.
+
+## FM-SEC-001
+- Date: 2026-08-20
+- Status: RECONCILIATION_REQUIRED
+- Risk: R3
+- Goal: reconcile current live Supabase security-advisor posture with the repository's controlled hardening design and finishline before any Production/Auth mutation.
+- Starting state: fresh Production/Staging targets are `ACTIVE_HEALTHY`, but current advisors expose unresolved warnings.
+- Production evidence: three trigger helpers still report mutable `search_path`; retired `trim_conversation_messages_to_latest_50()` is still reported as `SECURITY DEFINER` executable by `anon` and `authenticated`; leaked-password protection is disabled. `supabase/controlled/20260806203023_harden_trigger_function_privileges.sql` and `docs/operations/TRIGGER_FUNCTION_HARDENING_PRODUCTION.md` already define a checksum-pinned, transactional, fail-closed Production remediation, but the live advisor state shows that accepted post-apply state is not currently proven.
+- Staging evidence: `ensure_current_user_workspace(...)` is reported as authenticated-callable `SECURITY DEFINER`; repository migration explicitly grants that call to `authenticated` and validates `auth.uid()/auth.role()` while deriving commercial terms server-side, so it is an intentional-exception candidate rather than an automatic revoke. Leaked-password protection is also disabled.
+- Informational RLS findings: multiple service-only/internal tables have RLS enabled with no browser policies; current Production hardening runbook explicitly warns not to invent browser policies merely to silence these INFO advisories.
+- Independent evidence class: live Supabase security advisors on both exact targets, separate from repository code/CI.
+- Negative/fail-closed path: no broad grants, no artificial browser RLS policies, no trigger Apply if target/commit/checksum/ACL preflight drifts, and no Auth-setting acceptance inferred from code.
+- Rollback/recovery: use only the existing transactional controlled Production runner/postflight for trigger hardening; any Auth-setting change requires a separately documented reversible provider action.
+- Related issue: #982.
+- Falsification question: What observation would prove our conclusion wrong? A fresh advisor/catalog/ACL read showing Production already hardened, or evidence that the controlled migration/runbook no longer matches the deployed target, would invalidate this baseline and require a new reconciliation before mutation.
+- Next step: run the existing read-only Production hardening verify against the exact deployed commit; separately review the Staging RPC exception and leaked-password setting; do not Apply/mutate under this reconciliation task.

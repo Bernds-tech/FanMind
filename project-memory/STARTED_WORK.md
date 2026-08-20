@@ -139,21 +139,21 @@ Canonical register for FanMind work that has started but is not yet fully comple
 - Exact next step: incorporate only confirmed external evidence when received.
 - Owner action needed: yes/external advisors.
 
-## FM-MEM-008
-- Started: 2026-08-19
+## FM-SEC-001
+- Started: 2026-08-20
 - Updated: 2026-08-20
-- Status: IMPLEMENTED_NOT_VERIFIED
+- Status: RECONCILIATION_REQUIRED
 - Risk: R3
-- Scope: Project Memory V8 cross-chat reconciliation, impact matrix, owner-action inbox, automatic handoff and V8 quality enforcement.
-- Branch/PR: `project-memory-v8-crosschat-impact` / #980.
-- Work lock: `LOCK-FM-MEM-008` ACTIVE on the PR branch during reconciliation.
-- Dependencies: existing V6/V7 Project Memory and all existing FanMind/security/browser gates; no product/runtime/provider mutation.
-- Assumptions: a mostly-green check set is not enough if Browser E2E is cancelled; exact-head evidence must be fresh after bookkeeping changes.
-- Completed so far: V8 implementation exists; Guard/Quality/Status, FanMind CI, Supply Chain, Landing and CodeQL were green on prior exact head `ba48a7cab55ca45a98b62713bbc07989073589fc`.
-- Still open: V5 bookkeeping was missing; prior Browser E2E was cancelled during Chromium installation; new commits require a fresh exact-head complete check set and independent countercheck.
-- Evidence so far: PR #980 metadata, workflow runs and Browser E2E job evidence.
-- Exact next step: finish Task/Started/Lock/Receipt/Loop/Evidence/Assumption/Contradiction reconciliation, then require fresh Browser E2E and all required checks before merge.
-- Owner action needed: none unless a genuinely owner-only action appears in the V8 inbox.
+- Scope: reconcile fresh live Supabase Production/Staging security advisors with the controlled hardening design before any database/Auth mutation.
+- Branch/PR: `automation/postmerge-reconcile-20260820`; issue #982.
+- Work lock: read-only audit/reconciliation only; acquire a new mutating lock before any Production DB/Auth change.
+- Dependencies: FM-DEP-010; exact deployed Production commit; controlled trigger-hardening checksum/runner; current Production/Staging Supabase projects; provider/Auth access for leaked-password decision.
+- Assumptions: Production trigger warnings indicate pre-apply/not-accepted state; Staging authenticated workspace RPC may be intentional but its exception status must be explicitly reviewed.
+- Completed so far: fresh target health and security advisors read; repository SQL/runbook compared; issue #982 opened with V5 risk/evidence/falsification contract.
+- Still open: exact read-only Production verify; catalog/ACL confirmation; Staging RPC exception review; leaked-password setting decision/evidence; only then any separately authorized mutation and post-advisor countercheck.
+- Evidence so far: live Supabase security advisors plus current `supabase/controlled/20260806203023_harden_trigger_function_privileges.sql`, Production hardening runbook and workspace provisioning migration.
+- Exact next step: run the existing read-only Production hardening verify against the exact deployed commit; do not Apply in this reconciliation.
+- Owner action needed: only for protected Production DB/Auth mutations or provider-only setting changes when the read-only evidence is ready.
 
 ## Closed work
 
@@ -167,3 +167,14 @@ Canonical register for FanMind work that has started but is not yet fully comple
 - Result: exact head `2a62dc8337673be0b33acfd4338d0f452224e779` passed Project Memory Guard/Quality V6/Status, FanMind CI, Supply Chain, Landing, CodeQL and Browser E2E; merged as `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d`.
 - Evidence: PR #975, merge commit and exact-head workflow runs.
 - Follow-up: maintain V6; continue `FM-RST-001`.
+
+## FM-MEM-008
+- Started: 2026-08-19
+- Closed: 2026-08-20
+- Status: ACCEPTED
+- Risk: R3
+- Scope: Project Memory V8 cross-chat reconciliation, impact matrix, owner-action inbox, automatic handoff and V8 quality enforcement.
+- Branch/PR: `project-memory-v8-crosschat-impact` / #980.
+- Result: after correcting missing V5 bookkeeping and stale generated status, final exact head `704fec4b6264dd5a0dd83cc8e0029352672485d0` passed Guard, Quality, Status, FanMind CI, Supply Chain, Landing, CodeQL and Browser E2E, then squash-merged as `22eb6aed5da4fde47860bbe12b118d3780c8a4a0`.
+- Evidence: exact-head GitHub workflow runs and merge commit; independent Browser E2E run #915.
+- Follow-up: maintain V8; any stale/contradictory handoff must downgrade to revalidation rather than being trusted.
