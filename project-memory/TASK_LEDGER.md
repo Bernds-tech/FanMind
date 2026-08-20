@@ -147,3 +147,17 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 - Evidence: Issues #524/#534 and Production operations run history.
 - Limitations: full Restore remains FM-RST-001; Remote offsite delete #658 is not authorized; optional email/failure-matrix items are not blanket-complete.
 - Next step: maintain, do not rebuild.
+
+## FM-MEM-008
+- Date: 2026-08-19 to 2026-08-20
+- Status: IMPLEMENTED_NOT_VERIFIED
+- Risk: R3
+- Goal: Add Project Memory V8 cross-chat reconciliation, impact-scoped revalidation, owner-action inbox and automatic handoff without weakening existing V6/V7 finishline controls.
+- Branch/PR: `project-memory-v8-crosschat-impact` / PR #980.
+- Implementation evidence: exact head `ba48a7cab55ca45a98b62713bbc07989073589fc` added V8 controls and passed Project Memory Guard/Quality/Status, FanMind CI, Supply Chain Security, Landing Language CI and CodeQL.
+- Countercheck evidence: Browser E2E on that exact head was cancelled while installing Chromium; the public and synthetic flow steps were skipped. A cancelled required evidence class cannot satisfy R3 completion quorum.
+- Negative/fail-closed path: chat claims remain non-evidence; stale success downgrades to revalidation; owner/provider-only actions remain deferred; V8 must not bypass V6/V7 gates or mutate product/runtime/provider state.
+- Rollback/recovery: V8 is governance-only; if V8 checks/handoff logic proves inconsistent, revert the isolated V8 PR/merge without altering product/runtime state and retain V6/V7 as the last accepted baseline.
+- Reconciliation state: the original PR omitted this active task from TASK_LEDGER/STARTED_WORK/WORK_LOCKS/EXECUTION_RECEIPTS/EVIDENCE; this omission is being corrected before acceptance.
+- Next step: complete V5 bookkeeping on the PR branch, obtain fresh exact-head Browser E2E plus existing governance/security checks, then advance only IMPLEMENTED -> VERIFIED -> COUNTERCHECKED -> ACCEPTED.
+- Falsification question: What observation would prove our conclusion wrong? A fresh exact-head Browser E2E failure, V8-induced status drift, or evidence that V8 weakens an existing finishline/security invariant would block merge and require reconciliation or rollback.
