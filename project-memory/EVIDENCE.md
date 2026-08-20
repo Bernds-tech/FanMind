@@ -148,12 +148,13 @@ Implementation status and acceptance status are deliberately separate.
 - Related: FM-SEC-001 / issue #982
 - Date: 2026-08-20
 - Target: live FanMind Production Supabase `drqkpdvtbbrrdwmtrodz` and FanMind Staging `vshyhvgcmrlagvfnvomc`
-- Type: independent provider security-advisor evidence
-- Reference: fresh Supabase project health + security advisor scans; current repository controlled hardening SQL/runbook and workspace-provisioning migration
-- Result: both projects are `ACTIVE_HEALTHY`. Production advisors still report mutable `search_path` for three trigger helpers, browser execution of retired `trim_conversation_messages_to_latest_50()` as `SECURITY DEFINER`, and leaked-password protection disabled. Staging reports authenticated execution of `ensure_current_user_workspace(...)` as `SECURITY DEFINER` and leaked-password protection disabled. RLS/no-policy findings are informational and include service-only/internal tables.
-- Repository crosscheck: the Production trigger warnings match the explicit pre-apply state described by `docs/operations/TRIGGER_FUNCTION_HARDENING_PRODUCTION.md`; the controlled SQL would pin search paths/revoke browser execution but is intentionally not auto-applied. The Staging workspace RPC grant is explicit and guarded by authenticated identity checks, so its warning needs intentional-exception review rather than blind revoke.
-- Limitations: advisor output alone does not prove catalog ACL details or authorize mutation; no Production DB/Auth change was performed.
-- Falsification: a fresh catalog/ACL/advisor read showing the target already hardened or a mismatch between the controlled migration and deployed target invalidates this baseline.
+- Type: independent provider advisor + direct read-only catalog/ACL evidence
+- Reference: fresh Supabase project health/security advisor scans; direct read-only `pg_catalog` function/privilege queries; current repository controlled hardening SQL/runbook and workspace-provisioning migration
+- Result: both projects are `ACTIVE_HEALTHY`. Production direct catalog evidence confirms `set_social_connections_updated_at()`, `set_referral_updated_at()` and `set_demo_start_session_updated_at()` have no pinned function config/search path and are executable by both `anon` and `authenticated`; `trim_conversation_messages_to_latest_50()` remains `SECURITY DEFINER`, has `search_path=public, pg_temp`, and is executable by both `anon` and `authenticated`. Production advisors independently report the matching warnings plus leaked-password protection disabled. Staging direct catalog evidence confirms `ensure_current_user_workspace(text,text,boolean)` is `SECURITY DEFINER`, pinned to `search_path=pg_catalog, public, pg_temp`, not executable by `anon`, and executable by `authenticated`/`service_role`, matching the explicit migration design; leaked-password protection remains disabled.
+- Repository crosscheck: the Production state is exactly the pre-hardening state the existing controlled SQL/runbook is designed to remediate; merge/deploy intentionally does not auto-apply it. The Staging workspace RPC warning is an intentional-exposure review item rather than unexplained ACL drift.
+- RLS INFO posture: service-only/internal tables with RLS enabled/no policy are not automatically defects; current Production hardening documentation explicitly forbids inventing browser policies only to silence the linter.
+- Limitations: read-only catalog/advisor evidence proves current state but does not authorize a Production DB/Auth mutation. No state-changing provider action was performed.
+- Falsification: a later exact catalog/ACL/advisor read showing a different state or a mismatch between controlled migration and deployed target invalidates this baseline.
 - Acceptance: COUNTERCHECKED_NOT_ACCEPTED
 
 Never store secrets, private credentials, plaintext sensitive payloads, or unsafe diagnostic material here.
