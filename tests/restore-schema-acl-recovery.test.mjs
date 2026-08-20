@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   authorizationContractsEqual,
@@ -8,6 +11,8 @@ import {
   rollbackSql,
   validateSchemaAclState,
 } from "../scripts/operations/restore-schema-acl-recovery.mjs";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const REQUIRED_ROLES = Object.freeze([
   "anon",
@@ -188,4 +193,25 @@ test("schema ACL mutation is narrowly bounded and has an exact inverse", () => {
   assert.match(rollback, /set role supabase_admin;/u);
   assert.doesNotMatch(rollback, /revoke all/u);
   assert.doesNotMatch(rollback, /drop\s+(?:schema|database|role)/iu);
+});
+
+test("schema ACL recovery remains inside the protected R4 database-restore write gates", async () => {
+  const [workflow, restoreRunner] = await Promise.all([
+    readFile(path.join(repoRoot, ".github/workflows/restore-drill-database.yml"), "utf8"),
+    readFile(path.join(repoRoot, "scripts/operations/run-database-restore-drill.sh"), "utf8"),
+  ]);
+
+  assert.match(workflow, /\[\[ \"\$REQUESTED_CONFIRMATION\" == 'run-isolated-database-restore' \]\]/u);
+  assert.match(workflow, /environment: restore-drill/u);
+  assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'/u);
+  assert.match(workflow, /FANMIND_NON_PRODUCTION_WRITE_ACK: I_UNDERSTAND_NON_PRODUCTION_ONLY/u);
+  assert.match(workflow, /FANMIND_ENABLE_RESTORE_DRILL: 'true'/u);
+  assert.match(workflow, /FANMIND_RESTORE_TARGET_ACK: I_UNDERSTAND_EMPTY_DISPOSABLE_DATABASE_ONLY/u);
+  assert.match(workflow, /PGSSLMODE: verify-full/u);
+  assert.match(workflow, /PGGSSENCMODE: disable/u);
+
+  const recoveryInvocations = restoreRunner.match(/restore-schema-acl-recovery\.mjs/gu) ?? [];
+  assert.equal(recoveryInvocations.length, 1);
+  assert.match(restoreRunner, /database_schema_acl_recovery_failed/u);
+  assert.match(restoreRunner, /SCHEMA_ACL_RECOVERY=\(APPLIED\|NOT_NEEDED\)/u);
 });
