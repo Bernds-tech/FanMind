@@ -42,4 +42,40 @@ Append-only audit trail proving the mandatory preflight and independent counterc
 - Work lock released: yes
 - Merge evidence: PR #975 squash-merged to `main` as `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d`.
 
+## RECEIPT-FM-MEM-008-20260820
+- Task: FM-MEM-008
+- Started: 2026-08-19
+- Finished: 2026-08-20 after exact-head green countercheck and merge
+- Branch/PR: `project-memory-v8-crosschat-impact` / #980
+- Preflight checked: current main, Project Memory V6/V7, current active registers, open loops/dependencies, exact PR head, all PR-triggered checks and prior cancelled Browser E2E evidence.
+- Prior attempts found: prior head `ba48a7cab55ca45a98b62713bbc07989073589fc` was mostly green but Browser E2E was cancelled, so it was explicitly rejected as insufficient R3 countercheck evidence; initial V8 branch also omitted mandatory V5 active-work bookkeeping.
+- Dependency result: V5 bookkeeping repaired; generated `PROJECT_STATUS.md` refreshed; all V8 prerequisites retained without mutating product/runtime/provider state.
+- Planned evidence: exact-head governance/CI/security checks plus independent Browser E2E on the same revision.
+- Changes made: reconciled TASK_LEDGER, STARTED_WORK, WORK_LOCKS, OPEN_LOOPS, EVIDENCE and generated Project Status while preserving V8 implementation.
+- Checks/tests: exact head `704fec4b6264dd5a0dd83cc8e0029352672485d0` passed Project Memory Guard, Project Memory Quality, Project Memory Status, FanMind CI, Landing Language CI, Supply Chain Security, CodeQL and Browser E2E run #915.
+- Final diff counterchecked: yes.
+- Regression/security countercheck: passed; V8 remained governance-only and did not weaken V6/V7 finishline or protected provider/Production boundaries.
+- Evidence produced: exact-head workflow set and merge `22eb6aed5da4fde47860bbe12b118d3780c8a4a0`.
+- Result status: ACCEPTED via IMPLEMENTED -> VERIFIED -> COUNTERCHECKED -> ACCEPTED.
+- Open follow-up: maintain V8 and downgrade to revalidation if handoff/evidence drifts.
+- Work lock released: yes.
+
+## RECEIPT-FM-SEC-001-20260820-DISCOVERY
+- Task: FM-SEC-001
+- Started: 2026-08-20
+- Finished: read-only discovery/reconciliation still active; no protected mutation performed
+- Branch/PR: `automation/postmerge-reconcile-20260820`; issue #982
+- Preflight checked: current FanMind main, finishline/tasks/open loops/dependencies/evidence/assumptions/contradictions, live Supabase project health/security advisors, controlled Production trigger-hardening SQL/runbook and Staging workspace-provisioning RPC migration.
+- Prior attempts found: Production trigger hardening already has a dedicated checksum-pinned transactional control and runbook; it must not be rebuilt or auto-applied. Staging workspace RPC is intentionally granted to authenticated users in code and must not be blindly revoked.
+- Dependency result: read-only evidence is sufficient to classify the gap, not to mutate Production/Auth.
+- Planned evidence: provider advisor scan independent of repository implementation evidence; later exact catalog/ACL verify and post-action advisor scan if a protected action is approved.
+- Changes made: opened issue #982 and reconciled the new R3 security gap into Project Memory registers.
+- Checks/tests: live Production and Staging projects are `ACTIVE_HEALTHY`; fresh security advisor scans captured current warnings.
+- Final diff counterchecked: yes for reconciliation scope; no runtime/database diff.
+- Regression/security countercheck: fail-closed. No DB/Auth/provider mutation, no broad grants/revokes, and no artificial browser RLS policies were introduced.
+- Evidence produced: fresh provider target/advisor evidence plus repository hardening crosscheck.
+- Result status: RECONCILIATION_REQUIRED.
+- Open follow-up: exact read-only Production hardening verify, Staging RPC exception review and leaked-password setting decision; separately authorize any later state-changing action.
+- Work lock released: no mutating lock was acquired; acquire one before any Production DB/Auth change.
+
 A receipt is required for meaningful code/config/infra/governance work. Never include secrets, credentials, private backup material or protected evidence values.
