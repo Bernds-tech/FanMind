@@ -35,7 +35,7 @@ def render_handoff() -> str:
     lines = [
         "# FanMind Automatic Handoff",
         "",
-        "Generated from current Project Memory. Chat claims are never accepted as evidence without repository/external reconciliation.",
+        "Generated from current Project Memory. Chat memory is a navigation hint only; chat claims are never accepted as evidence without repository/external reconciliation.",
         "",
         f"- Repository: `{state.get('repository')}`",
         f"- Sales ready: `{str(bool(state.get('sales_ready'))).lower()}`",
@@ -53,9 +53,9 @@ def render_handoff() -> str:
     lines.extend([f"- {x}" for x in deferred] or ["- none"])
     lines += [
         "",
-        "## New-chat start rule",
+        "## Mandatory new-chat / project-entry rule",
         "",
-        "Read Project Memory first, reconcile current GitHub/main/provider evidence, run the Next Best Action selector, and continue at the highest executable safe action. Do not repeat completed, failed, superseded or owner-deferred work.",
+        "Before answering project-state questions or proposing/executing work, read Project Memory first: `PROTOCOL.md`, `CURRENT_STATE.md`, `FINISHLINE_STATE.json`, `NEXT_BEST_ACTION.md`, `AUTO_HANDOFF.md`, `OWNER_ACTION_INBOX.md`, `SESSION_HANDOFF.md`, `STARTED_WORK.md`, `WORK_LOCKS.md`, `OPEN_LOOPS.md`, `TASK_LEDGER.md`, `DEPENDENCIES.md`, `DECISIONS.md`, `FAILED_ATTEMPTS.md` and relevant canonical Source-of-Truth documents. Then reconcile current GitHub/main/PR/CI plus relevant runtime/provider evidence and run the Next Best Action selector. Do not repeat completed, failed, superseded or owner-deferred work. If Project Memory and current evidence disagree, record/reconcile the contradiction before continuing.",
         "",
     ]
     return "\n".join(lines)
@@ -71,6 +71,19 @@ def validate() -> list[str]:
         cross = load_json("CROSS_CHAT_STATE.json")
         if cross.get("repository") != "FanMind/FanMind" or cross.get("status") != "ACTIVE":
             errors.append("cross-chat-state-invalid")
+        rules = cross.get("rules", {})
+        for key in [
+            "require_project_memory_preflight_before_project_answer_or_action",
+            "chat_memory_is_navigation_only",
+            "chat_claim_is_not_evidence",
+            "github_and_project_memory_win_on_conflict",
+            "require_current_evidence_reconciliation",
+            "require_memory_refresh_after_external_chat_completion",
+            "require_next_best_action_refresh",
+            "do_not_repeat_if_verified_elsewhere",
+        ]:
+            if rules.get(key) is not True:
+                errors.append(f"cross-chat-rule-disabled:{key}")
     except Exception as exc:
         errors.append(f"cross-chat-json-invalid:{exc}")
     try:
