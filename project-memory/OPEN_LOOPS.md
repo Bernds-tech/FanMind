@@ -90,6 +90,14 @@ This register contains started, partially completed or follow-up work that could
 - Close when: each old checkbox has been mapped to current evidence or retained as a genuine remaining gate; then close/supersede stale issues deliberately.
 - Next check: issue-level reconciliation, not code reimplementation.
 
+## FM-LOOP-012
+- Related: FM-MEM-008
+- Status: OPEN
+- Updated: 2026-08-20
+- Gap: Project Memory V8 implementation exists in PR #980, but its original branch omitted mandatory V5 active-work bookkeeping and the required Browser E2E evidence on exact head was cancelled during Chromium installation.
+- Close when: V5 Task/Started/Lock/Receipt/Evidence/Assumption/Contradiction records are current, all required exact-head checks including Browser E2E are green, independent countercheck passes and PR #980 is merged or explicitly superseded.
+- Next check: fresh exact-head CI after the reconciliation commits; no acceptance from prior mostly-green evidence.
+
 ## Rules
 - Every `PARTIAL`, `BLOCKED` or `IMPLEMENTED_NOT_VERIFIED` task must have either an open-loop entry or an explicit reason why no follow-up is required.
 - Close loops explicitly; never delete their history.
