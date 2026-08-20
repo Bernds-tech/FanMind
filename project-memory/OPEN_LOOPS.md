@@ -92,13 +92,21 @@ This register contains started, partially completed or follow-up work that could
 
 ## FM-LOOP-012
 - Related: FM-MEM-008
+- Status: CLOSED
+- Updated: 2026-08-20
+- Gap: Project Memory V8 originally omitted mandatory V5 active-work bookkeeping and a prior exact-head Browser E2E run was cancelled.
+- Closed by: final exact PR #980 head `704fec4b6264dd5a0dd83cc8e0029352672485d0` included corrected V5 bookkeeping/generated status and passed Guard, Quality, Status, FanMind CI, Landing, Supply Chain, CodeQL and Browser E2E run #915 before merge `22eb6aed5da4fde47860bbe12b118d3780c8a4a0`.
+- Follow-up: maintain V8; stale handoff/evidence must downgrade to revalidation.
+
+## FM-LOOP-013
+- Related: FM-SEC-001 / issue #982
 - Status: OPEN
 - Updated: 2026-08-20
-- Gap: Project Memory V8 implementation exists in PR #980, but its original branch omitted mandatory V5 active-work bookkeeping and the required Browser E2E evidence on exact head was cancelled during Chromium installation.
-- Close when: V5 Task/Started/Lock/Receipt/Evidence/Assumption/Contradiction records are current, all required exact-head checks including Browser E2E are green, independent countercheck passes and PR #980 is merged or explicitly superseded.
-- Next check: fresh exact-head CI after the reconciliation commits; no acceptance from prior mostly-green evidence.
+- Gap: live Supabase advisors show Production trigger-function privilege/search-path warnings and leaked-password protection disabled; Staging reports an authenticated `SECURITY DEFINER` workspace RPC plus leaked-password protection disabled. Repository hardening code exists but live accepted post-state is not yet proven.
+- Close when: exact-target read-only catalog/ACL/advisor evidence classifies every warning as remediated or explicitly accepted by policy; any approved state-changing action follows the existing R3 protected path with rollback/postflight; fresh advisor scans are bound to exact targets.
+- Next check: existing read-only Production trigger-hardening verify against the exact deployed commit; separately review Staging RPC intent and leaked-password provider setting. No mutation from this loop.
 
 ## Rules
-- Every `PARTIAL`, `BLOCKED` or `IMPLEMENTED_NOT_VERIFIED` task must have either an open-loop entry or an explicit reason why no follow-up is required.
+- Every `PARTIAL`, `BLOCKED`, `IMPLEMENTED_NOT_VERIFIED` or `RECONCILIATION_REQUIRED` task must have either an open-loop entry or an explicit reason why no follow-up is required.
 - Close loops explicitly; never delete their history.
 - A loop may be `OPEN`, `BLOCKED`, `CLOSED` or `SUPERSEDED`.
