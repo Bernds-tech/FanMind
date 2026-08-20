@@ -78,4 +78,22 @@ Append-only audit trail proving the mandatory preflight and independent counterc
 - Open follow-up: exact read-only Production hardening verify, Staging RPC exception review and leaked-password setting decision; separately authorize any later state-changing action.
 - Work lock released: no mutating lock was acquired; acquire one before any Production DB/Auth change.
 
-A receipt is required for meaningful code/config/infra/governance work. Never include secrets, credentials, private backup material or protected evidence values.
+## RECEIPT-FM-SEC-001-NBA-SYNC-20260820
+- Task: FM-SEC-001 / Project Memory NBA orchestration reconciliation
+- Started: 2026-08-20 11:43 Europe/Vienna
+- Finished: branch implementation and reconciliation completed; acceptance is contingent on final exact-head green checks and merge of PR #986.
+- Branch/PR: `project-memory-security-nba-sync-20260820` / #986
+- Preflight checked: FanMind Project Memory preflight, current `main` `06234adb0948959a5a21ce627da53567ab0c38d2`, `CURRENT_STATE.md`, `NEXT_BEST_ACTIONS.json`, generated `NEXT_BEST_ACTION.md`, `AUTO_HANDOFF.md`, `FINISHLINE_STATE.json`, `AUTHORIZATIONS.md`, issue #982, central finishline #874, active FM-SEC-001 registers, current PR/CI state and the existing V8 generator/quality controls.
+- Prior attempts found: the security discovery had already been reconciled into current state/issue #982, but the NBA catalog remained dated 2026-08-19 and omitted `FM-SEC-001`, causing the generator to select Mobile despite the newer security-first restart truth.
+- Dependency result: standing authorization covers Project Memory governance branches/PRs; the correction is read-only governance and requires no Production/Staging/Auth/provider mutation.
+- Planned evidence: machine selector output, automatic handoff equality, Project Memory Guard/Quality/Status, broader FanMind CI/Landing/CodeQL/Browser E2E, and final branch diff limited to Project Memory/governance files.
+- Changes made: added `NBA-SECURITY-READONLY` priority 15 mapped to `FM-SEC-001`/`meta_security`; regenerated the selected NBA and automatic handoff; added a quality invariant tying `CURRENT_STATE.md` first-safe task to the catalog and generated selection; recorded reconciliation finding `RECON-2026-010`.
+- Checks/tests: initial implementation head passed Project Memory Guard, Project Memory Quality (including the new invariant), Project Memory Status and Landing Language CI before this audit receipt was appended; all PR-triggered checks rerun on the final receipt head before merge.
+- Final diff counterchecked: yes; scope is Project Memory/governance only and contains no product/runtime/SQL/Auth/provider mutation.
+- Regression/security countercheck: fail-closed. Restore remains deferred, Mobile remains parallel-safe after Security, Sales remains blocked, Phase 8 remains not started, and the new action explicitly prohibits Apply/Auth/provider mutations.
+- Evidence produced: PR #986, `RECON-2026-010`, generated `NBA-SECURITY-READONLY` handoff and the strengthened quality invariant.
+- Result status: COUNTERCHECKED on the governance design; becomes ACCEPTED only after final PR head remains green and #986 merges.
+- Open follow-up: after merge, execute the selected `FM-SEC-001` read-only Production hardening verify; do not perform Apply or Auth-setting mutations under this governance repair.
+- Work lock released: yes for this repository-governance sync; no Production DB/Auth mutating lock was acquired.
+
+A receipt is required for meaningful code/config/infra/governance work. Never include secrets, credentials, private backup material or protected evidence values here.

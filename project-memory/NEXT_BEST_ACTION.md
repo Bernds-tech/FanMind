@@ -4,15 +4,15 @@ Generated from `FINISHLINE_STATE.json`, `NEXT_BEST_ACTIONS.json` and `DEFERRED_O
 
 - Sales ready: `false`
 - Phase 8 started: `false`
-- Selected action: `NBA-MOBILE-READONLY`
-- Task: `FM-MOB-001`
-- Gate: `mobile` (`IMPLEMENTED_NOT_VERIFIED`)
+- Selected action: `NBA-SECURITY-READONLY`
+- Task: `FM-SEC-001`
+- Gate: `meta_security` (`PARTIAL`)
 - Selection status: `EXECUTABLE`
-- Title: Mobile externen Restpfad read-only reconciliieren
+- Title: Live Supabase Security read-only reconciliieren
 
 ## Instruction
 
-Reconcile current repository, Supabase redirect contract, EAS resource contracts, signing prerequisites and device/store runbooks. Do not create credentials, sign, submit or mutate external resources without the required owner/platform step.
+Run the existing read-only Production trigger-hardening verify against the exact deployed commit; classify the current Staging ensure_current_user_workspace SECURITY DEFINER exposure and leaked-password settings; record current evidence and contradictions. Do not Apply SQL, change Auth settings or mutate Production/Staging in this action.
 
 ## Why this action
 
@@ -21,6 +21,7 @@ standing-authorized safe work
 ## Candidate evaluation
 
 - `NBA-RESTORE-ADMIN-HOST` priority 10: **DEFERRED_BY_OWNER** — FM-RST-OWNER-001
+- `NBA-SECURITY-READONLY` priority 15: **EXECUTABLE** — standing-authorized safe work
 - `NBA-MOBILE-READONLY` priority 20: **EXECUTABLE** — standing-authorized safe work
 - `NBA-AI-LIFECYCLE-RECONCILE` priority 30: **EXECUTABLE** — standing-authorized safe work
 - `NBA-META-TECHNICAL-RECONCILE` priority 40: **EXECUTABLE** — standing-authorized safe work

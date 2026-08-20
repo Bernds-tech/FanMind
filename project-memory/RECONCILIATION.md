@@ -25,3 +25,13 @@ Compare `TASK_LEDGER.md`, `STARTED_WORK.md`, `WORK_LOCKS.md`, `OPEN_LOOPS.md`, `
 - Status: OPEN|RESOLVED|SUPERSEDED
 - Resolved:
 ```
+
+## RECON-2026-010
+- Detected: 2026-08-20 during the new-chat FanMind blind test after the mandatory project-entry preflight was enabled.
+- Task: `FM-SEC-001` / Next-Best-Action orchestration.
+- Mismatch: `CURRENT_STATE.md` and issue #982 identify `FM-SEC-001` as the exact first safe unproven step, while `NEXT_BEST_ACTIONS.json` omitted that task and the generator therefore selected `NBA-MOBILE-READONLY`.
+- Actual state: the live Supabase security reconciliation is open and its next allowed action is read-only Production trigger-hardening verification plus Staging/Auth classification; no protected mutation is authorized by this finding.
+- Memory state: the human restart truth had advanced to security-first, but the machine NBA catalog/handoff had not.
+- Required correction: add a parallel-safe read-only `FM-SEC-001` NBA before Mobile, regenerate the selected NBA and automatic handoff, and fail Project Memory Quality when `CURRENT_STATE.md` first-safe task is absent from or disagrees with the generated NBA.
+- Status: RESOLVED
+- Resolved: PR #986 branch scope implements the catalog/handoff/validator alignment. Acceptance remains contingent on exact-head green checks and merge; no Production/Staging/Auth/provider mutation is part of this reconciliation.
