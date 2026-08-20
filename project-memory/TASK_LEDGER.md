@@ -66,6 +66,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-RST-001
 - Date: 2026-08-17 to 2026-08-19
+- Updated: 2026-08-20
 - Status: PARTIAL
 - Goal: Complete isolated real restore drill.
 - Starting state: Dedicated restore host, PostgreSQL 17 target, runner group/workflows and protected environment already exist.
@@ -77,6 +78,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-MOB-001
 - Date: through 2026-08-19
+- Updated: 2026-08-20
 - Status: IMPLEMENTED_NOT_VERIFIED
 - Goal: Deliver the native FanMind Mobile app through signed Android/iOS builds and real-device/store acceptance.
 - Result: Native Expo/React-Native core, auth/recovery, SecureStore/Purge, contact CRUD/knowledge, AI, follow-ups, offline cache, push foundation, icon/splash/privacy/store metadata and CI/build-control paths are implemented and repository-verified. External signed-build/device/store acceptance is not complete.
@@ -86,6 +88,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-AI-001
 - Date: through 2026-08-19
+- Updated: 2026-08-20
 - Status: PARTIAL
 - Goal: Close KI Standard/Plus/Ultra product, quality, cost, Stripe-lifecycle and activation evidence.
 - Result: Standard is part of the active core. Plus/Ultra pricing/policy, fail-closed entitlement foundation, Staging storage, Test catalog foundation, lifecycle/ledger controls and monitoring/eval tooling exist. Plus/Ultra remain intentionally not productively active.
@@ -95,6 +98,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-META-001
 - Date: through 2026-08-19
+- Updated: 2026-08-20
 - Status: PARTIAL
 - Goal: Finish Meta Events Manager, Meta external acceptance and final Meta/Security evidence.
 - Result: Consent-gated PageView-only Pixel code is production-confirmed; Meta Facebook/Instagram data/token/content/conversation foundations are advanced and Staging foundations exist. External Events Manager/Test Events, App Review/permissions, real account/webhook/conversation E2E and required legal acceptance remain open.
@@ -104,6 +108,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-SOC3-001
 - Date: 2026-08-19 reconciliation of prior work
+- Updated: 2026-08-20
 - Status: PARTIAL
 - Goal: Real technical acceptance of Phase 3 — Facebook, Instagram and WhatsApp.
 - Result: Facebook/Instagram foundations are advanced; WhatsApp dormant inbound foundation is merged. None of the three has the final real external Phase-3 E2E acceptance required for sales handoff.
@@ -113,6 +118,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-SOC7-001
 - Date: 2026-08-19 reconciliation of prior work
+- Updated: 2026-08-20
 - Status: PARTIAL
 - Goal: Real technical acceptance of Phase 7 — TikTok, X/Twitter, Discord and conditional OnlyFans.
 - Result: Platform feasibility has been partially researched/documented; no complete real Phase-7 connector acceptance exists.
@@ -122,6 +128,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-SALES-001
 - Date: 2026-08-19 reconciliation of prior work
+- Updated: 2026-08-20
 - Status: BLOCKED
 - Goal: Technical sales handoff to Gerhard with production truth aligned to actual sellable scope.
 - Blocked by: real technical acceptance of required Phase-3 and Phase-7 channels and final finishline evidence.
@@ -132,6 +139,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-LEGAL-001
 - Date: through 2026-08-19
+- Updated: 2026-08-20
 - Status: BLOCKED
 - Goal: External legal/tax/AVV completion where required.
 - Result: technical/public reader framework and confirmed operator data exist; external legal, tax, registration and final AVV/provider evidence remains incomplete.
