@@ -135,11 +135,25 @@ Implementation status and acceptance status are deliberately separate.
 ## FM-EV-013
 - Related: FM-MEM-008
 - Date: 2026-08-20
-- Target: PR #980 Project Memory V8
-- Type: implementation evidence + independent CI countercheck
-- Reference: prior exact head `ba48a7cab55ca45a98b62713bbc07989073589fc`; GitHub workflow runs for that head
-- Result: V8 files/checker existed and Project Memory Guard/Quality/Status, FanMind CI, Supply Chain Security, Landing Language CI and CodeQL were green. Browser E2E did not execute its public/synthetic flows because both jobs were cancelled during Chromium installation.
-- Limitations: this exact head is superseded by V5 bookkeeping commits; the cancelled Browser E2E means the prior head never reached the required R3 acceptance quorum. Fresh exact-head evidence is required after reconciliation.
-- Acceptance: IMPLEMENTED_NOT_VERIFIED
+- Target: PR #980 / merged Project Memory V8
+- Type: implementation evidence + independent exact-head CI countercheck
+- Reference: final exact head `704fec4b6264dd5a0dd83cc8e0029352672485d0`; Browser E2E run #915; merge `22eb6aed5da4fde47860bbe12b118d3780c8a4a0`
+- Result: after rejecting an earlier cancelled Browser E2E as insufficient, the final head passed Project Memory Guard, Quality, Status, FanMind CI, Supply Chain Security, Landing Language CI, CodeQL and Browser E2E before merge.
+- Independent evidence: repository/CI checks and Browser E2E are separate from the implementation diff; merge commit is bound to the accepted head.
+- Limitations: V8 acceptance covers governance/memory behavior only and does not close product/runtime/provider/device finishline gates.
+- Status path: IMPLEMENTED -> VERIFIED -> COUNTERCHECKED -> ACCEPTED.
+- Acceptance: ACCEPTED
+
+## FM-EV-014
+- Related: FM-SEC-001 / issue #982
+- Date: 2026-08-20
+- Target: live FanMind Production Supabase `drqkpdvtbbrrdwmtrodz` and FanMind Staging `vshyhvgcmrlagvfnvomc`
+- Type: independent provider security-advisor evidence
+- Reference: fresh Supabase project health + security advisor scans; current repository controlled hardening SQL/runbook and workspace-provisioning migration
+- Result: both projects are `ACTIVE_HEALTHY`. Production advisors still report mutable `search_path` for three trigger helpers, browser execution of retired `trim_conversation_messages_to_latest_50()` as `SECURITY DEFINER`, and leaked-password protection disabled. Staging reports authenticated execution of `ensure_current_user_workspace(...)` as `SECURITY DEFINER` and leaked-password protection disabled. RLS/no-policy findings are informational and include service-only/internal tables.
+- Repository crosscheck: the Production trigger warnings match the explicit pre-apply state described by `docs/operations/TRIGGER_FUNCTION_HARDENING_PRODUCTION.md`; the controlled SQL would pin search paths/revoke browser execution but is intentionally not auto-applied. The Staging workspace RPC grant is explicit and guarded by authenticated identity checks, so its warning needs intentional-exception review rather than blind revoke.
+- Limitations: advisor output alone does not prove catalog ACL details or authorize mutation; no Production DB/Auth change was performed.
+- Falsification: a fresh catalog/ACL/advisor read showing the target already hardened or a mismatch between the controlled migration and deployed target invalidates this baseline.
+- Acceptance: COUNTERCHECKED_NOT_ACCEPTED
 
 Never store secrets, private credentials, plaintext sensitive payloads, or unsafe diagnostic material here.
