@@ -116,4 +116,19 @@ Statuses: `OPEN`, `RECONCILIATION_REQUIRED`, `RESOLVED`, `SUPERSEDED`.
 - Resolution/action: before next roadmap/public-truth update, determine whether Phase-5 wording should be advanced without overstating the still-open feature-specific external gates. Do not rebuild Staging merely because roadmap UI remains conservative.
 - Evidence: `src/config/roadmap.ts`; #874 Gate 1; deep audit.
 
+## CTR-FM-009
+- Date: 2026-08-20
+- Updated: 2026-08-20
+- Related task/change: FM-SEC-001 / issue #982
+- Risk: R3
+- Source A: current repository controlled Production hardening SQL/runbook
+- Claim A: code exists to pin the three trigger helper search paths and revoke direct browser execution of the optional retired retention function, but the runbook explicitly says merge/deploy does not auto-apply this Production database mutation.
+- Source B: fresh live Production Supabase security advisors
+- Claim B: the three mutable-search-path warnings and both browser-execution warnings for `trim_conversation_messages_to_latest_50()` are still present; leaked-password protection is also disabled.
+- Stronger/current evidence: both sources agree that implementation exists but accepted live post-state is not yet proven; any older wording implying Production hardening is complete would be stale.
+- Status: RECONCILIATION_REQUIRED
+- Resolution/action: run the existing exact-commit read-only Production verify; if the allowed pre-state is confirmed, use only the separately protected controlled Apply when explicitly authorized, then postflight and re-scan advisors. Keep Auth leaked-password setting as a separate provider decision/evidence path. Do not invent browser RLS policies for intentional service-only tables.
+- Evidence: live Supabase advisor scan 2026-08-20; `supabase/controlled/20260806203023_harden_trigger_function_privileges.sql`; `docs/operations/TRIGGER_FUNCTION_HARDENING_PRODUCTION.md`.
+- Falsification question: What observation would prove our conclusion wrong? A fresh catalog/ACL/advisor read showing the live Production state is already hardened, or evidence that the deployed target no longer matches the controlled migration/runbook, would invalidate this reconciliation before mutation.
+
 Never resolve a contradiction by deleting the older record. Document which source was stale or wrong and why.
