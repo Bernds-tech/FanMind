@@ -11,7 +11,16 @@ Prevents two agents/sessions from independently working the same task.
 
 ## Active locks
 
-None.
+## LOCK-FM-MEM-008
+- Task: FM-MEM-008
+- Status: ACTIVE
+- Holder: scheduled Project Memory reconciliation 2026-08-20
+- Branch/PR: `project-memory-v8-crosschat-impact` / #980
+- Acquired: 2026-08-20 08:22 Europe/Vienna
+- Updated: 2026-08-20
+- Scope: V5 bookkeeping and exact-head evidence reconciliation for the existing V8 governance PR only; no product/runtime/provider mutation.
+- Resume from: fresh exact-head CI after bookkeeping changes; require Browser E2E and all existing gates before acceptance.
+- Released: pending successful exact-head countercheck/merge or explicit supersession.
 
 ## Released locks
 
