@@ -48,7 +48,7 @@ Implementation status and acceptance status are deliberately separate.
 - Target: Production backup pipeline, read-only verification
 - Type: encrypted Full Backup + checksum verification
 - Reference: Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c`; Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1`
-- Result: succeeded/validation passed/offsite uploaded; Schema 2 authorization contract; 23 roles, 5 extensions, 174 ACL TOC, 24 default ACL TOC, Core Grant Matrix 120, 12 restricted Security Definer functions; checksum verification succeeded without restore
+- Result: succeeded/validation passed/offsite uploaded; Schema 2 authorization contract; checksum verification succeeded without restore
 - Limitations: no decryption/real restore acceptance
 - Acceptance: VERIFIED
 
@@ -58,7 +58,7 @@ Implementation status and acceptance status are deliberately separate.
 - Target: isolated Restore operator environment
 - Type: operator-session infrastructure evidence
 - Reference: restore-session record summarized in `FANMIND_DEEP_AUDIT_2026-08-19.md`
-- Result: isolated VM, Ubuntu 24.04, PostgreSQL 17.11, Node 24.19.0, target DB `fanmind_restore`, bootstrap `fanmind_restore_bootstrap`, local PostgreSQL, TLS verify-full, non-sudo restore user, environment/age/runner-group setup were established in the working session
+- Result: isolated VM, Ubuntu 24.04, PostgreSQL 17.11, Node 24.19.0, target DB `fanmind_restore`, bootstrap login, local PostgreSQL, TLS verify-full, non-sudo restore user, environment/age/runner-group setup were established in the working session
 - Limitations: live state may drift and the current connector cannot independently attest the complete GitHub runner-group Admin policy; mandatory revalidation before R4 write
 - Acceptance: VERIFIED_NOT_ACCEPTED
 
@@ -131,5 +131,15 @@ Implementation status and acceptance status are deliberately separate.
 - Result: Project Memory Guard, Project Memory Status, Project Memory Quality V6 including Sales Readiness and Canonical Truth Drift, FanMind CI including PG17/Operations/Stripe policies/Production build, Landing Language CI, Supply Chain Security, CodeQL and both Browser E2E jobs all passed before merge
 - Limitations: acceptance covers the V6 memory/finishline governance system only; it does not close Restore, Mobile, AI/Billing, Meta/Security, Social or Sales Handoff gates
 - Acceptance: ACCEPTED
+
+## FM-EV-013
+- Related: FM-MEM-008
+- Date: 2026-08-20
+- Target: PR #980 Project Memory V8
+- Type: implementation evidence + independent CI countercheck
+- Reference: prior exact head `ba48a7cab55ca45a98b62713bbc07989073589fc`; GitHub workflow runs for that head
+- Result: V8 files/checker existed and Project Memory Guard/Quality/Status, FanMind CI, Supply Chain Security, Landing Language CI and CodeQL were green. Browser E2E did not execute its public/synthetic flows because both jobs were cancelled during Chromium installation.
+- Limitations: this exact head is superseded by V5 bookkeeping commits; the cancelled Browser E2E means the prior head never reached the required R3 acceptance quorum. Fresh exact-head evidence is required after reconciliation.
+- Acceptance: IMPLEMENTED_NOT_VERIFIED
 
 Never store secrets, private credentials, plaintext sensitive payloads, or unsafe diagnostic material here.
