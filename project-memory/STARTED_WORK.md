@@ -139,6 +139,22 @@ Canonical register for FanMind work that has started but is not yet fully comple
 - Exact next step: incorporate only confirmed external evidence when received.
 - Owner action needed: yes/external advisors.
 
+## FM-MEM-008
+- Started: 2026-08-19
+- Updated: 2026-08-20
+- Status: IMPLEMENTED_NOT_VERIFIED
+- Risk: R3
+- Scope: Project Memory V8 cross-chat reconciliation, impact matrix, owner-action inbox, automatic handoff and V8 quality enforcement.
+- Branch/PR: `project-memory-v8-crosschat-impact` / #980.
+- Work lock: `LOCK-FM-MEM-008` ACTIVE on the PR branch during reconciliation.
+- Dependencies: existing V6/V7 Project Memory and all existing FanMind/security/browser gates; no product/runtime/provider mutation.
+- Assumptions: a mostly-green check set is not enough if Browser E2E is cancelled; exact-head evidence must be fresh after bookkeeping changes.
+- Completed so far: V8 implementation exists; Guard/Quality/Status, FanMind CI, Supply Chain, Landing and CodeQL were green on prior exact head `ba48a7cab55ca45a98b62713bbc07989073589fc`.
+- Still open: V5 bookkeeping was missing; prior Browser E2E was cancelled during Chromium installation; new commits require a fresh exact-head complete check set and independent countercheck.
+- Evidence so far: PR #980 metadata, workflow runs and Browser E2E job evidence.
+- Exact next step: finish Task/Started/Lock/Receipt/Loop/Evidence/Assumption/Contradiction reconciliation, then require fresh Browser E2E and all required checks before merge.
+- Owner action needed: none unless a genuinely owner-only action appears in the V8 inbox.
+
 ## Closed work
 
 ## FM-MEM-005
