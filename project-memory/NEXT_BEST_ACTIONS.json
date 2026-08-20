@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-08-19",
+  "updated": "2026-08-20",
   "selection_rule": "Choose the lowest-priority-number unresolved action whose prerequisites are satisfied and that is safe under current standing authorization. If an earlier unresolved action is owner-required or DEFERRED_BY_OWNER, only later actions explicitly marked parallel_safe=true may be selected. Deferral never closes or downgrades the earlier gate.",
   "actions": [
     {
@@ -15,6 +15,18 @@
       "prerequisite_gates": ["memory_v6", "staging"],
       "done_states": ["ACCEPTED", "PRODUCTION_CONFIRMED"],
       "instruction": "Resume the deferred runner-group administrator evidence with the owner, then run secret-free Host Toolchain Readiness and advance only with current evidence."
+    },
+    {
+      "id": "NBA-SECURITY-READONLY",
+      "priority": 15,
+      "task": "FM-SEC-001",
+      "gate": "meta_security",
+      "title": "Live Supabase Security read-only reconciliieren",
+      "requires_owner": false,
+      "parallel_safe": true,
+      "prerequisite_gates": ["memory_v6", "staging"],
+      "done_states": ["ACCEPTED", "PRODUCTION_CONFIRMED"],
+      "instruction": "Run the existing read-only Production trigger-hardening verify against the exact deployed commit; classify the current Staging ensure_current_user_workspace SECURITY DEFINER exposure and leaked-password settings; record current evidence and contradictions. Do not Apply SQL, change Auth settings or mutate Production/Staging in this action."
     },
     {
       "id": "NBA-MOBILE-READONLY",
