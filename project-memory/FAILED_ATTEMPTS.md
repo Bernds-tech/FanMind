@@ -71,3 +71,13 @@ Record failed, unsafe, superseded or misleading approaches here. Do not store se
 - Cause: canonical restore readers were not yet updated after organization change/setup.
 - Decision: Ownership claim is invalidated; exact runner-group Admin policy still requires independent live revalidation before Restore dispatch.
 - Do not repeat: Do not redo org transfer and do not infer runner authorization from labels or org ownership alone.
+
+## FM-FAIL-008
+- Date: 2026-08-20
+- Status: DONE
+- Area: V5/R3 acceptance evidence
+- Attempt: Treat PR #980 as ready for R3 acceptance while its required exact-head Browser E2E run had been cancelled during Chromium installation and its first V8 branch omitted active-work bookkeeping.
+- Result: The mostly-green check set was insufficient for R3 quorum and could have skipped the required independent countercheck/status path.
+- Cause: implementation and most CI evidence were present, but one required evidence class and mandatory V5 records were incomplete.
+- Decision: reject the cancelled run as evidence, reconcile the V5 registers/generated status, obtain a fresh exact-head complete check set, and only then merge/accept.
+- Do not repeat: never convert `cancelled`, `skipped`, stale-head or partial check evidence into `COUNTERCHECKED`/`ACCEPTED` merely because other gates are green.
