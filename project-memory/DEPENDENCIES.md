@@ -67,13 +67,21 @@ Track ordering and prerequisites here. Do not mark dependent work accepted while
 - Rule: do not guess UID/register/tax/legal/AVV/provider facts; technical checks cannot self-approve legal status.
 
 ## FM-DEP-009
-- From: FM-MEM-005
-- Requires: exact PR #975 head and terminal green Project Memory Guard/Quality V6/Status plus FanMind CI/Supply Chain/Landing/CodeQL/Browser E2E gates.
+- From: FM-MEM-005 / FM-MEM-008
+- Requires: exact governance PR heads and terminal green Project Memory/FanMind/Security/Browser gates.
 - Type: repository governance
 - Status: SATISFIED
-- Updated: 2026-08-19
-- Evidence: exact head `2a62dc8337673be0b33acfd4338d0f452224e779` passed all applicable checks and PR #975 merged as `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d`.
-- Rule: V6 is now the active mainline system; do not reopen this dependency unless V6 itself materially changes.
+- Updated: 2026-08-20
+- Evidence: V6 exact head `2a62dc8337673be0b33acfd4338d0f452224e779` passed all applicable checks and PR #975 merged as `b4bef882a55e8c0dd1dd33d0ad1c1664c3078d0d`; V8 exact head `704fec4b6264dd5a0dd83cc8e0029352672485d0` passed the full gate set including Browser E2E and PR #980 merged as `22eb6aed5da4fde47860bbe12b118d3780c8a4a0`.
+- Rule: V8 is now the active mainline memory layer; reopen only on material drift/contradiction.
+
+## FM-DEP-010
+- From: FM-SEC-001
+- Requires: exact live Production/Staging Supabase target identity and health; exact deployed Production commit; read-only catalog/ACL/advisor evidence; checksum-pinned controlled trigger-hardening runner/runbook; explicit provider/owner authorization before any Production DB or Auth-setting mutation; fresh post-action advisor evidence.
+- Type: security + external provider + protected mutation
+- Status: ACTIVE
+- Updated: 2026-08-20
+- Rule: read-only reconciliation may proceed automatically. Production DB/Auth mutation must remain fail-closed under its existing protected control; do not revoke intentional RPC access or add browser RLS policies merely to silence an advisor without policy review.
 
 ## Dependency states
 `ACTIVE`, `SATISFIED`, `BLOCKED`, `SUPERSEDED`.
