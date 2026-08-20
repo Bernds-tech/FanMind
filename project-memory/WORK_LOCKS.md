@@ -15,7 +15,7 @@ Prevents two agents/sessions from independently working the same task.
 - Task: FM-RST-001
 - Status: ACTIVE
 - Holder: ChatGPT Restore schema-ACL recovery session 2026-08-20
-- Branch/PR: `restore-schema-acl-recovery-20260820` / PR pending
+- Branch/PR: `restore-schema-acl-recovery-20260820` / #987
 - Acquired: 2026-08-20 16:10 Europe/Vienna
 - Updated: 2026-08-20
 - Scope: implement and verify the fail-closed recovery of the two Supabase schema ACL baselines (`graphql`, `graphql_public`) that the accepted Schema-2 authorization contract proves but the bare PostgreSQL restore did not materialize; no Production or Supabase Staging mutation.
