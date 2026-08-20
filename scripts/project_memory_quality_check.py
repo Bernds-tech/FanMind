@@ -19,6 +19,7 @@ required = [
     "OPEN_LOOPS.md",
     "DEPENDENCIES.md",
     "EVIDENCE.md",
+    "CURRENT_STATE.md",
     "FANMIND_FINISHLINE.md",
     "FINISHLINE_STATE.json",
     "RESTORE_STATE_MACHINE.md",
@@ -77,6 +78,7 @@ if state_path.exists():
             errors.append(f"finishline-gate-missing:{gate}")
 
 catalog_path = PM / "NEXT_BEST_ACTIONS.json"
+catalog = {}
 if catalog_path.exists():
     try:
         catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
@@ -100,6 +102,32 @@ if catalog_path.exists():
             errors.append(f"next-action-parallel-safe-missing:{action_id}")
         if action.get("requires_owner") not in {True, False}:
             errors.append(f"next-action-requires-owner-missing:{action_id}")
+
+# `CURRENT_STATE.md` owns the human-readable exact next safe sequence. It must
+# never point to a task that is absent from the machine NBA catalog, and the
+# generated selection must name the same task. This prevents cross-chat drift
+# where a newly discovered urgent read-only task is documented but never made
+# selectable by the generator.
+current_state = (PM / "CURRENT_STATE.md").read_text(encoding="utf-8") if (PM / "CURRENT_STATE.md").exists() else ""
+first_safe = re.search(
+    r"(?ms)^## Exact next safe sequence\s*\n\s*1\. \*\*([A-Z0-9-]+):\*\*",
+    current_state,
+)
+if not first_safe:
+    errors.append("current-state-first-safe-task-missing")
+else:
+    first_safe_task = first_safe.group(1)
+    catalog_tasks = {str(a.get("task")) for a in catalog.get("actions", []) if a.get("task")}
+    if first_safe_task not in catalog_tasks:
+        errors.append(f"current-state-first-safe-task-not-in-nba-catalog:{first_safe_task}")
+    next_action_text = (PM / "NEXT_BEST_ACTION.md").read_text(encoding="utf-8") if (PM / "NEXT_BEST_ACTION.md").exists() else ""
+    selected_task = re.search(r"(?m)^- Task: `([^`]+)`\s*$", next_action_text)
+    if not selected_task:
+        errors.append("generated-next-action-task-missing")
+    elif selected_task.group(1) != first_safe_task:
+        errors.append(
+            f"current-state-generated-next-action-task-mismatch:{first_safe_task}!={selected_task.group(1)}"
+        )
 
 branch_contract = json.loads((PM / "BRANCH_PROTECTION_CONTRACT.json").read_text(encoding="utf-8"))
 if branch_contract.get("branch") != "main" or branch_contract.get("require_pull_request") is not True:
