@@ -11,7 +11,16 @@ Prevents two agents/sessions from independently working the same task.
 
 ## Active locks
 
-No active implementation lock is held by this reconciliation. `FM-SEC-001` is currently read-only reconciliation; acquire a new dedicated lock before any Production DB/Auth mutation.
+## LOCK-FM-RST-001-SCHEMA-ACL-RECOVERY-20260820
+- Task: FM-RST-001
+- Status: ACTIVE
+- Holder: ChatGPT Restore schema-ACL recovery session 2026-08-20
+- Branch/PR: `restore-schema-acl-recovery-20260820` / PR pending
+- Acquired: 2026-08-20 16:10 Europe/Vienna
+- Updated: 2026-08-20
+- Scope: implement and verify the fail-closed recovery of the two Supabase schema ACL baselines (`graphql`, `graphql_public`) that the accepted Schema-2 authorization contract proves but the bare PostgreSQL restore did not materialize; no Production or Supabase Staging mutation.
+- Resume from: operator evidence proved the real database restore completed, canonical TLS connectivity works, authorization role/container/extension preflight passes, archive ACL SQL is identical, and the remaining authorization mismatch is exactly eight missing schema grant tuples: four on `graphql` and four on `graphql_public`.
+- Safety: repository code/tests/Project Memory only until reviewed PR acceptance; any later isolated-target mutation must use the protected R4 Restore path and never Production or Supabase Staging.
 
 ## Released locks
 
