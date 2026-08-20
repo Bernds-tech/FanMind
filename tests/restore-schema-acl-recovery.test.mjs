@@ -201,7 +201,7 @@ test("schema ACL recovery remains inside the protected R4 database-restore write
     readFile(path.join(repoRoot, "scripts/operations/run-database-restore-drill.sh"), "utf8"),
   ]);
 
-  assert.match(workflow, /\[\[ \"\$REQUESTED_CONFIRMATION\" == 'run-isolated-database-restore' \]\]/u);
+  assert.match(workflow, /\[\[ "\$REQUESTED_CONFIRMATION" == 'run-isolated-database-restore' \]\]/u);
   assert.match(workflow, /environment: restore-drill/u);
   assert.match(workflow, /FANMIND_ENABLE_NON_PRODUCTION_WRITES: 'true'/u);
   assert.match(workflow, /FANMIND_NON_PRODUCTION_WRITE_ACK: I_UNDERSTAND_NON_PRODUCTION_ONLY/u);
