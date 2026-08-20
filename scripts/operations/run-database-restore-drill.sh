@@ -1082,6 +1082,41 @@ then
 fi
 exec {restore_toc_fd}<&-
 
+# Supabase marks the graphql/graphql_public schema ACLs as extension-initial
+# privileges in pg_init_privs. pg_dump therefore treats those four USAGE
+# grants per schema as baseline and does not emit SQL that recreates them on a
+# bare PostgreSQL target. Repair only that exact proven eight-tuple gap. The
+# helper is fail-closed on every other contract difference, verifies the
+# owner-only target precondition, applies the bounded grants as supabase_admin,
+# and automatically rolls them back unless the unchanged full authorization
+# contract matches the private Full Backup Receipt afterwards.
+if ! schema_acl_recovery_result="$(
+  env \
+    -u PGHOSTADDR \
+    -u PGSERVICE \
+    -u PGSERVICEFILE \
+    -u PGPASSWORD \
+    -u PGOPTIONS \
+    PGPASSFILE="$snapshot_passfile" \
+    PGSSLMODE="verify-full" \
+    PGSSLROOTCERT="$snapshot_ca_certificate" \
+    PGGSSENCMODE="disable" \
+    node scripts/operations/restore-schema-acl-recovery.mjs \
+      apply \
+      --receipt "$snapshot_full_receipt" \
+      --psql-bin "$psql_bin" \
+      --host "$PGHOST" \
+      --port "$PGPORT" \
+      --username "$PGUSER" \
+      --dbname "$PGDATABASE" \
+      2>/dev/null
+)"
+then
+  fail "database_schema_acl_recovery_failed"
+fi
+[[ "$schema_acl_recovery_result" =~ ^SCHEMA_ACL_RECOVERY=(APPLIED|NOT_NEEDED)$ ]] \
+  || fail "database_schema_acl_recovery_result_invalid"
+
 FANMIND_RESTORE_COMPLETED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
   || fail "completed_timestamp_failed"
 export FANMIND_RESTORE_COMPLETED_AT

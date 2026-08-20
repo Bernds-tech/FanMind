@@ -97,3 +97,21 @@ Append-only audit trail proving the mandatory preflight and independent counterc
 - Work lock released: yes for this repository-governance sync; no Production DB/Auth mutating lock was acquired.
 
 A receipt is required for meaningful code/config/infra/governance work. Never include secrets, credentials, private backup material or protected evidence values here.
+
+## RECEIPT-FM-RST-001-SCHEMA-ACL-20260820
+- Task: FM-RST-001
+- Started: 2026-08-20 16:10 Europe/Vienna
+- Finished: repository implementation and branch-level reconciliation completed; exact-head R4 acceptance and protected isolated rerun remain pending.
+- Branch/PR: `restore-schema-acl-recovery-20260820` / #987
+- Preflight checked: current `main` `12d7ecd4cb0c8b3a1a8104745479d3cf29a1dc2f`, AGENTS, Source of Truth, Project Memory Protocol/Current State/Finishline/NBA/Owner Inbox/Handoff/Started Work/Locks/Open Loops/Task Ledger/Dependencies/Decisions/Failed Attempts, Restore state machine/runbook, current PR/CI and operator evidence from the isolated Restore target.
+- Prior attempts found: the real isolated `pg_restore` completed; the unchanged receipt-bound authorization postcheck failed only after restore. Later read-only reconciliation localized the source/target difference to exactly eight missing `USAGE` schema grant tuples across `graphql` and `graphql_public`. Earlier manual diagnostics that hardcoded `127.0.0.1` were not valid evidence for the canonical TLS host and are not used as the root-cause basis. No rerestore or manual grant repair is accepted.
+- Dependency result: existing Restore host/PG17/TLS/runner/backup foundation is reused; no second server and no Production/Supabase-Staging target. Any future target write remains inside the protected `restore-drill` database workflow with exact dispatch confirmation, both non-Production/Restore write gates, target acknowledgement, TLS `verify-full` and the existing receipt-bound target preflight.
+- Planned evidence: exact eight-tuple classifier, exact schema/owner/non-extension/ACL precondition, bounded grant SQL and inverse rollback, unchanged full authorization fingerprint after apply, focused negative tests, CI ownership of the new test, full exact-head PR CI/security/governance set, then a fresh protected isolated Restore rerun through `DB_POSTCHECKED`.
+- Changes made: added `restore-schema-acl-recovery.mjs`; wired it immediately after `pg_restore` and before the unchanged authorization postcheck; added automatic rollback+verification on post-apply mismatch; added focused tests including explicit protected R4 workflow-gate assertions; added the new test to required `test:operations`; recorded root cause and active R4 lock.
+- Checks/tests: initial PR head passed Project Memory Guard/Quality/Status, Landing, Browser E2E and CodeQL; FanMind CI had exactly one policy failure because the new test file was not yet included in a required CI root. That ownership gap was corrected in `package.json`; the focused test now also asserts the exact protected Restore confirmation/write/TLS gates. Final exact-head checks are still required before merge.
+- Final diff counterchecked: yes for current scope; final exact-head CI countercheck remains pending.
+- Regression/security countercheck: fail-closed by design. Recovery is a no-op on a matching contract, rejects any invariant drift or grant delta other than eight, requires exact two schemas owned by `supabase_admin`, rejects extension membership/unexpected ACL entries, applies no broad grants, and has an exact inverse rollback. The final receipt-bound authorization contract remains unchanged as the acceptance oracle.
+- Evidence produced: PR #987, focused recovery tests, protected-gate policy test, current GitHub CI history and the isolated operator/source reconciliation record.
+- Result status: IMPLEMENTED.
+- Open follow-up: wait for the final exact PR head to pass all required checks; then merge. Only after merge may the protected isolated database Restore be freshly rerun. Do not mark `DB_POSTCHECKED`, `COUNTERCHECKED` or `ACCEPTED` until that external R4 evidence exists.
+- Work lock released: no; keep `LOCK-FM-RST-001-SCHEMA-ACL-RECOVERY-20260820` active until merge/countercheck reconciliation.

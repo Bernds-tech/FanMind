@@ -13,19 +13,20 @@ Canonical register for FanMind work that has started but is not yet fully comple
 
 ## FM-RST-001
 - Started: 2026-08-17
-- Updated: 2026-08-19
-- Status: PARTIAL
+- Updated: 2026-08-20
+- Status: RECONCILIATION_REQUIRED
 - Risk: R4
-- Scope: Complete the isolated real FanMind restore drill without touching Production or Supabase Staging.
-- Branch/PR: current restore workflows on main; no new parallel restore branch until current evidence is revalidated.
-- Work lock: acquire before next mutating restore step.
+- Scope: Complete the isolated real FanMind restore drill without touching Production or Supabase Staging; current implementation work is limited to the proven Schema-2 schema-ACL recovery gap on the bare PostgreSQL target.
+- Branch/PR: `restore-schema-acl-recovery-20260820` / #987.
+- Work lock: `LOCK-FM-RST-001-SCHEMA-ACL-RECOVERY-20260820` ACTIVE.
 - Dependencies: FM-DEP-001; current Org runner-group/workflow-allowlist/JIT policy; existing isolated host/target; exact Schema-2 Full Backup; protected environment.
-- Assumptions: operator-session setup exists but live state may drift; revalidate before use.
-- Completed so far: ACL/default-ACL/Owner/Role/DB-container/Extension recovery contract merged/deployed; real PG17 two-cluster CI passed; new Schema-2 encrypted Full Backup validated and offsite; checksum verification passed; isolated Ubuntu/PG17.11/Node24.19/TLS/target/runner foundation established in operator session.
-- Still open: live policy/host/target/artifact revalidation; Resource Readiness; Target Compatibility; DB Restore; DB postcheck; Storage; Server Config; Cleanup; final evidence/acceptance.
-- Evidence so far: PR #943, issue #944, issue #874, Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c`, Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1`, deep audit.
-- Exact next step: follow `RESTORE_STATE_MACHINE.md` from current `BACKUP_ACCEPTED` state with fresh read-only revalidation; do not reprovision the server.
-- Owner action needed: only for platform/environment/mutating gate confirmations that remain required.
+- Assumptions: the operator-session target remains disposable and isolated; all mutable host/runner evidence must be revalidated before any later write rerun.
+- Completed so far: ACL/default-ACL/Owner/Role/DB-container/Extension recovery contract merged/deployed; real PG17 two-cluster CI passed; new Schema-2 encrypted Full Backup validated and offsite; checksum verification passed; isolated Ubuntu/PG17.11/Node24.19/TLS/target/runner foundation established; the real database restore ran successfully on the isolated target; canonical TLS connection, role/container/extension preflight and full authorization capture now pass; archive ACL/DEFAULT ACL SQL source-vs-target is identical; PR #987 implements the bounded eight-tuple schema-ACL recovery with rollback and unchanged final receipt-bound authorization verification.
+- Latest reconciled blocker: receipt-bound authorization comparison fails only because the restored target has eight fewer schema grant tuples. Read-only Production/source evidence and isolated-target evidence localize all eight to `graphql` and `graphql_public`: each target schema retains only its two owner-default privileges while the source contract additionally has `USAGE` for `anon`, `authenticated`, `service_role`, and `postgres` with grant option. These source ACLs are represented as `pg_init_privs` baseline and are therefore not recreated by normal pg_dump/pg_restore on a bare PostgreSQL target.
+- Still open: exact-head CI/security/governance countercheck and merge of #987; then fresh protected isolated DB restore/postcheck rerun before Storage, Server Config, Cleanup and final acceptance.
+- Evidence so far: PR #943, issue #944, issue #874, Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c`, Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1`, restore workflow run `32126829563` attempt 5 / job `96376838764`, operator read-only diagnostics on 2026-08-20, current Production catalog read-only comparison and PR #987.
+- Exact next step: require the final #987 head to pass all applicable checks, countercheck the exact diff and merge only when green; after merge rerun only the protected isolated R4 Restore path. No manual GRANT repair and no Production/Supabase-Staging mutation.
+- Owner action needed: not for repository code/tests/PR work; protected Restore runner/target mutation remains R4-controlled and requires the existing external/admin gates to be current before rerun.
 
 ## FM-MOB-001
 - Started: before 2026-08-19
