@@ -5,8 +5,8 @@ Generated from current Project Memory. Chat memory is a navigation hint only; ch
 - Repository: `FanMind/FanMind`
 - Sales ready: `false`
 - Phase 8 started: `false`
-- Next action: `NBA-MOBILE-READONLY`
-- Next action title: Mobile externen Restpfad read-only reconciliieren
+- Next action: `NBA-SECURITY-READONLY`
+- Next action title: Live Supabase Security read-only reconciliieren
 
 ## Finishline gates
 
