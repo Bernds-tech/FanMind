@@ -5,6 +5,7 @@ import { constants } from "node:fs";
 import {
   mkdtemp,
   open,
+  readFile,
   rm,
   symlink,
   writeFile,
@@ -20,6 +21,14 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const OWNER_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{0,37}[a-z0-9])?$/iu;
 const FORBIDDEN_OWNER_PATTERN = /^(?:owner|example|placeholder|fanmind)$/iu;
+const RELEASE_READINESS_WORKFLOW_URL = new URL(
+  "../../.github/workflows/mobile-release-resource-readiness.yml",
+  import.meta.url,
+);
+const SIGNED_BUILD_WORKFLOW_URL = new URL(
+  "../../.github/workflows/mobile-signed-internal-build.yml",
+  import.meta.url,
+);
 
 function fail(code) {
   const error = new Error(code);
@@ -144,6 +153,38 @@ export async function verifyEasProjectInfoFile(
   });
 }
 
+function assertWorkflowBinding(workflow, { signedBuild }) {
+  const lookupMarker = "eas-cli@21.2.0 project:info";
+  const verifierMarker =
+    "node ../../scripts/operations/mobile-eas-project-info-verify.mjs";
+  assert.equal((workflow.match(/eas-cli@21\.2\.0 project:info/gu) ?? []).length, 1);
+  assert.equal(
+    (workflow.match(/mobile-eas-project-info-verify\.mjs/gu) ?? []).length,
+    1,
+  );
+  assert.ok(workflow.indexOf(lookupMarker) >= 0);
+  assert.ok(workflow.indexOf(verifierMarker) > workflow.indexOf(lookupMarker));
+  assert.match(workflow, /project:info >"\$REPORT_PATH" 2>&1/u);
+  assert.match(workflow, /"\$REPORT_PATH"; then/u);
+  assert.match(workflow, /umask 077/u);
+  assert.doesNotMatch(
+    workflow,
+    /\bcat\s+"\$REPORT_PATH"|\becho\s+"\$(?:cat|<)/u,
+  );
+
+  if (signedBuild) {
+    assert.ok(
+      workflow.indexOf(verifierMarker)
+      < workflow.indexOf("Authorize exactly one signed internal build"),
+    );
+  } else {
+    assert.doesNotMatch(
+      workflow,
+      /eas(?:-cli@[\d.]+)?\s+(?:build|submit|update|project:init|init)\b/u,
+    );
+  }
+}
+
 async function runSelfTest() {
   const expectedOwner = "bernds-tech";
   const expectedProjectId = "123e4567-e89b-42d3-a456-426614174000";
@@ -263,6 +304,13 @@ async function runSelfTest() {
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }
+
+  const [releaseReadinessWorkflow, signedBuildWorkflow] = await Promise.all([
+    readFile(RELEASE_READINESS_WORKFLOW_URL, "utf8"),
+    readFile(SIGNED_BUILD_WORKFLOW_URL, "utf8"),
+  ]);
+  assertWorkflowBinding(releaseReadinessWorkflow, { signedBuild: false });
+  assertWorkflowBinding(signedBuildWorkflow, { signedBuild: true });
 
   console.log("MOBILE_EAS_PROJECT_INFO_SELF_TEST=PASS");
 }
