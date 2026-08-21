@@ -46,6 +46,11 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Verify Mobile EAS project-info parser
+        id: mobile_eas_project_info
+        continue-on-error: true
+        run: node scripts/operations/mobile-eas-project-info-verify.mjs --self-test
+
       - name: Verify commercial and product truth
         id: truth
         continue-on-error: true
@@ -140,6 +145,12 @@ jobs:
           path: build-report.txt
           if-no-files-found: error
           retention-days: 7
+
+      - name: Enforce Mobile EAS project-info verifier result
+        if: always() && steps.mobile_eas_project_info.outcome != 'success'
+        run: |
+          echo "Mobile EAS project-info verifier self-test failed." >&2
+          exit 1
 
       - name: Enforce truth result
         if: always() && steps.truth.outcome != 'success'
