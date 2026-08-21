@@ -33,16 +33,16 @@ Canonical register for FanMind work that has started but is not yet fully comple
 - Updated: 2026-08-21
 - Status: IMPLEMENTED_NOT_VERIFIED
 - Risk: R3
-- Scope: Signed Android/iOS Mobile release and real-device/store acceptance; current repository implementation hardens the exact EAS project binding used by both read-only resource readiness and the separately protected signed-build path.
-- Branch/PR: `mobile-eas-project-binding-hardening-20260821` / #988.
-- Work lock: `LOCK-FM-MOB-001-EAS-PROJECT-BINDING-20260821` ACTIVE.
+- Scope: Signed Android/iOS Mobile release and real-device/store acceptance; the merged repository implementation now binds both read-only resource readiness and the separately protected signed-build path to the exact remote EAS project record.
+- Branch/PR: `main`; PR #988 merged as `e20efd475e475101226f266118b9cfed7972243a`.
+- Work lock: `LOCK-FM-MOB-001-EAS-PROJECT-BINDING-20260821` RELEASED.
 - Dependencies: Supabase redirect, EAS project/environments/token, signing credentials, Apple Developer/App Store Connect for iOS.
 - Assumptions: repository CI/build evidence does not prove a signed device build; a successful EAS lookup alone does not prove that the returned owner, slug and project ID match the protected FanMind binding.
-- Completed so far: native app core, auth/recovery, SecureStore/Purge, contacts/knowledge/AI/followups, offline cache, push foundation, icon/splash/privacy/store metadata and CI/control workflows. PR #988 adds a bounded verifier for the redacted `eas project:info` report, rejects owner/slug/ID drift and unsafe report files, wires it before both read-only readiness and any signed internal build queue, and exercises parser plus workflow wiring through positive and negative CI self-tests.
-- Still open: exact-head code/CI/countercheck and merge of #988; then real read-only EAS environment verification; redirect/device recovery; EAS/signing; signed Android + real device; iOS/TestFlight + real device; push/store portal evidence.
-- Evidence so far: issues #584/#690, Source of Truth, mobile docs/tests, Expo EAS CLI `project:info` source contract, PR #988 and local/CI self-test evidence.
-- Exact next step: require the final #988 head to pass all applicable Project Memory, FanMind CI, Supply Chain, CodeQL and Browser checks; countercheck the exact diff and merge only when green. No EAS build, credential, submit, update or provider mutation in this repository task.
-- Owner action needed: not for repository code/tests/PR work; external EAS account/environment, Supabase Redirect, signing, stores and real-device acceptance remain separate platform steps.
+- Completed so far: native app core, auth/recovery, SecureStore/Purge, contacts/knowledge/AI/followups, offline cache, push foundation, icon/splash/privacy/store metadata and CI/control workflows. PR #988 added a bounded verifier for the redacted `eas project:info` report, rejects owner/slug/ID drift and unsafe report files, wires it before both read-only readiness and any signed internal build queue, and exercises parser plus workflow wiring through positive and negative CI self-tests. Exact head `6f42a5897aabb3387a74149010dee2b5fb2c92cd` passed Project Memory Guard/Quality/Status, FanMind CI, Landing Language CI, Supply Chain Security, CodeQL and Browser E2E before merge `e20efd475e475101226f266118b9cfed7972243a`.
+- Still open: real read-only EAS environment verification; redirect/device recovery; EAS/signing; signed Android + real device; iOS/TestFlight + real device; push/store portal evidence.
+- Evidence so far: issues #584/#690, Source of Truth, mobile docs/tests, Expo EAS CLI `project:info` source contract, PR #988 exact-head workflow set, countercheck comment and merge commit.
+- Exact next step: run the existing protected, main-bound Mobile release resource-readiness workflow for the intended non-Production environment and bind its external EAS result to the exact merged commit. Do not queue a build or mutate credentials in that read-only step.
+- Owner action needed: only where protected EAS environment/account access, Supabase Redirect, signing, stores and real-device acceptance require external action.
 
 ## FM-AI-001
 - Started: before 2026-08-19
