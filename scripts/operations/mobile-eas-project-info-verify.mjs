@@ -1,8 +1,16 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { lstat, readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { constants } from "node:fs";
+import {
+  mkdtemp,
+  open,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const MAX_REPORT_BYTES = 64 * 1024;
@@ -11,6 +19,7 @@ const ANSI_ESCAPE_PATTERN = /\u001B(?:\[[0-?]*[ -/]*[@-~]|[@-_])/gu;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const OWNER_PATTERN = /^[a-z0-9](?:[a-z0-9_-]{0,37}[a-z0-9])?$/iu;
+const FORBIDDEN_OWNER_PATTERN = /^(?:owner|example|placeholder|fanmind)$/iu;
 
 function fail(code) {
   const error = new Error(code);
@@ -26,10 +35,8 @@ function required(value, code = "configuration_missing") {
 
 function parseProjectInfoFields(report) {
   if (typeof report !== "string") fail("eas_project_info_invalid");
-  if (
-    Buffer.byteLength(report, "utf8") === 0
-    || Buffer.byteLength(report, "utf8") > MAX_REPORT_BYTES
-  ) {
+  const reportBytes = Buffer.byteLength(report, "utf8");
+  if (reportBytes === 0 || reportBytes > MAX_REPORT_BYTES) {
     fail("eas_project_info_size_invalid");
   }
 
@@ -67,7 +74,12 @@ export function evaluateEasProjectInfoReport({
   const projectId = required(expectedProjectId);
   const slug = required(expectedSlug);
 
-  if (!OWNER_PATTERN.test(owner)) fail("eas_owner_invalid");
+  if (
+    !OWNER_PATTERN.test(owner)
+    || FORBIDDEN_OWNER_PATTERN.test(owner)
+  ) {
+    fail("eas_owner_invalid");
+  }
   if (!UUID_PATTERN.test(projectId)) fail("eas_project_id_invalid");
   if (slug !== EXPECTED_SLUG) fail("eas_slug_invalid");
 
@@ -104,21 +116,25 @@ export async function verifyEasProjectInfoFile(
   environment = process.env,
 ) {
   const path = required(reportPath, "eas_project_info_path_missing");
-  let stats;
+  let handle;
   try {
-    stats = await lstat(path);
+    handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   } catch {
     fail("eas_project_info_file_unavailable");
-  }
-  if (!stats.isFile() || stats.size <= 0 || stats.size > MAX_REPORT_BYTES) {
-    fail("eas_project_info_file_invalid");
   }
 
   let report;
   try {
-    report = await readFile(path, "utf8");
-  } catch {
+    const stats = await handle.stat();
+    if (!stats.isFile() || stats.size <= 0 || stats.size > MAX_REPORT_BYTES) {
+      fail("eas_project_info_file_invalid");
+    }
+    report = await handle.readFile("utf8");
+  } catch (error) {
+    if (String(error?.code ?? "").startsWith("eas_")) throw error;
     fail("eas_project_info_file_unavailable");
+  } finally {
+    await handle.close().catch(() => {});
   }
 
   return evaluateEasProjectInfoReport({
@@ -128,9 +144,13 @@ export async function verifyEasProjectInfoFile(
   });
 }
 
-function runSelfTest() {
+async function runSelfTest() {
   const expectedOwner = "bernds-tech";
   const expectedProjectId = "123e4567-e89b-42d3-a456-426614174000";
+  const environment = {
+    FANMIND_MOBILE_EXPECTED_EAS_OWNER: expectedOwner,
+    FANMIND_MOBILE_EXPECTED_EAS_PROJECT_ID: expectedProjectId,
+  };
   const validReport = [
     "\u001B[2mfullName\u001B[22m  @bernds-tech/fanmind-mobile",
     `\u001B[2mID      \u001B[22m  ${expectedProjectId}`,
@@ -171,7 +191,10 @@ function runSelfTest() {
   assert.throws(
     () =>
       evaluateEasProjectInfoReport({
-        report: validReport.replace(expectedProjectId, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+        report: validReport.replace(
+          expectedProjectId,
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        ),
         expectedOwner,
         expectedProjectId,
       }),
@@ -195,13 +218,58 @@ function runSelfTest() {
       }),
     { code: "eas_project_info_incomplete" },
   );
+  assert.throws(
+    () =>
+      evaluateEasProjectInfoReport({
+        report: validReport,
+        expectedOwner: "placeholder",
+        expectedProjectId,
+      }),
+    { code: "eas_owner_invalid" },
+  );
+
+  const temporaryRoot = await mkdtemp(
+    join(tmpdir(), "fanmind-mobile-eas-project-info-"),
+  );
+  try {
+    const reportPath = join(temporaryRoot, "project-info.txt");
+    await writeFile(reportPath, validReport, { mode: 0o600 });
+    assert.deepEqual(
+      await verifyEasProjectInfoFile(reportPath, environment),
+      {
+        owner: "verified",
+        slug: "verified",
+        projectId: "verified",
+      },
+    );
+
+    const symlinkPath = join(temporaryRoot, "project-info-link.txt");
+    await symlink(reportPath, symlinkPath);
+    await assert.rejects(
+      () => verifyEasProjectInfoFile(symlinkPath, environment),
+      { code: "eas_project_info_file_unavailable" },
+    );
+
+    const oversizedPath = join(temporaryRoot, "oversized.txt");
+    await writeFile(
+      oversizedPath,
+      Buffer.alloc(MAX_REPORT_BYTES + 1, 0x61),
+      { mode: 0o600 },
+    );
+    await assert.rejects(
+      () => verifyEasProjectInfoFile(oversizedPath, environment),
+      { code: "eas_project_info_file_invalid" },
+    );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
 
   console.log("MOBILE_EAS_PROJECT_INFO_SELF_TEST=PASS");
 }
 
 async function main() {
   if (process.argv[2] === "--self-test") {
-    runSelfTest();
+    await runSelfTest();
     return;
   }
   if (process.argv.length !== 3) fail("eas_project_info_path_missing");
