@@ -217,9 +217,11 @@ test("all process-injection names remain represented by the workflows", async ()
   ].map((path) => readFile(resolve(ROOT, path), "utf8")));
   for (const workflow of workflows) {
     for (const name of PROCESS_INJECTION_ENVIRONMENT) {
+      if (name === "GIT_SSL_NO_VERIFY") continue;
       const indent = name === name.toLowerCase() ? 2 : 6;
       assert.match(workflow, new RegExp(`^ {${indent}}${name}: `, "m"), name);
     }
+    assert.doesNotMatch(workflow, /^\s+GIT_SSL_NO_VERIFY:/mu);
     assert.match(workflow, /^ {6}GIT_TRACE_REDACT: 'true'$/m);
     assert.match(workflow, /^ {6}NODE_TLS_REJECT_UNAUTHORIZED: '1'$/m);
   }
@@ -284,6 +286,11 @@ test("all Restore workflows require the future organization scope, gate digest a
     assert.match(workflow, /^env:\n  all_proxy: ''\n  http_proxy: ''\n  https_proxy: ''\n  no_proxy: ''$/mu);
     assert.doesNotMatch(workflow, /^\s{6}(?:all|http|https|no)_proxy:/mu);
     assert.doesNotMatch(workflow, /^\s{6}TMPDIR: \$\{\{ runner\.temp \}\}$/mu);
+    assert.doesNotMatch(workflow, /^\s+GIT_SSL_NO_VERIFY:/mu);
+    assert.equal(
+      (workflow.match(/\[\[ -z "\$\{GIT_SSL_NO_VERIFY\+x\}" \]\]/gu) ?? []).length,
+      selfHostedJobCount,
+    );
     assert.equal(
       (workflow.match(/printf 'TMPDIR=%s\\n' "\$RUNNER_TEMP" >> "\$GITHUB_ENV"/gu) ?? []).length,
       selfHostedJobCount,
