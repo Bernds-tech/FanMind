@@ -22,6 +22,17 @@ Prevents two agents/sessions from independently working the same task.
 - Resume from: operator evidence proved the real database restore completed, canonical TLS connectivity works, authorization role/container/extension preflight passes, archive ACL SQL is identical, and the remaining authorization mismatch is exactly eight missing schema grant tuples: four on `graphql` and four on `graphql_public`.
 - Safety: repository code/tests/Project Memory only until reviewed PR acceptance; any later isolated-target mutation must use the protected R4 Restore path and never Production or Supabase Staging.
 
+## LOCK-FM-MOB-001-EAS-PROJECT-BINDING-20260821
+- Task: FM-MOB-001
+- Status: ACTIVE
+- Holder: ChatGPT Mobile EAS project-binding hardening session 2026-08-21
+- Branch/PR: `mobile-eas-project-binding-hardening-20260821` / #988
+- Acquired: 2026-08-21
+- Updated: 2026-08-21
+- Scope: harden the existing read-only Mobile release and signed-build resource checks so successful `eas project:info` lookup is bound to the exact expected EAS owner, `fanmind-mobile` slug and project ID before any later build gate; no credential creation, build, submit, update, signing or provider mutation.
+- Resume from: existing workflows only verified that `project:info` exited successfully and discarded its reported `fullName`/`ID`; the new verifier must parse bounded redacted output and fail closed on mismatch, ambiguity, malformed output or oversized/non-regular report files.
+- Safety: repository code/tests/workflows only. External EAS, Supabase Auth, signing, stores and real-device acceptance remain open and unchanged.
+
 ## Released locks
 
 ## LOCK-FM-MEM-005

@@ -115,3 +115,21 @@ A receipt is required for meaningful code/config/infra/governance work. Never in
 - Result status: IMPLEMENTED.
 - Open follow-up: wait for the final exact PR head to pass all required checks; then merge. Only after merge may the protected isolated database Restore be freshly rerun. Do not mark `DB_POSTCHECKED`, `COUNTERCHECKED` or `ACCEPTED` until that external R4 evidence exists.
 - Work lock released: no; keep `LOCK-FM-RST-001-SCHEMA-ACL-RECOVERY-20260820` active until merge/countercheck reconciliation.
+
+## RECEIPT-FM-MOB-001-EAS-PROJECT-BINDING-20260821
+- Task: FM-MOB-001
+- Started: 2026-08-21
+- Finished: repository implementation and branch-level reconciliation completed; exact-head R3 checks and external EAS acceptance remain pending.
+- Branch/PR: `mobile-eas-project-binding-hardening-20260821` / #988
+- Preflight checked: current `main` `6b0baa53a8cb408f5d8d36923237676b6d5931`, AGENTS, Source of Truth, Project Memory Protocol/Current State/Finishline/NBA/Owner Inbox/Handoff/Started Work/Locks/Open Loops/Task Ledger/Dependencies/Decisions/Failed Attempts, External Acceptance, issues #584/#690/#874, exact Mobile workflows/scripts/tests, current PR/CI state and the pinned Expo EAS CLI `project:info` source contract.
+- Prior attempts found: native Mobile implementation, CI, app configuration, read-only release readiness and signed-build controls already exist and must not be rebuilt. The uncovered gap was narrower: both workflows treated any successful `eas project:info` exit as a valid link while discarding the remote `fullName` and `ID`, so the protected expected owner/project values were not checked against the EAS project record returned by the pinned CLI.
+- Dependency result: repository code/tests/PR work is standing-authorized. EAS account/environment evidence, Supabase Auth redirect, signing credentials, signed builds, TestFlight/stores and real devices remain external R3 controls and are not accepted by this PR.
+- Planned evidence: bounded parser with exact owner/slug/project-ID match, fixed redacted output, regular-file/no-follow/size controls, positive and negative parser tests, workflow-wiring tests, exact-head Project Memory/FanMind CI/Supply Chain/CodeQL/Browser checks and an independent final-diff/proof-of-absence countercheck.
+- Changes made: added `mobile-eas-project-info-verify.mjs`; parse only the bounded `fullName` and `ID` fields after ANSI normalization; require exact protected owner, fixed `fanmind-mobile` slug and UUID project ID; reject generic owner placeholders, mismatch, ambiguity, malformed output, symlinks/non-regular files and oversized reports; wire the verifier immediately after `project:info` in both read-only readiness and signed-build workflows; add CI self-tests for parser, file boundary and exact workflow ordering; update active work and lock records.
+- Checks/tests: local self-test passed; branch CI self-test passed on intermediate heads; final exact-head checks are required after this receipt commit.
+- Final diff counterchecked: yes for intended scope; final exact-head workflow completion and final patch countercheck remain pending.
+- Regression/security countercheck: fail-closed. Build, Submit and Update gates remain unchanged; the read-only workflow still contains no build/submit/update/init path; project-info reports remain private temporary files with `umask 077`, are never echoed, are opened no-follow and are deleted; fixed output exposes no owner, project ID, token, URL or artifact identifier. No EAS build, credentials, Supabase/Auth/DB, Apple or Google mutation occurred.
+- Evidence produced: PR #988, parser/file/workflow self-tests, exact code/workflow diff and active R3 bookkeeping.
+- Result status: IMPLEMENTED.
+- Open follow-up: require all checks on the final exact PR head, independently countercheck the final diff and merge only when green. After merge, run the existing protected read-only EAS resource readiness before any separately authorized signed build.
+- Work lock released: no; keep `LOCK-FM-MOB-001-EAS-PROJECT-BINDING-20260821` active until exact-head countercheck and merge reconciliation.

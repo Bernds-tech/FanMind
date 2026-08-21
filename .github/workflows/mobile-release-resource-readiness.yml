@@ -64,22 +64,29 @@ jobs:
         working-directory: apps/mobile
         run: npm ci --no-audit --no-fund
 
-      - name: Verify existing EAS project binding
+      - name: Verify exact existing EAS project binding
         working-directory: apps/mobile
         run: |
           set -euo pipefail
+          umask 077
           REPORT_PATH="$RUNNER_TEMP/fanmind-mobile-eas-project-info.txt"
           trap 'rm -f "$REPORT_PATH"' EXIT
           if ! npx --yes eas-cli@21.2.0 project:info >"$REPORT_PATH" 2>&1; then
             echo "MOBILE_RELEASE_READINESS_ERROR=eas_project_lookup_failed" >&2
             exit 1
           fi
-          echo "MOBILE_RELEASE_READINESS_EAS_PROJECT=linked"
+          if ! node ../../scripts/operations/mobile-eas-project-info-verify.mjs \
+            "$REPORT_PATH"; then
+            echo "MOBILE_RELEASE_READINESS_ERROR=eas_project_binding_mismatch" >&2
+            exit 1
+          fi
+          echo "MOBILE_RELEASE_READINESS_EAS_PROJECT=exact-binding-verified"
 
       - name: Verify selected EAS public environment without release writes
         working-directory: apps/mobile
         run: |
           set -euo pipefail
+          umask 077
           REPORT_PATH="$RUNNER_TEMP/fanmind-mobile-eas-environment.txt"
           trap 'rm -f "$REPORT_PATH"' EXIT
           if ! npx --yes eas-cli@21.2.0 env:exec \
