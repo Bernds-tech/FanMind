@@ -75,7 +75,7 @@ jobs:
         working-directory: apps/mobile
         run: npm ci --no-audit --no-fund
 
-      - name: Verify existing EAS project binding
+      - name: Verify exact existing EAS project binding
         working-directory: apps/mobile
         run: |
           set -euo pipefail
@@ -86,7 +86,12 @@ jobs:
             echo "MOBILE_SIGNED_BUILD_ERROR=eas_project_lookup_failed" >&2
             exit 1
           fi
-          echo "MOBILE_SIGNED_BUILD_EAS_PROJECT=linked"
+          if ! node ../../scripts/operations/mobile-eas-project-info-verify.mjs \
+            "$REPORT_PATH"; then
+            echo "MOBILE_SIGNED_BUILD_ERROR=eas_project_binding_mismatch" >&2
+            exit 1
+          fi
+          echo "MOBILE_SIGNED_BUILD_EAS_PROJECT=exact-binding-verified"
 
       - name: Verify selected public environment before build
         working-directory: apps/mobile
