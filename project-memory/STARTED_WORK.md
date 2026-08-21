@@ -30,19 +30,19 @@ Canonical register for FanMind work that has started but is not yet fully comple
 
 ## FM-MOB-001
 - Started: before 2026-08-19
-- Updated: 2026-08-19
+- Updated: 2026-08-21
 - Status: IMPLEMENTED_NOT_VERIFIED
 - Risk: R3
-- Scope: Signed Android/iOS Mobile release and real-device/store acceptance.
-- Branch/PR: existing mobile implementation on main; external acceptance path only unless a defect is found.
-- Work lock: acquire before signing/build/store mutation.
+- Scope: Signed Android/iOS Mobile release and real-device/store acceptance; current repository implementation hardens the exact EAS project binding used by both read-only resource readiness and the separately protected signed-build path.
+- Branch/PR: `mobile-eas-project-binding-hardening-20260821` / pending.
+- Work lock: `LOCK-FM-MOB-001-EAS-PROJECT-BINDING-20260821` ACTIVE.
 - Dependencies: Supabase redirect, EAS project/environments/token, signing credentials, Apple Developer/App Store Connect for iOS.
-- Assumptions: repository CI/build evidence does not prove a signed device build.
-- Completed so far: native app core, auth/recovery, SecureStore/Purge, contacts/knowledge/AI/followups, offline cache, push foundation, icon/splash/privacy/store metadata and CI/control workflows.
-- Still open: redirect/device recovery; EAS/signing; signed Android + real device; iOS/TestFlight + real device; push/store portal evidence.
-- Evidence so far: issues #584/#690, Source of Truth, mobile docs/tests.
-- Exact next step: read-only EAS/Supabase resource verification before any signing/build action.
-- Owner action needed: external account/signing setup where platform requires it.
+- Assumptions: repository CI/build evidence does not prove a signed device build; a successful EAS lookup alone does not prove that the returned owner, slug and project ID match the protected FanMind binding.
+- Completed so far: native app core, auth/recovery, SecureStore/Purge, contacts/knowledge/AI/followups, offline cache, push foundation, icon/splash/privacy/store metadata and CI/control workflows. The active branch adds a bounded verifier for the redacted `eas project:info` report and wires it before both read-only readiness and any signed internal build queue.
+- Still open: exact-head code/CI/countercheck and merge of the binding hardening; then real read-only EAS environment verification; redirect/device recovery; EAS/signing; signed Android + real device; iOS/TestFlight + real device; push/store portal evidence.
+- Evidence so far: issues #584/#690, Source of Truth, mobile docs/tests, Expo EAS CLI `project:info` source contract, branch `mobile-eas-project-binding-hardening-20260821`.
+- Exact next step: finish the fail-closed parser/self-test/workflow integration, open a PR, require exact-head CI/security/governance checks and merge only when green. No EAS build, credential, submit, update or provider mutation in this repository task.
+- Owner action needed: not for repository code/tests/PR work; external EAS account/environment, Supabase Redirect, signing, stores and real-device acceptance remain separate platform steps.
 
 ## FM-AI-001
 - Started: before 2026-08-19
