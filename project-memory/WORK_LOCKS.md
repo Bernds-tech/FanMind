@@ -26,7 +26,7 @@ Prevents two agents/sessions from independently working the same task.
 - Task: FM-MOB-001
 - Status: ACTIVE
 - Holder: ChatGPT Mobile EAS project-binding hardening session 2026-08-21
-- Branch/PR: `mobile-eas-project-binding-hardening-20260821` / pending
+- Branch/PR: `mobile-eas-project-binding-hardening-20260821` / #988
 - Acquired: 2026-08-21
 - Updated: 2026-08-21
 - Scope: harden the existing read-only Mobile release and signed-build resource checks so successful `eas project:info` lookup is bound to the exact expected EAS owner, `fanmind-mobile` slug and project ID before any later build gate; no credential creation, build, submit, update, signing or provider mutation.
