@@ -63,7 +63,6 @@ jobs:
       GIT_EXEC_PATH: ''
       GIT_SSL_CAINFO: ''
       GIT_SSL_CAPATH: ''
-      GIT_SSL_NO_VERIFY: 'false'
       GIT_TRACE: ''
       GIT_TRACE_CURL: ''
       GIT_TRACE_CURL_NO_DATA: ''
@@ -144,6 +143,7 @@ jobs:
           TMPDIR: ${{ runner.temp }}
         run: |
           umask 077
+          [[ -z "${GIT_SSL_NO_VERIFY+x}" ]]
           NODE_PATH=/opt/fanmind-restore/node-v24.19.0-linux-x64/bin/node
           GATE_PATH=/opt/fanmind-restore/restore-host-readiness.mjs
           [[ -f "$GATE_PATH" && ! -L "$GATE_PATH" ]]
