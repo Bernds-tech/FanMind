@@ -28,7 +28,7 @@
     {
       "id": "EV-RESTORE-FAILCLOSED-20260822",
       "gate": "restore",
-      "class": "restore_target",
+      "class": "restore_host",
       "status": "COUNTERCHECKED",
       "observed_at": "2026-08-22T19:40:57Z",
       "source": "Run 32594374666 / Host-2 job 97082992861 plus independent read-only reconciliation recorded in issue #944 comments 5382274967 and 5382336892"
