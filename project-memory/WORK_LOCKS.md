@@ -15,7 +15,7 @@ Prevents two agents/sessions from independently working the same task.
 - Task: FM-RST-001
 - Status: ACTIVE
 - Holder: ChatGPT database-Restore fail-closed reconciliation session 2026-08-22
-- Branch/PR: `restore-failclosed-reconciliation-20260822` / PR pending.
+- Branch/PR: `restore-failclosed-reconciliation-20260822` / #995.
 - Acquired: 2026-08-22 after independent read-only reconciliation of run `32594374666`.
 - Risk: R4 evidence reconciliation; repository documentation only.
 - Scope: record the consumed protected database-Restore run, prove the pre-write failure/cleanup/empty-target state, preserve the exact 2-of-5 extension blocker and define the separately authorized provisioning boundary.
