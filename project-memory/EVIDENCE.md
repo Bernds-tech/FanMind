@@ -162,7 +162,7 @@ Implementation status and acceptance status are deliberately separate.
 - Date: 2026-08-22
 - Target: exact `main` `b75f68ecc7999a9b492051aecc2421b9b597dd18`, organization runner policy, isolated Restore host, accepted encrypted Full Backup and empty PostgreSQL-17 target
 - Type: protected read-only GitHub workflow + independent job-log/TLS/JIT-cleanup countercheck
-- Reference: run `32582640853`; jobs `97054217701`, `97054234003`, `97054248185`; one-job runner IDs `41` and `42`; PR #991; issue #944 comment `5381530143`
+- Reference: run `32582640853`; jobs `97054217701`, `97054234003`, `97054248185`; one-job runner IDs `41` and `42`; PR #991; issue #944 comment `5381530143`; evidence PR #992 exact head `53308fa43b258e4570b67d675f38f16e15e3bb69`, merge `cb04829c378285c24c3c53b5fab2d03177c19165`
 - Result: all jobs succeeded. Checkout used the pinned root-owned Ubuntu truststore, negotiated TLS 1.3 and reported `server certificate verification OK`; resource readiness verified the Full Backup checksum without decryption/DB access/write; target compatibility verified PostgreSQL 17, all required roles, `pgcrypto`, dedicated restore superuser and TLS `verify-full` through a read-only catalog session. Both one-job runners cleaned credentials/configuration; Host-2 exit and API removal were controller-verified.
 - Negative evidence: no dangerous `server certificate verification SKIPPED`, no CA-file error, no decryption, no restore, no target reset, no Production write, no Supabase-Staging write and no secret output.
 - Limitations: `FM-RST-001` is not complete. Database, postcheck, Storage, config, cleanup and final countercheck remain open; mutable host/runner/target/TLS evidence must be refreshed before the separately authorized write.

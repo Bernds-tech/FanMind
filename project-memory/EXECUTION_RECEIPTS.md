@@ -137,7 +137,7 @@ A receipt is required for meaningful code/config/infra/governance work. Never in
 ## RECEIPT-FM-RST-001-CHECKOUT-CA-20260822
 - Task: FM-RST-001
 - Started: 2026-08-22 15:52 Europe/Vienna
-- Finished: repository implementation in progress; exact-head PR acceptance and any future protected read-only rerun remain pending.
+- Finished: PR #991 passed exact-head acceptance and merged as `b75f68ecc7999a9b492051aecc2421b9b597dd18`; protected runtime closure was later counterchecked by run `32582640853` and evidence PR #992.
 - Branch/PR: `restore-checkout-ca-truststore-20260822` / #991
 - Preflight checked: current `main` `1735a5f552c0c20c180fb96be6fa9000cbffc360`, mandatory Project Memory/Restore readers, drift and evidence-freshness preflights, issue #944, PRs #987/#990, workflow run `32568632008`, jobs `97020817035`/`97020825268`/`97020836458`, protected job steps/logs, runner ID `40` state and operator cleanup output.
 - Prior attempts found: PR #990 correctly removed `GIT_SSL_NO_VERIFY` and its fresh protected host gate passed. The later checkout still failed because six path-valued CA variables remained exported as empty strings. No Resource Readiness, Target Compatibility, decryption, DB connection or write ran.
@@ -145,27 +145,27 @@ A receipt is required for meaningful code/config/infra/governance work. Never in
 - Planned evidence: exact live-log root cause; independent Git 2.43 negative/positive reproduction; fixed root-owned Ubuntu truststore binding; pre-checkout file/directory owner/mode/type/canonical-path checks; exact workflow-count regression tests; drift baseline; full exact-head PR CI/security/governance set; independent final-diff countercheck.
 - Changes made: pinned `CURL_CA_BUNDLE`, `GIT_SSL_CAINFO`, `GIT_SSL_CAPATH`, `REQUESTS_CA_BUNDLE`, `SSL_CERT_DIR` and `SSL_CERT_FILE` in all five self-hosted Restore jobs; added truststore integrity assertions before the preinstalled gate/checkout; preserved unset `GIT_SSL_NO_VERIFY`; added regression and Project Memory reconciliation records.
 - Checks/tests: focused Restore-host tests pass 19/19; the combined Restore/supply-chain policy set passes 89/89; all three edited workflows parse as YAML; Project Memory quality/sales/truth/NBA/freshness/drift/milestone/V8 and generated-status checks pass with the final workflow blob baseline. A broad `test:operations` attempt passed 1012 tests and stopped on seven unrelated missing-package errors in the incomplete local `node_modules` (`typescript`, `pdfnative`, `brace-expansion`, `sharp`, `next`); clean-install exact-head CI remains the acceptance source for that full set.
-- Final diff counterchecked: pending.
+- Final diff counterchecked: yes; the bounded truststore repair passed the full exact-head PR #991 gate set before merge, and the later protected checkout independently proved active certificate verification.
 - Regression/security countercheck: initial negative/positive reproduction passed; empty Git CA paths fail with the same CA error as the protected run, while the pinned system truststore succeeds. All Restore write gates/commands and the preinstalled gate digest remain unchanged.
 - Evidence produced: issue #944 comment `5380738369`, the 2026-08-22 CA-truststore checkpoint, focused test output and local Git transport reproduction.
-- Result status: IN_PROGRESS / RECONCILIATION_REQUIRED.
-- Open follow-up: finish local quality/drift checks, update the watched baseline to final workflow blobs, open a PR and require exact-head green countercheck before merge. Do not dispatch a Restore workflow or create/reissue a JIT.
-- Work lock released: no; `LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822` remains active.
+- Result status: COUNTERCHECKED for the checkout repair; overall `FM-RST-001` remains PARTIAL.
+- Open follow-up: fulfilled for read-only readiness by run `32582640853`; the next database transition remains separately exact-R4-authorized and owner-deferred.
+- Work lock released: yes; `LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822` was released after evidence PR #992 merged.
 
 ## RECEIPT-FM-RST-001-READINESS-20260822-1641
 - Task: FM-RST-001
 - Started: 2026-08-22 protected read-only authorization and preflight
-- Finished: 2026-08-22 16:41 UTC runtime; documentation reconciliation remains on `restore-readiness-evidence-20260822`
-- Branch/PR: runtime used exact `main` `b75f68ecc7999a9b492051aecc2421b9b597dd18`; evidence branch `restore-readiness-evidence-20260822`
+- Finished: 2026-08-22 16:41 UTC runtime; evidence PR #992 exact head `53308fa43b258e4570b67d675f38f16e15e3bb69` merged as `cb04829c378285c24c3c53b5fab2d03177c19165`
+- Branch/PR: runtime used exact `main` `b75f68ecc7999a9b492051aecc2421b9b597dd18`; evidence branch `restore-readiness-evidence-20260822` / #992
 - Preflight checked: mandatory Project Memory/Restore readers, exact GitHub `main`, issue #944, PR #991 checks/merge, active Restore workflows, organization runner group/repository/workflow scope, host-1/host-2 runner directories, no active listener, exact JIT boundaries and write-disabled workflow contract.
 - Prior attempts found: run `32568632008`/runner ID `40` failed checkout on empty CA paths; several local controller attempts failed before Host-2 JIT creation because of path, DNS, PowerShell privilege, background-listener timing and an invalid dependency on a local Host-1 `_diag` file. None authorized a database write.
 - Dependency result: PR #991 repair present on exact main; runner/host/backup/target/TLS read-only dependencies current for run `32582640853`; database-write authorization explicitly absent.
 - Planned evidence: exactly one new Resource Readiness run, exactly two fresh sequential one-job JITs, independent GitHub run/job logs, positive checkout certificate verification, resource checksum-only PASS, target compatibility `verify-full` PASS and full runner teardown.
 - Changes made: dispatched only authorized read-only run `32582640853`; used Host-1 runner ID `41` and Host-2 runner ID `42`; no database workflow or write gate was enabled. The local controller was corrected before Host-2 JIT generation to remove a non-contractual diagnostic-log dependency and background-listener races.
 - Checks/tests: run and all three jobs completed `success`; Host-2 steps 1-5/10-11 succeeded; checkout found the fixed truststore certificates, negotiated TLS 1.3 and reported server-certificate verification OK; `RESTORE_DRILL_RESOURCE_READINESS=PASS`; `RESTORE_TARGET_COMPATIBILITY=PASS`; no dangerous certificate-verification-skip or CA-file error. Local Project Memory/Truth/Freshness/Milestone checks passed, and 83/83 focused Restore regression tests passed.
-- Final diff counterchecked: yes for runtime/log evidence; documentation diff requires exact-head PR checks.
+- Final diff counterchecked: yes; exact head `53308fa43b258e4570b67d675f38f16e15e3bb69` passed Project Memory Guard/Quality/Status, Landing Language CI, FanMind CI including PG17, CodeQL and both Browser E2E jobs before merge.
 - Regression/security countercheck: write flags remained false/empty; checksum-only phase made no DB connection or decryption; compatibility used a read-only catalog session with TLS `verify-full`; no secret was emitted; controller proved `.credentials`/`.runner` removal, listener exit 0 and runner ID `42` API removal.
 - Evidence produced: run `32582640853`, jobs `97054217701`/`97054234003`/`97054248185`, FM-EV-015 and issue #944 read-only checkpoint comment `5381530143`.
 - Result status: COUNTERCHECKED_READ_ONLY; Restore state `TARGET_COMPATIBLE`; overall task PARTIAL.
 - Open follow-up: database Restore and all later state-machine steps require a new exact protected R4 authorization. Revalidate mutable evidence immediately before any such dispatch.
-- Work lock released: no; release the documentation/reconciliation lock only after the evidence PR is exact-head green and merged.
+- Work lock released: yes; `LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822` was released after #992 exact-head acceptance and merge.
