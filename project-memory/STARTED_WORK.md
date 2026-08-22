@@ -17,7 +17,7 @@ Canonical register for FanMind work that has started but is not yet fully comple
 - Status: RECONCILIATION_REQUIRED
 - Risk: R4
 - Scope: Complete the isolated real FanMind Restore drill without touching Production or Supabase Staging; preserve the accepted read-only chain while reconciling the consumed fail-closed database attempt and its exact receipt-bound extension prerequisite.
-- Branch/PR: `restore-failclosed-reconciliation-20260822` / PR pending; prior evidence PR #992 merged as `cb04829c378285c24c3c53b5fab2d03177c19165`.
+- Branch/PR: `restore-failclosed-reconciliation-20260822` / #995; prior evidence PR #992 merged as `cb04829c378285c24c3c53b5fab2d03177c19165`.
 - Work lock: `LOCK-FM-RST-001-FAILCLOSED-RECONCILIATION-20260822` ACTIVE for repository evidence only.
 - Dependencies: FM-DEP-001; exact Schema-2 Full Backup/Verification/source binding; existing isolated host/empty target/quarantine; full receipt-bound roles/database-container/extensions; protected authorization for any later mutation.
 - Assumptions: database reset does not change cluster-global roles; prior full role/container authorization success remains navigation evidence only and must be freshly receipt-checked after extension provisioning. Mutable host, target, backup, runner-policy and TLS evidence must be revalidated before any mutation.
