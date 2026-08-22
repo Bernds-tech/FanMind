@@ -19,7 +19,7 @@ None.
 - Task: FM-RST-001
 - Status: RELEASED
 - Holder: ChatGPT database-Restore fail-closed reconciliation session 2026-08-22
-- Branch/PR: `restore-failclosed-reconciliation-20260822` / #995; exact head `ce2b63c606ca1a9aa701d24a569e21d66cfe13ea`, squash merge `86bf2657996c45bfe03fadd4af689ffa89e7ea6e`.
+- Branch/PR: `restore-failclosed-reconciliation-20260822` / #995; exact head `ce2b63c606ca1a9aa701d24a569e21d66cfe13ea`, squash merge `86bf2657996c45bfe03fadd4af689ffa89e7ea6e`; lock closeout PR #996.
 - Acquired: 2026-08-22 after independent read-only reconciliation of run `32594374666`.
 - Released: 2026-08-22 22:22 Europe/Vienna after exact-head CI/countercheck and merge.
 - Risk: R4 evidence reconciliation; repository documentation only.
