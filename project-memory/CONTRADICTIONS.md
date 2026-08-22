@@ -131,4 +131,19 @@ Statuses: `OPEN`, `RECONCILIATION_REQUIRED`, `RESOLVED`, `SUPERSEDED`.
 - Evidence: live Supabase advisor scan 2026-08-20; `supabase/controlled/20260806203023_harden_trigger_function_privileges.sql`; `docs/operations/TRIGGER_FUNCTION_HARDENING_PRODUCTION.md`.
 - Falsification question: What observation would prove our conclusion wrong? A fresh catalog/ACL/advisor read showing the live Production state is already hardened, or evidence that the deployed target no longer matches the controlled migration/runbook, would invalidate this reconciliation before mutation.
 
+## CTR-FM-010
+- Date: 2026-08-22
+- Updated: 2026-08-22
+- Related task/change: FM-RST-001
+- Risk: R4
+- Source A: successful protected read-only run `32582640853` and `RESTORE_TARGET_COMPATIBILITY=PASS`.
+- Claim A: the isolated target satisfies the minimal PostgreSQL 17/roles/`pgcrypto` readiness contract and is safe to inspect over TLS `verify-full` with writes disabled.
+- Source B: protected database run `32594374666` and independent read-only reconciliation.
+- Claim B: the same empty target fails the selected receipt's larger authorization contract because only 2/5 exact extensions are present.
+- Stronger/current evidence: both sources are valid at different contract layers; the later receipt-bound preflight is authoritative for database-Restore eligibility.
+- Status: RECONCILIATION_REQUIRED
+- Resolution/action: keep baseline `TARGET_COMPATIBLE`, add side state `RECONCILIATION_REQUIRED`, provision the exact extension baseline under a separate R4 authorization and require the unchanged full receipt fingerprint before a new database authorization. Future workflow/design work should make the two compatibility layers unmistakable without weakening either fail-closed check.
+- Evidence: runs `32582640853` and `32594374666`; jobs `97054248185` and `97082992861`; issue #944 comments `5382274967`/`5382336892`; FM-EV-015/FM-EV-016.
+- Falsification question: What observation would prove this conclusion wrong? A current read-only full receipt authorization matching the exact five-extension/97-record fingerprint would close the blocker; any evidence of a target write would invalidate the current no-write reconciliation.
+
 Never resolve a contradiction by deleting the older record. Document which source was stale or wrong and why.
