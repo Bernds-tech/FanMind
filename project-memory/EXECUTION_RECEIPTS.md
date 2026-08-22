@@ -174,7 +174,7 @@ A receipt is required for meaningful code/config/infra/governance work. Never in
 - Task: FM-RST-001
 - Started: 2026-08-22 with the owner's exact one-run R4 database-Restore authorization.
 - Finished: runtime failure and independent read-only reconciliation completed; repository reconciliation remains active pending exact-head PR checks/merge.
-- Branch/PR: `restore-failclosed-reconciliation-20260822` / PR pending; runtime used exact `main` `8bc8855a6de928cf38ef2e8fb9e9e0860fc477db`.
+- Branch/PR: `restore-failclosed-reconciliation-20260822` / #995; runtime used exact `main` `8bc8855a6de928cf38ef2e8fb9e9e0860fc477db`.
 - Preflight checked: accepted run `32582640853`, runtime drift from `b75f68ecc7999a9b492051aecc2421b9b597dd18` to authorized main, mutable GitHub/runner/host/target/backup/TLS evidence, exact backup/verification/source binding, runner-group workflow scope, target reset receipt and two fresh sequential one-job JIT boundaries.
 - Prior attempts found: the earlier controller call-depth defect was corrected before dispatch. The successful minimal readiness contract did not prove the selected receipt's full five-extension authorization contract. Prior trusted `uuid-ossp` recreation alone produced the wrong internal-member ownership/fingerprint and must not be repeated.
 - Dependency result: run `32594374666` deterministically localized the first unproven dependency to the three missing extensions and stopped before write; no infrastructure rebuild is needed.
