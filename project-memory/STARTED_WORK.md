@@ -14,20 +14,19 @@ Canonical register for FanMind work that has started but is not yet fully comple
 ## FM-RST-001
 - Started: 2026-08-17
 - Updated: 2026-08-22
-- Status: PARTIAL
+- Status: RECONCILIATION_REQUIRED
 - Risk: R4
-- Scope: Complete the isolated real FanMind Restore drill without touching Production or Supabase Staging; read-only Resource Readiness and Target Compatibility are freshly proven, while database/Storage/config/cleanup acceptance remains open.
-- Branch/PR: PR #991 merged as `b75f68ecc7999a9b492051aecc2421b9b597dd18`; evidence PR #992 exact head `53308fa43b258e4570b67d675f38f16e15e3bb69` merged as `cb04829c378285c24c3c53b5fab2d03177c19165`.
-- Work lock: `LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822` RELEASED after #992 merge.
-- Dependencies: FM-DEP-001; current Org runner-group/workflow-allowlist/JIT policy; existing isolated host/target; exact Schema-2 Full Backup; protected environment.
-- Assumptions: the established empty isolated target and connection-disabled rollback quarantine remain unchanged; all mutable host, target, backup and TLS evidence must be revalidated before any later run or write.
-- Completed so far: PR #987 merged the bounded schema-ACL recovery; the disposable target was independently reset to the empty baseline while retaining the prior populated target as quarantine; PRs #990/#991 repaired checkout TLS/CA handling. Protected read-only run `32582640853` on exact #991 merge completed all three jobs successfully, proved checkout certificate verification, checksum-only Full Backup readiness and read-only PostgreSQL-17 target compatibility with TLS `verify-full`, then cleaned both one-job runners.
-- Latest reconciled blocker: no technical read-only blocker remains. The state machine is at `TARGET_COMPATIBLE`; the next transition is an isolated database write and is deliberately unauthorized under the current scope.
-- Still open: exact protected database Restore, receipt-bound DB postcheck, Storage Restore, server-config verification, disposable-target cleanup, independent countercheck and final acceptance.
-- Evidence so far: PRs #943/#987/#990/#991/#992, issue #944 comment `5381530143`, issue #874, accepted Full Backup/Verification records, independently reset empty target, run `32582640853`, jobs `97054217701`/`97054234003`/`97054248185`, Host-2 runner ID `42` cleanup and the 2026-08-22 TLS/log countercheck.
-- Exact next step: only after separate exact R4 authorization, revalidate mutable runner-group/host/target/backup/TLS evidence and execute the reviewed isolated database workflow on the exact authorized commit/artifact/target. Do not dispatch it from this documentation reconciliation.
-- Owner action needed: yes, but only for a future exact protected database-Restore authorization/approval. No owner action is needed for the current evidence documentation.
-
+- Scope: Complete the isolated real FanMind Restore drill without touching Production or Supabase Staging; preserve the accepted read-only chain while reconciling the consumed fail-closed database attempt and its exact receipt-bound extension prerequisite.
+- Branch/PR: `restore-failclosed-reconciliation-20260822` / PR pending; prior evidence PR #992 merged as `cb04829c378285c24c3c53b5fab2d03177c19165`.
+- Work lock: `LOCK-FM-RST-001-FAILCLOSED-RECONCILIATION-20260822` ACTIVE for repository evidence only.
+- Dependencies: FM-DEP-001; exact Schema-2 Full Backup/Verification/source binding; existing isolated host/empty target/quarantine; full receipt-bound roles/database-container/extensions; protected authorization for any later mutation.
+- Assumptions: database reset does not change cluster-global roles; prior full role/container authorization success remains navigation evidence only and must be freshly receipt-checked after extension provisioning. Mutable host, target, backup, runner-policy and TLS evidence must be revalidated before any mutation.
+- Completed so far: protected read-only run `32582640853` accepted through `TARGET_COMPATIBLE`. Exactly authorized database run `32594374666` passed its gate, Host-1, checkout, Resource Readiness and baseline PostgreSQL compatibility, then Host-2 job `97082992861` failed at `database_authorization_preflight_failed` before the first target write/`pg_restore`. Independent read-only reconciliation proved listener/JIT/credentials/plaintext absent, exit 0 receipt present, TLS `verify-full`, target still empty, quarantine retained and no Production/Supabase-Staging write.
+- Latest reconciled blocker: the empty reset baseline has 2/5 receipt-bound extensions. `pg_stat_statements`, `supabase_vault` and `uuid-ossp` are absent; all three trusted control files are present. Prior accepted host evidence proves the eventual exact extension fingerprint `6704956613ca8e58a527336d67b622a043e48a568858873ca5a6fa6b8bd08012` at 97 records after the three installs plus exact 36-`pgcrypto`/10-`uuid-ossp` member-owner correction.
+- Still open: separately authorized extension-baseline provisioning and receipt-bound read-only postcheck; only then a newly authorized protected database Restore, DB postcheck, Storage, server config, disposable-target cleanup, independent countercheck and final acceptance.
+- Evidence so far: PRs #943/#987/#990/#991/#992; issue #944 comments `5381530143`, `5382274967`, `5382336892`; runs `32582640853` and `32594374666`; Host-2 job `97082992861`; independent read-only reconciliation output.
+- Exact next step: finish and merge this repository-only reconciliation. Then wait for a new exact R4 authorization limited to the isolated target extension baseline, receipt-bound verification and rollback. Do not retry/rerun the database workflow and do not generate a JIT.
+- Owner action needed: yes, only for a new exact protected extension-baseline provisioning mutation. The prior one-run database-Restore authorization is consumed.
 ## FM-MOB-001
 - Started: before 2026-08-19
 - Updated: 2026-08-21
