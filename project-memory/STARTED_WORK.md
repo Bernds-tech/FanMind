@@ -17,7 +17,7 @@ Canonical register for FanMind work that has started but is not yet fully comple
 - Status: RECONCILIATION_REQUIRED
 - Risk: R4
 - Scope: Complete the isolated real FanMind Restore drill without touching Production or Supabase Staging; current repository work is limited to the checkout CA-truststore defect proven by protected read-only run `32568632008`.
-- Branch/PR: `restore-checkout-ca-truststore-20260822` / pending.
+- Branch/PR: `restore-checkout-ca-truststore-20260822` / #991.
 - Work lock: `LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822` ACTIVE.
 - Dependencies: FM-DEP-001; current Org runner-group/workflow-allowlist/JIT policy; existing isolated host/target; exact Schema-2 Full Backup; protected environment.
 - Assumptions: the established empty isolated target and connection-disabled rollback quarantine remain unchanged; all mutable host, target, backup and TLS evidence must be revalidated before any later run or write.

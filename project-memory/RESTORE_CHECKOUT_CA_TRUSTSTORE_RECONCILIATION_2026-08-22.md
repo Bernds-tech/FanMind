@@ -6,7 +6,7 @@
 - Risk: `R4`
 - Status: `RECONCILIATION_REQUIRED`
 - Branch: `restore-checkout-ca-truststore-20260822`
-- Pull request: pending
+- Pull request: `#991`
 - Base commit: `1735a5f552c0c20c180fb96be6fa9000cbffc360`
 - Active repair lock: `LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822`
 

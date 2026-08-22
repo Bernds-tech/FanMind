@@ -138,7 +138,7 @@ A receipt is required for meaningful code/config/infra/governance work. Never in
 - Task: FM-RST-001
 - Started: 2026-08-22 15:52 Europe/Vienna
 - Finished: repository implementation in progress; exact-head PR acceptance and any future protected read-only rerun remain pending.
-- Branch/PR: `restore-checkout-ca-truststore-20260822` / pending
+- Branch/PR: `restore-checkout-ca-truststore-20260822` / #991
 - Preflight checked: current `main` `1735a5f552c0c20c180fb96be6fa9000cbffc360`, mandatory Project Memory/Restore readers, drift and evidence-freshness preflights, issue #944, PRs #987/#990, workflow run `32568632008`, jobs `97020817035`/`97020825268`/`97020836458`, protected job steps/logs, runner ID `40` state and operator cleanup output.
 - Prior attempts found: PR #990 correctly removed `GIT_SSL_NO_VERIFY` and its fresh protected host gate passed. The later checkout still failed because six path-valued CA variables remained exported as empty strings. No Resource Readiness, Target Compatibility, decryption, DB connection or write ran.
 - Dependency result: repository code/tests/PR work is standing-authorized. Existing isolated host, empty target, retained rollback quarantine, backup and protected environment are reused without mutation. No workflow dispatch or JIT creation is part of this repair.

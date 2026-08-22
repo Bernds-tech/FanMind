@@ -15,7 +15,7 @@ Prevents two agents/sessions from independently working the same task.
 - Task: FM-RST-001
 - Status: ACTIVE
 - Holder: ChatGPT Restore checkout CA-truststore reconciliation session 2026-08-22
-- Branch/PR: `restore-checkout-ca-truststore-20260822` / pending
+- Branch/PR: `restore-checkout-ca-truststore-20260822` / #991
 - Acquired: 2026-08-22 15:52 Europe/Vienna
 - Updated: 2026-08-22
 - Scope: pin the six path-valued CA environment controls in all self-hosted Restore jobs to Ubuntu's root-owned system truststore, validate that boundary before checkout, add regression tests and reconcile run `32568632008`; no workflow dispatch, JIT creation or runtime/database mutation.
