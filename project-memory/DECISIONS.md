@@ -31,3 +31,9 @@ Decisions are append-only. If a decision changes, add a new entry that explicitl
 - Status: DONE
 - Decision: Self-hosted Restore workflow CA-path controls are pinned to `/etc/ssl/certs/ca-certificates.crt` and `/etc/ssl/certs`, validated as canonical root-owned non-runner-writable system truststore objects before checkout; `GIT_SSL_NO_VERIFY` remains unset.
 - Reason: Empty CA-path exports override truststore discovery and caused run `32568632008` to fail, while simply removing the variables would permit ambient runner values to influence the R4 checkout boundary.
+
+## FM-DEC-006
+- Date: 2026-08-22
+- Status: DONE
+- Decision: Successful protected read-only run `32582640853` advances the Restore state machine to `TARGET_COMPATIBLE`, but it never implies or authorizes `DB_RESTORED`. The database workflow requires a new exact R4 authorization and fresh mutable-evidence preflight.
+- Reason: Resource checksum and read-only catalog/TLS evidence prove readiness only; the next state changes the isolated database and remains a separately protected risk boundary.

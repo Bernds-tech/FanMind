@@ -157,4 +157,16 @@ Implementation status and acceptance status are deliberately separate.
 - Falsification: a later exact catalog/ACL/advisor read showing a different state or a mismatch between controlled migration and deployed target invalidates this baseline.
 - Acceptance: COUNTERCHECKED_NOT_ACCEPTED
 
+## FM-EV-015
+- Related: FM-RST-001 / issue #944
+- Date: 2026-08-22
+- Target: exact `main` `b75f68ecc7999a9b492051aecc2421b9b597dd18`, organization runner policy, isolated Restore host, accepted encrypted Full Backup and empty PostgreSQL-17 target
+- Type: protected read-only GitHub workflow + independent job-log/TLS/JIT-cleanup countercheck
+- Reference: run `32582640853`; jobs `97054217701`, `97054234003`, `97054248185`; one-job runner IDs `41` and `42`; PR #991; issue #944 comment `5381530143`
+- Result: all jobs succeeded. Checkout used the pinned root-owned Ubuntu truststore, negotiated TLS 1.3 and reported `server certificate verification OK`; resource readiness verified the Full Backup checksum without decryption/DB access/write; target compatibility verified PostgreSQL 17, all required roles, `pgcrypto`, dedicated restore superuser and TLS `verify-full` through a read-only catalog session. Both one-job runners cleaned credentials/configuration; Host-2 exit and API removal were controller-verified.
+- Negative evidence: no dangerous `server certificate verification SKIPPED`, no CA-file error, no decryption, no restore, no target reset, no Production write, no Supabase-Staging write and no secret output.
+- Limitations: `FM-RST-001` is not complete. Database, postcheck, Storage, config, cleanup and final countercheck remain open; mutable host/runner/target/TLS evidence must be refreshed before the separately authorized write.
+- State-machine result: `TARGET_COMPATIBLE`.
+- Acceptance: COUNTERCHECKED_READ_ONLY
+
 Never store secrets, private credentials, plaintext sensitive payloads, or unsafe diagnostic material here.

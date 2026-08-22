@@ -178,23 +178,27 @@ no database target, no encrypted backup and no restore dispatch.
 The job is routed through organization runner group `fanmind-restore-drill`
 and all five labels `self-hosted`, `fanmind-restore`, `fanmind-restore-01`,
 `linux` and `x64`. The labels are routing selectors, not an authorization or
-host-readiness boundary. This public, user-owned repository cannot currently
-provide that organization group. Every dispatch therefore checks the unset
-repository variable `FANMIND_RESTORE_RUNNER_SCOPE` in its GitHub-hosted first
-job and must stop before any Self-hosted job. Do not set the value or register
-a Restore runner until the repository is organization-owned and the group is
-allowlisted to exactly the three reviewed Restore workflow paths on
-`refs/heads/main`:
+host-readiness boundary. The current public repository is organization-owned
+as `FanMind/FanMind`, repository ID `1259448985`. The group is selected for
+that repository and restricted to exactly these three reviewed Restore
+workflow paths on `refs/heads/main`:
 
-- `<future-org>/FanMind/.github/workflows/restore-drill-host-readiness.yml@refs/heads/main`;
-- `<future-org>/FanMind/.github/workflows/restore-drill-resource-readiness.yml@refs/heads/main`;
-- `<future-org>/FanMind/.github/workflows/restore-drill-database.yml@refs/heads/main`.
+- `FanMind/FanMind/.github/workflows/restore-drill-host-readiness.yml@refs/heads/main`;
+- `FanMind/FanMind/.github/workflows/restore-drill-resource-readiness.yml@refs/heads/main`;
+- `FanMind/FanMind/.github/workflows/restore-drill-database.yml@refs/heads/main`.
 
-Before setting the scope variable, verify and retain a private administrator
+This mutable administrator policy was revalidated immediately before protected
+read-only run `32582640853` on 2026-08-22. It is not permanent acceptance:
+every later R4 write must repeat the live group/repository/workflow check.
+Every dispatch still checks `FANMIND_RESTORE_RUNNER_SCOPE` in its GitHub-hosted
+first job and must stop before any Self-hosted job unless its value is exactly
+`organization-workflow-allowlist`.
+
+Before relying on the scope variable for any run, verify and retain a private administrator
 receipt showing `visibility=selected`, selected repositories exactly
 `[1259448985]`,
 `restricted_to_workflows=true` and `selected_workflows` exactly the three workflow/ref entries
-above. If the transferred repository remains public, the same receipt must
+above. Because the current repository is public, the same receipt must
 show `allows_public_repositories=true`; alternatively make the repository
 private before any Runner registration. `FANMIND_RESTORE_RUNNER_SCOPE` is only the operator assertion of
 that independently verified policy; it does not query the GitHub Admin API.
@@ -213,8 +217,7 @@ The capture has exactly `schemaVersion`, `capturedAt`, `capture`,
 `organization`, `repository` and `runnerGroup`. `capture` records only method
 `github-organization-admin-policy-capture`, role
 `organization-runner-group-administrator` and `containsSecrets: false`.
-`organization.login` is supplied from the real transfer; this runbook does not
-name or predict it. `repository` contains exactly `id`, `name`, `fullName`,
+`organization.login` must be `FanMind`. `repository` contains exactly `id`, `name`, `fullName`,
 `ownerLogin`, `ownerType` and `private`. `runnerGroup` contains exactly `name`,
 `visibility`, `allowsPublicRepositories`, `restrictedToWorkflows`,
 `selectedRepositoryIds` and `selectedWorkflows`. Unknown or duplicate members,

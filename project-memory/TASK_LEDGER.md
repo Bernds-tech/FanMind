@@ -65,15 +65,15 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 - Do not repeat: Do not recreate Staging host/Supabase/Stripe test baseline absent verified drift.
 
 ## FM-RST-001
-- Date: 2026-08-17 to 2026-08-19
+- Date: 2026-08-17 to 2026-08-22
 - Updated: 2026-08-22
-- Status: RECONCILIATION_REQUIRED
+- Status: PARTIAL
 - Goal: Complete isolated real restore drill.
 - Starting state: Dedicated restore host, PostgreSQL 17 target, runner group/workflows and protected environment already exist.
-- Action: Host-readiness, TLS, PostgreSQL compatibility, runner/JIT and workflow setup were iterated; ACL/authorization recovery was merged in PRs #943/#987; the isolated target was reset to the independently checked empty baseline with rollback quarantine retained; PR #990 removed the unsafe `GIT_SSL_NO_VERIFY` export. Protected read-only run `32568632008` then localized a second checkout defect to empty path-valued CA overrides.
-- Result: Recovery code/backup/host/empty-target foundation remains reusable, but the latest read-only run failed in checkout before resource or target checks. No DB, Production or Supabase-Staging mutation occurred; end-to-end Restore/Storage/Server-Config/Cleanup/Evidence acceptance remains open.
-- Evidence: PR #943 merge `14a1e2d0e100f2ec8cfa14486c96f128fb431878`; PR #987 merge `b6bc368915d50dd2903b83b87c7ca25eb0ed6e18`; PR #990 merge `1735a5f552c0c20c180fb96be6fa9000cbffc360`; accepted Full Backup/Verification records; issue #944; run `32568632008` and jobs `97020817035`/`97020825268`/`97020836458`; runner ID `40` cleanup; CA failure reproduction and the 2026-08-22 truststore checkpoint.
-- Next step: finish, test, countercheck and merge the repository-only CA-truststore repair. Do not dispatch or prepare any Restore run/JIT during that repair. Only after merge separately revalidate the two-JIT protected read-only path before any write.
+- Action: Host-readiness, TLS, PostgreSQL compatibility, runner/JIT and workflow setup were iterated; ACL/authorization recovery was merged in PRs #943/#987; the isolated target was reset to the independently checked empty baseline with rollback quarantine retained; PRs #990/#991 repaired checkout TLS/CA handling. Fresh protected read-only run `32582640853` then used two new sequential one-job JIT runners and passed Host, checkout TLS, Resource Readiness and Target Compatibility on exact #991 merge.
+- Result: Restore state advanced through `TARGET_COMPATIBLE`. The Full Backup checksum matched without decryption; the isolated PostgreSQL-17 target exposed all required roles/extension through TLS `verify-full` and a server-enforced read-only catalog session; writes remained disabled. Database/Storage/Config/Cleanup/final acceptance remain open.
+- Evidence: PR #943 merge `14a1e2d0e100f2ec8cfa14486c96f128fb431878`; PR #987 merge `b6bc368915d50dd2903b83b87c7ca25eb0ed6e18`; PR #990 merge `1735a5f552c0c20c180fb96be6fa9000cbffc360`; PR #991 merge `b75f68ecc7999a9b492051aecc2421b9b597dd18`; accepted Full Backup/Verification records; issue #944; run `32582640853` and jobs `97054217701`/`97054234003`/`97054248185`; runner IDs `41`/`42` cleanup; independent checkout/TLS log countercheck.
+- Next step: await a separate exact protected R4 authorization for `restore-drill-database.yml`; immediately before it, revalidate mutable runner/host/target/backup/TLS evidence. No database dispatch or JIT preparation belongs to this evidence reconciliation.
 - Do not repeat: Do not export CA paths as empty strings, retry run `32568632008`, reuse runner ID `40`, build another Restore server, reset the already empty target or recreate TLS/PostgreSQL/runner foundations absent verified drift. Never restore against Production or Supabase Staging.
 
 ## FM-MOB-001

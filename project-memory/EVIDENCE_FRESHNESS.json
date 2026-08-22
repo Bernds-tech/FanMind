@@ -5,9 +5,17 @@
       "id": "EV-RUNNER-POLICY",
       "gate": "restore",
       "class": "runner_admin_policy",
-      "status": "DEFERRED_BY_OWNER",
-      "observed_at": null,
-      "source": "FM-RST-OWNER-001"
+      "status": "COUNTERCHECKED",
+      "observed_at": "2026-08-22T16:40:56Z",
+      "source": "Run 32582640853 / jobs 97054217701, 97054234003, 97054248185 / FM-RST-OWNER-001"
+    },
+    {
+      "id": "EV-RESTORE-HOST-20260822",
+      "gate": "restore",
+      "class": "restore_host",
+      "status": "COUNTERCHECKED",
+      "observed_at": "2026-08-22T16:40:56Z",
+      "source": "Run 32582640853 Host-1 and Host-2 gate/TLS/toolchain logs; runner IDs 41 and 42 cleanup"
     },
     {
       "id": "EV-RESTORE-BACKUP-SCHEMA2",

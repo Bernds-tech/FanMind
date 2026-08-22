@@ -1,6 +1,6 @@
 # FanMind Current State
 
-Last reconciled: 2026-08-20
+Last reconciled: 2026-08-22
 
 ## Mandatory restart point
 
@@ -86,11 +86,14 @@ Do not create artificial browser RLS policies merely to silence INFO advisories 
 - New encrypted Schema-2 Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c` succeeded, validated and uploaded offsite.
 - Checksum-only Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1` succeeded/passed.
 - Historical privilege-less backups are not valid Gate-2 recovery evidence.
-- Current accepted Restore progression remains `BACKUP_ACCEPTED`; later isolated restore/readiness work is valuable evidence but is still `RECONCILIATION_REQUIRED` and does not authorize the next write.
+- Current highest proven Restore state is `TARGET_COMPATIBLE`; this advances the read-only state machine only and does not authorize the next write.
 - PR #987 merged the bounded schema-ACL recovery as `b6bc368915d50dd2903b83b87c7ca25eb0ed6e18`; the disposable target was later independently reset to the empty baseline and the prior populated database retained as connection-disabled quarantine.
 - PR #990 merged the `GIT_SSL_NO_VERIFY` checkout repair as `1735a5f552c0c20c180fb96be6fa9000cbffc360`.
 - Protected read-only run `32568632008` passed dispatch and Host-1 but protected job `97020836458` failed in `actions/checkout` because path-valued CA variables were present with empty values. Resource Readiness and Target Compatibility were skipped, one-job runner ID `40` cleaned itself, and no DB/Production/Supabase-Staging mutation occurred.
-- Active repository blocker: `RESTORE_CHECKOUT_CA_TRUSTSTORE_RECONCILIATION_2026-08-22.md`; no retry, new JIT or Restore dispatch belongs to that repository repair.
+- PR #991 pinned all Restore CA consumers to the root-owned Ubuntu truststore and merged as `b75f68ecc7999a9b492051aecc2421b9b597dd18` after exact-head green countercheck.
+- Fresh protected read-only run `32582640853` on that exact commit completed `success`: gate job `97054217701`, Host-1 job `97054234003` and protected Host-2 job `97054248185` all passed. Checkout loaded the pinned truststore, negotiated TLS 1.3 and reported `server certificate verification OK`; the earlier unsafe verification-skip marker and empty-CA failure were absent.
+- Resource Readiness proved isolated/separate targeting, encrypted Full Backup type, matching checksum-only verification, no DB connection, no decryption and writes disabled. Target Compatibility proved PostgreSQL 17, all three required roles, `pgcrypto` 1.3, the dedicated restore superuser, read-only catalog access, TLS `verify-full` and writes disabled.
+- Fresh one-job runners completed normal teardown; Host-2 runner ID `42` removed `.credentials`/`.runner`, exited 0 and disappeared from the live runner list before the controller accepted cleanup. No database Restore, target reset, Production write or Supabase-Staging write occurred.
 
 ### Operator-session foundation — revalidate before use
 
@@ -111,7 +114,7 @@ These live facts can drift. Revalidate runner group/workflow allowlist/JIT state
 
 ## Important contradictions
 
-- Actual GitHub repository is organization-owned `FanMind/FanMind`; older Restore prose still contains pre-transfer `user-owned`/`future-org` wording. Do not repeat transfer work. Runner-group Admin policy must still be revalidated before dispatch.
+- GitHub repository ownership and runner-group scope are reconciled: `FanMind/FanMind`, repository ID `1259448985`, selected group `fanmind-restore-drill` and exactly the three reviewed `main` Restore workflows. This mutable policy must still be freshly revalidated before every later R4 write.
 - Production trigger-hardening implementation exists in code, but fresh live advisors show the pre-accepted privilege/search-path warnings. Treat implementation and live acceptance separately until exact target verify/postflight is complete.
 
 ## Canonical roadmap boundary
@@ -150,7 +153,7 @@ GitHub `main` is currently **not branch-protected**. This is known and remains a
 ## Exact next safe sequence
 
 1. **FM-SEC-001:** read-only Production trigger-hardening verify on exact deployed commit; classify Staging RPC/leaked-password settings; no mutation yet.
-2. Continue Restore from `BACKUP_ACCEPTED -> HOST_REVALIDATED` only when the deferred owner/admin gate is resumed.
+2. Keep Restore at `TARGET_COMPATIBLE`. The next transition is the separately protected isolated database Restore only after a new exact R4 authorization; revalidate all mutable runner/host/target/backup/TLS evidence immediately beforehand.
 3. Mobile external read-only resource reconciliation, then signing/device/store acceptance.
 4. Plus/Ultra product/quality/cost/Stripe lifecycle closure.
 5. Meta Events Manager + final non-Social security acceptance.
