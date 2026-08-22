@@ -62,8 +62,8 @@ Update this file at the end of a substantial work session or whenever work is pa
 
 ## Current handoff
 - Updated: 2026-08-22 19:01 Europe/Vienna
-- Active focus: `FM-RST-001` is paused safely at `TARGET_COMPATIBLE` after successful read-only runtime evidence and merged reconciliation PR #992. No Restore work lock is active; the next database transition is owner-deferred and no database/runtime/provider mutation is authorized.
-- Start here: run the complete Project Memory/Restore preflight, inspect issue #944 comment `5381530143`, run `32582640853`, jobs `97054217701`/`97054234003`/`97054248185` and current `main` merge `cb04829c378285c24c3c53b5fab2d03177c19165`. Current GitHub/runtime evidence overrides older memory prose.
+- Active focus: `FM-RST-001` is paused safely at `TARGET_COMPATIBLE` after successful read-only runtime evidence, merged reconciliation PR #992 and merged lock closeout PR #993. No Restore work lock is active; the next database transition is owner-deferred and no database/runtime/provider mutation is authorized.
+- Start here: run the complete Project Memory/Restore preflight, inspect current GitHub `main`, issue #944 comment `5381530143`, run `32582640853`, jobs `97054217701`/`97054234003`/`97054248185` and immutable evidence merge `cb04829c378285c24c3c53b5fab2d03177c19165`. Current GitHub/runtime evidence overrides older memory prose.
 - Accepted governance: `FM-MEM-005` V6 accepted; `FM-MEM-008` V8 accepted after final PR #980 head `704fec4b6264dd5a0dd83cc8e0029352672485d0` passed Guard/Quality/Status, FanMind CI, Landing, Supply Chain, CodeQL and Browser E2E run #915, then merged as `22eb6aed5da4fde47860bbe12b118d3780c8a4a0`.
 - Active IDs: `FM-RST-001`, `FM-MOB-001`, `FM-AI-001`, `FM-META-001`, `FM-SOC3-001`, `FM-SOC7-001`, `FM-SALES-001`, `FM-LEGAL-001`, `FM-SEC-001`.
 - Accepted foundation: `FM-STG-001`; Production operations baseline: `FM-OPS-001` verified; `sales_ready=false`; Phase 8 not started.
