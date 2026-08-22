@@ -12,14 +12,23 @@ This is the single compact queue for actions that genuinely require the owner, a
 - Revalidation: this mutable evidence expires and must be repeated immediately before the later protected R4 write.
 
 ## FM-RST-OWNER-002 — Exact isolated database-Restore authorization
-- Status: DEFERRED_BY_OWNER
-- Where: GitHub workflow `restore-drill-database.yml`, protected `restore-drill` environment and fresh one-job JIT controller.
-- Why: the state machine is `TARGET_COMPATIBLE`; the next transition writes to the isolated database and is outside read-only standing authorization.
+- Status: CONSUMED_FAIL_CLOSED
+- Where: workflow run `32594374666` on exact commit `8bc8855a6de928cf38ef2e8fb9e9e0860fc477db`.
+- Result: the single authorized dispatch and two fresh JITs were consumed. Host-2 stopped at receipt-bound database authorization preflight before the first target write; independent read-only reconciliation proved the database remains empty and runner/private cleanup is safe.
 - Risk: R4
-- Duration class: protected execution block
-- Resume trigger: owner grants a new exact authorization naming commit, accepted Full Backup/source binding, isolated target, workflow confirmation and two fresh sequential one-job JITs.
-- Do not ask before: explicit owner resume. Never infer this authorization from the successful read-only run.
+- Evidence: jobs `97082934347`, `97082943319`, `97082992861`; issue #944 comments `5382274967` and `5382336892`.
+- Do not repeat: no rerun/retry, JIT reuse or inference that the prior authorization remains available.
 
+## FM-RST-OWNER-003 — Exact isolated extension-baseline provisioning
+- Status: DEFERRED_BY_OWNER
+- Where: only `fanmind-restore-01` / PostgreSQL 17.11 / database `fanmind_restore`, followed by receipt-bound read-only authorization verification.
+- Why: reset v10 left the intended empty 2-extension baseline, but the selected Full Backup requires five exact extensions before the first Restore write. The three missing trusted packages are already installed on the host.
+- Exact permitted scope when resumed: add only `pg_stat_statements` 1.11, `supabase_vault` 0.3.1 and `uuid-ossp` 1.1 with their receipt-bound schemas/owners, apply only the already proven internal member-owner correction, verify the exact 97-record extension fingerprint, and automatically restore the proven 2-extension baseline on postcheck failure.
+- Forbidden: database Restore/rerun, target reset, quarantine deletion, Production/Supabase-Staging target or write, any other role/database/config mutation.
+- Risk: R4
+- Duration class: protected bounded transaction
+- Resume trigger: owner grants a fresh exact authorization naming this target, selected backup/receipt/source binding, expected extension fingerprint and rollback boundary.
+- Do not ask before: explicit owner resume. A later database-Restore authorization is separate and may be considered only after this provisioning passes.
 ## FM-GOV-OWNER-001 — Protect `main`
 - Status: DEFERRED_BY_OWNER
 - Where: GitHub repository/organization Rulesets or Branch Protection UI

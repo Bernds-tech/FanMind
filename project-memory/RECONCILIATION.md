@@ -35,3 +35,13 @@ Compare `TASK_LEDGER.md`, `STARTED_WORK.md`, `WORK_LOCKS.md`, `OPEN_LOOPS.md`, `
 - Required correction: add a parallel-safe read-only `FM-SEC-001` NBA before Mobile, regenerate the selected NBA and automatic handoff, and fail Project Memory Quality when `CURRENT_STATE.md` first-safe task is absent from or disagrees with the generated NBA.
 - Status: RESOLVED
 - Resolved: PR #986 branch scope implements the catalog/handoff/validator alignment. Acceptance remains contingent on exact-head green checks and merge; no Production/Staging/Auth/provider mutation is part of this reconciliation.
+
+## RECON-2026-011
+- Detected: 2026-08-22 after exactly authorized database-Restore run `32594374666` failed closed.
+- Task: `FM-RST-001`.
+- Mismatch: Project Memory still named a database-Restore dispatch as the next transition after minimal `TARGET_COMPATIBLE`, while live receipt-bound authorization proved the empty target has only 2 of the selected backup's 5 required extensions.
+- Actual state: run `32594374666` stopped before the first write; independent read-only reconciliation proves an empty, TLS-verified, clean target with retained quarantine and exactly three missing trusted extensions.
+- Memory state: readiness evidence was valid but described only the smaller baseline contract; the database authorization owner action was still shown as unused/deferred.
+- Required correction: mark the one-run authorization consumed fail-closed, preserve highest accepted state `TARGET_COMPATIBLE`, add side state `RECONCILIATION_REQUIRED`, route the next owner action to exact rollback-capable extension-baseline provisioning/full receipt postcheck, and prohibit automatic retry.
+- Status: OPEN
+- Resolved: after this exact reconciliation PR passes required checks and merges; runtime acceptance remains open.

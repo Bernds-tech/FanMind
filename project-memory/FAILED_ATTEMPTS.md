@@ -101,3 +101,13 @@ Record failed, unsafe, superseded or misleading approaches here. Do not store se
 - Cause: ephemeral runner diagnostic files are not a stable authorization contract, and offline-to-online registration plus SSH output buffering are asynchronous.
 - Decision: authorize Host-2 from exact GitHub Host-1 success plus credential/listener/API cleanup, then run the already queued Host-2 job synchronously with streamed console output and require independent GitHub job success, listener exit 0 and runner removal before cleanup acceptance.
 - Do not repeat: do not regenerate a JIT after a pre-JIT controller defect; do not gate continuation on one local `_diag` filename; do not poll a fresh JIT as if its initial `offline` state were an error; do not use a background listener when the single queued job can be consumed synchronously.
+
+## FM-FAIL-011
+- Date: 2026-08-22
+- Status: DONE
+- Area: Restore target compatibility contract
+- Attempt: Treat the minimal read-only `TARGET_COMPATIBLE` check and reset baseline (`plpgsql`, `pgcrypto`) as sufficient preparation for the selected backup receipt's full database authorization preflight.
+- Result: Exactly authorized run `32594374666` reached Host-2 and failed deterministically at `database_authorization_preflight_failed` before the first write because only 2 of 5 required extensions were present.
+- Cause: the readiness workflow validates a deliberately smaller host/target baseline, while the database runner validates the selected receipt's exact five-extension descriptor and 97-record fingerprint. The earlier state label did not distinguish these contracts clearly enough.
+- Decision: preserve `TARGET_COMPATIBLE` as the highest accepted baseline state but add `RECONCILIATION_REQUIRED`; require a separately authorized extension-baseline transaction and exact full receipt-bound read-only postcheck before any new database dispatch.
+- Do not repeat: do not rerun the database workflow unchanged, infer receipt compatibility from the minimal marker, recreate only `uuid-ossp`, or skip the proven 36-`pgcrypto`/10-`uuid-ossp` member-owner correction.

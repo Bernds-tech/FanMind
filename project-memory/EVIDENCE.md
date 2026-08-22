@@ -169,4 +169,18 @@ Implementation status and acceptance status are deliberately separate.
 - State-machine result: `TARGET_COMPATIBLE`.
 - Acceptance: COUNTERCHECKED_READ_ONLY
 
+## FM-EV-016
+- Related: FM-RST-001 / issue #944
+- Date: 2026-08-22
+- Target: exact `main` `8bc8855a6de928cf38ef2e8fb9e9e0860fc477db`, run `32594374666`, isolated `fanmind-restore-01` PostgreSQL 17.11 database `fanmind_restore`
+- Type: protected R4 workflow evidence + independent read-only host/target reconciliation
+- Reference: run `32594374666`; jobs `97082934347`, `97082943319`, `97082992861`; one-job runner IDs `43` and `44`; issue #944 comments `5382274967` and `5382336892`; target reset receipt `/home/fanmind-restore/secure/target-reset-receipt-20260821_193331.json`.
+- Result: gate and Host-1 succeeded. Host-2 passed exact checkout, checksum-only Resource Readiness, baseline PostgreSQL compatibility and positive TLS certificate verification, then failed at `database_authorization_preflight_failed` before backup decryption/first target write. The target has 2/5 receipt-bound extensions; `pg_stat_statements`, `supabase_vault` and `uuid-ossp` are missing, with trusted control files present.
+- Independent evidence: follow-up read-only controller returned `READ_ONLY_RECONCILIATION=PASS`, listener/credentials/JIT/plaintext absent, Host-2 exit receipt 0, TLS `verify-full`, server-enforced read-only transaction, empty baseline target, 2/2 baseline extensions, 3/3 baseline roles and retained connection-disabled quarantine.
+- Negative evidence: no `RESTORE_DRILL_DATABASE=PASS`, no applied Restore, no target reset, no Production write, no Supabase-Staging write, no certificate-verification skip and no private artifact upload.
+- Prior accepted repair path: exact five-extension state requires fingerprint `6704956613ca8e58a527336d67b622a043e48a568858873ca5a6fa6b8bd08012` over 97 records, including the proven 36-`pgcrypto` and 10-`uuid-ossp` member-owner correction; recreating `uuid-ossp` alone previously produced the wrong fingerprint.
+- Limitations: the extension baseline is not currently provisioned and the unchanged full receipt-bound role/container authorization must be rerun after provisioning. Database/Storage/config/cleanup/final acceptance remain open.
+- State-machine result: highest accepted progression `TARGET_COMPATIBLE`; side state `RECONCILIATION_REQUIRED`.
+- Acceptance: COUNTERCHECKED_FAIL_CLOSED
+
 Never store secrets, private credentials, plaintext sensitive payloads, or unsafe diagnostic material here.

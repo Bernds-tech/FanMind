@@ -21,10 +21,12 @@ No state may be skipped. A later state does not retroactively prove an earlier s
 
 ## Current state
 
-- Current highest proven state: `TARGET_COMPATIBLE`.
+- Current side state: `RECONCILIATION_REQUIRED`; highest accepted progression remains `TARGET_COMPATIBLE`. `DB_RESTORED` was not reached.
 - Immutable foundation: PR #943 merge `14a1e2d0e100f2ec8cfa14486c96f128fb431878`; Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c`; checksum Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1`.
-- Fresh transition evidence: protected read-only run `32582640853` on exact commit `b75f68ecc7999a9b492051aecc2421b9b597dd18`; jobs `97054217701`, `97054234003` and `97054248185` all succeeded. Checkout certificate verification passed with the pinned Ubuntu truststore; resource checksum-only readiness and PostgreSQL-17 target compatibility with TLS `verify-full` passed; writes remained disabled.
-- Mutable host/runner/target/TLS facts must still be revalidated immediately before the separately authorized `TARGET_COMPATIBLE -> DB_RESTORED` transition.
+- Accepted transition evidence: protected read-only run `32582640853` on exact commit `b75f68ecc7999a9b492051aecc2421b9b597dd18`; jobs `97054217701`, `97054234003` and `97054248185` all succeeded. Checkout certificate verification passed with the pinned Ubuntu truststore; resource checksum-only readiness and PostgreSQL-17 baseline target compatibility with TLS `verify-full` passed; writes remained disabled.
+- Consumed write attempt: exactly authorized run `32594374666` on commit `8bc8855a6de928cf38ef2e8fb9e9e0860fc477db` passed dispatch, Host-1, checkout, checksum readiness and baseline target compatibility, then protected Host-2 job `97082992861` failed at `database_authorization_preflight_failed` before the first target write and before `pg_restore`.
+- Independent read-only reconciliation proved no listener/JIT/credential/plaintext residue, listener exit 0, TLS `verify-full`, unchanged empty target and retained connection-disabled quarantine. The target has exactly two baseline extensions while the selected receipt requires five; the trusted PostgreSQL-17 control files for the three missing extensions are already present.
+- The exact run authorization is consumed. No retry or JIT reuse is permitted. The next possible mutation is a separately authorized, bounded isolated-target extension-baseline provisioning transaction with receipt-bound postcheck and rollback; only after that succeeds may a new database-Restore authorization be considered.
 
 ## Transition contract
 

@@ -4,12 +4,12 @@ Track ordering and prerequisites here. Do not mark dependent work accepted while
 
 ## FM-DEP-001
 - From: FM-RST-001
-- Requires: reviewed restore workflows, protected `restore-drill` environment, exact Organization runner-group/workflow-allowlist/JIT policy, isolated existing PostgreSQL-17.11 target, TLS verify-full, exact accepted Schema-2 Full Backup/Receipt and current host gate/toolchain.
+- Requires: reviewed restore workflows, protected `restore-drill` environment, exact Organization runner-group/workflow-allowlist/JIT policy, isolated existing PostgreSQL-17.11 target, TLS `verify-full`, exact accepted Schema-2 Full Backup/Receipt, current host gate/toolchain and the complete receipt-bound database authorization contract.
 - Type: internal + external control
 - Status: ACTIVE
 - Updated: 2026-08-22
-- Current evidence: run `32582640853` proved the chain through `TARGET_COMPATIBLE`; mutable runner-policy/host/target/TLS evidence must be refreshed before the next write.
-- Rule: Continue from the first unproven gate; do not recreate established infrastructure merely because a later gate is blocked. `TARGET_COMPATIBLE -> DB_RESTORED` requires separate exact R4 authorization. Never target Production or Supabase Staging.
+- Current evidence: read-only run `32582640853` proved the baseline chain through `TARGET_COMPATIBLE`. Authorized run `32594374666` then proved the full database authorization preflight fails before write at 2/5 required extensions; independent read-only reconciliation proved the target remains empty and clean.
+- Rule: Continue from the first unproven gate. Before any database retry, separately authorize and prove the exact five-extension/97-record baseline (`6704956613ca8e58a527336d67b622a043e48a568858873ca5a6fa6b8bd08012`) plus the unchanged full role/container contract. Do not recreate established infrastructure, automatically retry the consumed run, target Production/Supabase Staging or infer full receipt compatibility from the minimal readiness check.
 
 ## FM-DEP-002
 - From: FM-MOB-001
