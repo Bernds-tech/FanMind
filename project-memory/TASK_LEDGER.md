@@ -67,7 +67,7 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 ## FM-RST-001
 - Date: 2026-08-17 to 2026-08-22
 - Updated: 2026-08-22
-- Status: RECONCILIATION_REQUIRED
+- Status: PARTIAL
 - Goal: Complete isolated real restore drill.
 - Starting state: Dedicated restore host, PostgreSQL 17 target, runner group/workflows, accepted backup tuple and protected environment already exist.
 - Action: Protected read-only run `32582640853` first established baseline readiness through `TARGET_COMPATIBLE`. The owner then authorized exactly one database run on `main` `8bc8855a6de928cf38ef2e8fb9e9e0860fc477db`. Run `32594374666` used fresh one-job JIT runner IDs `43`/`44`; gate and Host-1 passed, while Host-2 job `97082992861` stopped at the full receipt-bound database authorization preflight before decryption/first target write.
