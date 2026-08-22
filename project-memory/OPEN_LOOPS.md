@@ -8,7 +8,7 @@ This register contains started, partially completed or follow-up work that could
 - Updated: 2026-08-22
 - Gap: Recovery code/backup/host foundation is advanced, but the complete isolated DB/Storage/Server-config/Cleanup/Evidence drill is not accepted end-to-end.
 - Close when: exact artifact-bound isolated restore has passed current R4 quorum and independent countercheck, including cleanup and final evidence.
-- Next check: state is freshly `TARGET_COMPATIBLE` from successful read-only run `32582640853`. Do not dispatch the database workflow until separate exact R4 authorization exists; then revalidate all mutable gates and bind the exact commit/artifact/empty target before the write.
+- Next check: run `32594374666` consumed the database-Restore authorization and failed closed before the first write because the empty target has only 2 of 5 receipt-bound extensions. Do not rerun it. The first unproven gate is a separately authorized extension-only baseline provision plus unchanged full receipt-bound read-only authorization; only after its exact 97-record fingerprint passes may a newly authorized database Restore be planned.
 
 ## FM-LOOP-002
 - Related: FM-MEM-005
