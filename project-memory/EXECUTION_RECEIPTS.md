@@ -133,3 +133,21 @@ A receipt is required for meaningful code/config/infra/governance work. Never in
 - Result status: COUNTERCHECKED for the repository control; overall `FM-MOB-001` remains `IMPLEMENTED_NOT_VERIFIED` until the external EAS/signing/device/store gates pass.
 - Open follow-up: run the existing protected read-only EAS resource-readiness workflow against the exact merged commit; only after accepted external evidence may a separately authorized signed internal build be considered.
 - Work lock released: yes; `LOCK-FM-MOB-001-EAS-PROJECT-BINDING-20260821` was released after merge reconciliation.
+
+## RECEIPT-FM-RST-001-CHECKOUT-CA-20260822
+- Task: FM-RST-001
+- Started: 2026-08-22 15:52 Europe/Vienna
+- Finished: repository implementation in progress; exact-head PR acceptance and any future protected read-only rerun remain pending.
+- Branch/PR: `restore-checkout-ca-truststore-20260822` / #991
+- Preflight checked: current `main` `1735a5f552c0c20c180fb96be6fa9000cbffc360`, mandatory Project Memory/Restore readers, drift and evidence-freshness preflights, issue #944, PRs #987/#990, workflow run `32568632008`, jobs `97020817035`/`97020825268`/`97020836458`, protected job steps/logs, runner ID `40` state and operator cleanup output.
+- Prior attempts found: PR #990 correctly removed `GIT_SSL_NO_VERIFY` and its fresh protected host gate passed. The later checkout still failed because six path-valued CA variables remained exported as empty strings. No Resource Readiness, Target Compatibility, decryption, DB connection or write ran.
+- Dependency result: repository code/tests/PR work is standing-authorized. Existing isolated host, empty target, retained rollback quarantine, backup and protected environment are reused without mutation. No workflow dispatch or JIT creation is part of this repair.
+- Planned evidence: exact live-log root cause; independent Git 2.43 negative/positive reproduction; fixed root-owned Ubuntu truststore binding; pre-checkout file/directory owner/mode/type/canonical-path checks; exact workflow-count regression tests; drift baseline; full exact-head PR CI/security/governance set; independent final-diff countercheck.
+- Changes made: pinned `CURL_CA_BUNDLE`, `GIT_SSL_CAINFO`, `GIT_SSL_CAPATH`, `REQUESTS_CA_BUNDLE`, `SSL_CERT_DIR` and `SSL_CERT_FILE` in all five self-hosted Restore jobs; added truststore integrity assertions before the preinstalled gate/checkout; preserved unset `GIT_SSL_NO_VERIFY`; added regression and Project Memory reconciliation records.
+- Checks/tests: focused Restore-host tests pass 19/19; the combined Restore/supply-chain policy set passes 89/89; all three edited workflows parse as YAML; Project Memory quality/sales/truth/NBA/freshness/drift/milestone/V8 and generated-status checks pass with the final workflow blob baseline. A broad `test:operations` attempt passed 1012 tests and stopped on seven unrelated missing-package errors in the incomplete local `node_modules` (`typescript`, `pdfnative`, `brace-expansion`, `sharp`, `next`); clean-install exact-head CI remains the acceptance source for that full set.
+- Final diff counterchecked: pending.
+- Regression/security countercheck: initial negative/positive reproduction passed; empty Git CA paths fail with the same CA error as the protected run, while the pinned system truststore succeeds. All Restore write gates/commands and the preinstalled gate digest remain unchanged.
+- Evidence produced: issue #944 comment `5380738369`, the 2026-08-22 CA-truststore checkpoint, focused test output and local Git transport reproduction.
+- Result status: IN_PROGRESS / RECONCILIATION_REQUIRED.
+- Open follow-up: finish local quality/drift checks, update the watched baseline to final workflow blobs, open a PR and require exact-head green countercheck before merge. Do not dispatch a Restore workflow or create/reissue a JIT.
+- Work lock released: no; `LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822` remains active.

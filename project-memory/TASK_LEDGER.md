@@ -66,15 +66,15 @@ Use one heading per task/attempt. Never delete historical entries; supersede the
 
 ## FM-RST-001
 - Date: 2026-08-17 to 2026-08-19
-- Updated: 2026-08-20
-- Status: PARTIAL
+- Updated: 2026-08-22
+- Status: RECONCILIATION_REQUIRED
 - Goal: Complete isolated real restore drill.
 - Starting state: Dedicated restore host, PostgreSQL 17 target, runner group/workflows and protected environment already exist.
-- Action: Host-readiness, TLS, PostgreSQL compatibility, runner/JIT and workflow setup were iterated. ACL/Default-ACL/Owner/Role/DB-container/Extension backup+restore contract was hardened in PR #943; real PG17 two-cluster CI passed; Worker v6 was deployed; one new encrypted Schema-2 Full Backup and checksum-only verification were accepted.
-- Result: Recovery code/backup/host foundation is advanced, but the real end-to-end isolated Restore/Storage/Server-Config/Cleanup/Evidence chain is not yet accepted.
-- Evidence: PR #943 merge `14a1e2d0e100f2ec8cfa14486c96f128fb431878`; Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c`; Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1`; issue #944 comments; issue #874; restore operator-session evidence summarized in the deep audit.
-- Next step: Revalidate current Organization runner-group/workflow-allowlist/JIT policy, host/toolchain/target/TLS and exact backup binding; then follow `RESTORE_STATE_MACHINE.md` from `BACKUP_ACCEPTED` without skipping a state.
-- Do not repeat: Do not build another restore server or recreate TLS/PostgreSQL/runner foundations unless verified drift requires it. Never restore against Production or Supabase Staging.
+- Action: Host-readiness, TLS, PostgreSQL compatibility, runner/JIT and workflow setup were iterated; ACL/authorization recovery was merged in PRs #943/#987; the isolated target was reset to the independently checked empty baseline with rollback quarantine retained; PR #990 removed the unsafe `GIT_SSL_NO_VERIFY` export. Protected read-only run `32568632008` then localized a second checkout defect to empty path-valued CA overrides.
+- Result: Recovery code/backup/host/empty-target foundation remains reusable, but the latest read-only run failed in checkout before resource or target checks. No DB, Production or Supabase-Staging mutation occurred; end-to-end Restore/Storage/Server-Config/Cleanup/Evidence acceptance remains open.
+- Evidence: PR #943 merge `14a1e2d0e100f2ec8cfa14486c96f128fb431878`; PR #987 merge `b6bc368915d50dd2903b83b87c7ca25eb0ed6e18`; PR #990 merge `1735a5f552c0c20c180fb96be6fa9000cbffc360`; accepted Full Backup/Verification records; issue #944; run `32568632008` and jobs `97020817035`/`97020825268`/`97020836458`; runner ID `40` cleanup; CA failure reproduction and the 2026-08-22 truststore checkpoint.
+- Next step: finish, test, countercheck and merge the repository-only CA-truststore repair. Do not dispatch or prepare any Restore run/JIT during that repair. Only after merge separately revalidate the two-JIT protected read-only path before any write.
+- Do not repeat: Do not export CA paths as empty strings, retry run `32568632008`, reuse runner ID `40`, build another Restore server, reset the already empty target or recreate TLS/PostgreSQL/runner foundations absent verified drift. Never restore against Production or Supabase Staging.
 
 ## FM-MOB-001
 - Date: through 2026-08-19

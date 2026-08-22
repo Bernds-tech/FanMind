@@ -30,6 +30,18 @@ const TRUSTED_DIRECTORIES = new Set([
   "/usr/lib/postgresql/17",
   "/usr/lib/postgresql/17/bin",
 ]);
+const PINNED_RESTORE_CA_ENVIRONMENT = Object.freeze({
+  CURL_CA_BUNDLE: "/etc/ssl/certs/ca-certificates.crt",
+  GIT_SSL_CAINFO: "/etc/ssl/certs/ca-certificates.crt",
+  GIT_SSL_CAPATH: "/etc/ssl/certs",
+  REQUESTS_CA_BUNDLE: "/etc/ssl/certs/ca-certificates.crt",
+  SSL_CERT_DIR: "/etc/ssl/certs",
+  SSL_CERT_FILE: "/etc/ssl/certs/ca-certificates.crt",
+});
+
+function countOccurrences(text, value) {
+  return text.split(value).length - 1;
+}
 
 function hostEnvironment(overrides = {}) {
   return {
@@ -224,6 +236,10 @@ test("all process-injection names remain represented by the workflows", async ()
     assert.doesNotMatch(workflow, /^\s+GIT_SSL_NO_VERIFY:/mu);
     assert.match(workflow, /^ {6}GIT_TRACE_REDACT: 'true'$/m);
     assert.match(workflow, /^ {6}NODE_TLS_REJECT_UNAUTHORIZED: '1'$/m);
+    for (const [name, value] of Object.entries(PINNED_RESTORE_CA_ENVIRONMENT)) {
+      assert.match(workflow, new RegExp(`^ {6}${name}: ${value}$`, "m"), name);
+      assert.doesNotMatch(workflow, new RegExp(`^ {6}${name}: ''$`, "m"), name);
+    }
   }
 });
 
@@ -289,6 +305,34 @@ test("all Restore workflows require the future organization scope, gate digest a
     assert.doesNotMatch(workflow, /^\s+GIT_SSL_NO_VERIFY:/mu);
     assert.equal(
       (workflow.match(/\[\[ -z "\$\{GIT_SSL_NO_VERIFY\+x\}" \]\]/gu) ?? []).length,
+      selfHostedJobCount,
+    );
+    for (const [name, value] of Object.entries(PINNED_RESTORE_CA_ENVIRONMENT)) {
+      assert.equal(
+        countOccurrences(workflow, `      ${name}: ${value}`),
+        selfHostedJobCount,
+        name,
+      );
+    }
+    assert.equal(
+      countOccurrences(
+        workflow,
+        "readonly RESTORE_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt",
+      ),
+      selfHostedJobCount,
+    );
+    assert.equal(
+      countOccurrences(
+        workflow,
+        '[[ -s "$RESTORE_CA_BUNDLE" && ! -L "$RESTORE_CA_BUNDLE" && ! -w "$RESTORE_CA_BUNDLE" ]]',
+      ),
+      selfHostedJobCount,
+    );
+    assert.equal(
+      countOccurrences(
+        workflow,
+        '[[ -d "$RESTORE_CA_DIRECTORY" && ! -L "$RESTORE_CA_DIRECTORY" && ! -w "$RESTORE_CA_DIRECTORY" ]]',
+      ),
       selfHostedJobCount,
     );
     assert.equal(
