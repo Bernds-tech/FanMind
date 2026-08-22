@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "baseline_commit": "4e9fd71485109c481f72ceddefd96eaf54398603",
-  "captured": "2026-08-21",
+  "baseline_commit": "18c149800f3deaf10b8c99a95619c3cb061c39b0",
+  "captured": "2026-08-22",
   "watched_files": {
     "docs/SOURCE_OF_TRUTH.md": "2191fe784dc08ee7eebeeb5137d714d68991dde6",
     "src/config/roadmap.ts": "89f1aa05b83dfec14b3948904f12004742934bed",
     "src/config/aiTiers.mjs": "00d61fa256e90538c8f67d20a74722d73c85ec06",
-    ".github/workflows/restore-drill-host-readiness.yml": "6a7a2654143bb7b02f100d96c1e344a8b98b0f76",
-    ".github/workflows/restore-drill-resource-readiness.yml": "e2e6b8fc0ae0dd5832cbb5fabafea0c442382e63",
-    ".github/workflows/restore-drill-database.yml": "640eac766500646a06a284834624b1cf6cc67ca8"
+    ".github/workflows/restore-drill-host-readiness.yml": "ad2dff865f517599346176eee5c5aa1717200154",
+    ".github/workflows/restore-drill-resource-readiness.yml": "a2f2b07730e86546e9d95a4091dbb204efe53f1c",
+    ".github/workflows/restore-drill-database.yml": "1a5d977e4314e46cacb7197e9ab25bdba8dc315d"
   },
   "rule": "A watched-file fingerprint change is not automatically a defect, but it creates DRIFT_REVIEW_REQUIRED before relying on prior acceptance evidence. Update this baseline only in the same reviewed change that reconciles the affected gate."
 }
