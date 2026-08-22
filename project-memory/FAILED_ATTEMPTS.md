@@ -91,3 +91,13 @@ Record failed, unsafe, superseded or misleading approaches here. Do not store se
 - Cause: the empty values were still present and therefore overrode normal system truststore discovery for Git/cURL.
 - Decision: pin all CA-path consumers to Ubuntu's fixed root-owned system CA bundle/directory and validate ownership, type, canonical path and non-writability before checkout. Keep `GIT_SSL_NO_VERIFY` entirely unset.
 - Do not repeat: never use an empty string as the safe value for `CURL_CA_BUNDLE`, `GIT_SSL_CAINFO`, `GIT_SSL_CAPATH`, `REQUESTS_CA_BUNDLE`, `SSL_CERT_DIR` or `SSL_CERT_FILE` in a Restore workflow.
+
+## FM-FAIL-010
+- Date: 2026-08-22
+- Status: DONE
+- Area: ephemeral one-job JIT controller continuation
+- Attempt: require a particular prior Host-1 `_diag/Runner_*.log` file and coordinate Host-2 through a buffered background PowerShell job plus immediate online polling.
+- Result: the valid Host-2 continuation stopped before JIT generation on a missing non-contractual diagnostic file; earlier background variants also produced listener-ready timing races and could race remote cleanup.
+- Cause: ephemeral runner diagnostic files are not a stable authorization contract, and offline-to-online registration plus SSH output buffering are asynchronous.
+- Decision: authorize Host-2 from exact GitHub Host-1 success plus credential/listener/API cleanup, then run the already queued Host-2 job synchronously with streamed console output and require independent GitHub job success, listener exit 0 and runner removal before cleanup acceptance.
+- Do not repeat: do not regenerate a JIT after a pre-JIT controller defect; do not gate continuation on one local `_diag` filename; do not poll a fresh JIT as if its initial `offline` state were an error; do not use a background listener when the single queued job can be consumed synchronously.

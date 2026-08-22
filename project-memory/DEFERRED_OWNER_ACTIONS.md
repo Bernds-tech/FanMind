@@ -1,21 +1,25 @@
 # Deferred Owner Actions
 
-Updated: 2026-08-19 17:06 Europe/Vienna
+Updated: 2026-08-22 18:44 Europe/Vienna
 
 ## FM-RST-OWNER-001 — GitHub runner-group policy evidence
 - Related task: `FM-RST-001`.
+- Status: COMPLETED.
+- Result: protected read-only run `32582640853` revalidated the exact selected repository/workflow policy and host/toolchain boundary, then advanced through `RESOURCE_READY` and `TARGET_COMPATIBLE` without writes.
+- Evidence: all three jobs succeeded on exact `b75f68ecc7999a9b492051aecc2421b9b597dd18`; Host-2 runner ID `42` cleaned credentials/configuration, exited 0 and was removed.
+- Revalidation rule: mutable runner policy/host evidence must be checked again immediately before any later R4 write.
+
+## FM-RST-OWNER-002 — Exact isolated database-Restore authorization
+- Related task: `FM-RST-001`.
 - Status: DEFERRED_BY_OWNER.
-- Decision: The owner explicitly requested that actions which ChatGPT cannot perform directly be postponed and completed later together.
+- Decision: Successful read-only readiness does not authorize the `TARGET_COMPATIBLE -> DB_RESTORED` transition.
 - Deferred actions:
-  1. Open GitHub Organization `FanMind` -> Settings -> Actions -> Runner groups -> `fanmind-restore-drill`.
-  2. Verify selected repository is only `FanMind/FanMind` / repository ID `1259448985`.
-  3. Verify workflow restriction is enabled for exactly the three reviewed Restore workflows on `refs/heads/main`.
-  4. Capture/validate the private administrator policy receipt according to `docs/operations/RESTORE_DRILL.md`.
-  5. Only after that evidence is accepted, run `FanMind Restore Host Toolchain Readiness` with confirmation `verify-isolated-restore-host`.
-- Resume rule: Do not ask the owner to redo this setup before they explicitly return to the deferred Restore-admin step. Do not treat the deferment as a new code defect.
-- Current Restore state remains: `BACKUP_ACCEPTED`.
-- Next machine state after the deferred action: `HOST_REVALIDATED`, then `RUNNER_POLICY_REVALIDATED` as defined in `RESTORE_STATE_MACHINE.md`.
-- Safety: no Restore write, decryption, Production mutation, Supabase-Staging restore, payment, or destructive action is authorized by this deferment.
+  1. Name the exact reviewed `main` commit, exact accepted Full Backup/source binding and exact empty isolated target.
+  2. Authorize exactly one `restore-drill-database.yml` dispatch with confirmation `run-isolated-database-restore`.
+  3. Authorize exactly two fresh sequential one-job JIT runners and only the corresponding protected environment approval.
+  4. Revalidate mutable runner-group, host, target, artifact and TLS evidence before starting either write-capable job.
+- Resume rule: do not dispatch, prepare a database-run JIT or ask for approval unless the owner explicitly resumes this exact protected step.
+- Safety: Production and Supabase Staging remain forbidden targets; no target reset, database Restore or other R4 mutation is authorized by this deferment.
 
 ## FM-GOV-OWNER-001 — Protect `main` with GitHub Ruleset / Branch Protection
 - Related area: FanMind governance / Project Memory V7 hardening.

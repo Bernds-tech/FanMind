@@ -14,13 +14,13 @@ Prevents two agents/sessions from independently working the same task.
 ## LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822
 - Task: FM-RST-001
 - Status: ACTIVE
-- Holder: ChatGPT Restore checkout CA-truststore reconciliation session 2026-08-22
-- Branch/PR: `restore-checkout-ca-truststore-20260822` / #991
+- Holder: ChatGPT Restore readiness evidence reconciliation session 2026-08-22
+- Branch/PR: `restore-readiness-evidence-20260822` / pending PR; predecessor #991 merged.
 - Acquired: 2026-08-22 15:52 Europe/Vienna
 - Updated: 2026-08-22
-- Scope: pin the six path-valued CA environment controls in all self-hosted Restore jobs to Ubuntu's root-owned system truststore, validate that boundary before checkout, add regression tests and reconcile run `32568632008`; no workflow dispatch, JIT creation or runtime/database mutation.
-- Resume from: run `32568632008` passed dispatch and Host-1, then protected job `97020836458` failed in checkout with an empty CA-file path before Resource Readiness or Target Compatibility. Runner ID `40` completed one-job cleanup and must not be retried/reused.
-- Safety: repository code/tests/Project Memory only until exact-head reviewed PR acceptance; any later read-only run or isolated-target mutation remains separately R4-controlled and never targets Production or Supabase Staging.
+- Scope: reconcile PR #991 and successful protected read-only run `32582640853` into canonical docs/Project Memory, close the stale ownership/runner-policy contradiction and preserve the exact next R4 boundary; no database/runtime/provider mutation.
+- Resume from: run `32582640853` and all three jobs succeeded on exact #991 merge; Host-2 runner ID `42` completed controller/API/remote cleanup. State machine is `TARGET_COMPATIBLE`.
+- Safety: repository documentation/Project Memory only. Database Restore, isolated-target write, Production write and Supabase-Staging write remain outside this lock and require separate exact R4 authorization.
 
 ## Released locks
 

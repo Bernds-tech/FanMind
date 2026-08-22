@@ -7,8 +7,9 @@ Track ordering and prerequisites here. Do not mark dependent work accepted while
 - Requires: reviewed restore workflows, protected `restore-drill` environment, exact Organization runner-group/workflow-allowlist/JIT policy, isolated existing PostgreSQL-17.11 target, TLS verify-full, exact accepted Schema-2 Full Backup/Receipt and current host gate/toolchain.
 - Type: internal + external control
 - Status: ACTIVE
-- Updated: 2026-08-19
-- Rule: Continue from the first unproven gate; do not recreate established infrastructure merely because a later gate is blocked. Never target Production or Supabase Staging.
+- Updated: 2026-08-22
+- Current evidence: run `32582640853` proved the chain through `TARGET_COMPATIBLE`; mutable runner-policy/host/target/TLS evidence must be refreshed before the next write.
+- Rule: Continue from the first unproven gate; do not recreate established infrastructure merely because a later gate is blocked. `TARGET_COMPATIBLE -> DB_RESTORED` requires separate exact R4 authorization. Never target Production or Supabase Staging.
 
 ## FM-DEP-002
 - From: FM-MOB-001

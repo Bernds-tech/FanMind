@@ -8,7 +8,7 @@ This register contains started, partially completed or follow-up work that could
 - Updated: 2026-08-22
 - Gap: Recovery code/backup/host foundation is advanced, but the complete isolated DB/Storage/Server-config/Cleanup/Evidence drill is not accepted end-to-end.
 - Close when: exact artifact-bound isolated restore has passed current R4 quorum and independent countercheck, including cleanup and final evidence.
-- Next check: merge and exact-head-countercheck the CA-truststore workflow repair first. Only afterwards separately prepare a fresh two-JIT read-only Resource Readiness run and revalidate checkout TLS, runner-group/workflow allowlist, host/toolchain, target and exact Schema-2 backup before any write.
+- Next check: state is freshly `TARGET_COMPATIBLE` from successful read-only run `32582640853`. Do not dispatch the database workflow until separate exact R4 authorization exists; then revalidate all mutable gates and bind the exact commit/artifact/empty target before the write.
 
 ## FM-LOOP-002
 - Related: FM-MEM-005
@@ -76,11 +76,11 @@ This register contains started, partially completed or follow-up work that could
 
 ## FM-LOOP-010
 - Related: FM-RST-001
-- Status: OPEN
-- Updated: 2026-08-19
+- Status: CLOSED
+- Updated: 2026-08-22
 - Gap: canonical restore documentation still contains pre-transfer `user-owned`/`future-org` wording although the current repository is Organization-owned `FanMind/FanMind`.
-- Close when: canonical restore readers are safely updated after the current live runner-group/workflow-allowlist state is independently revalidated; no guess about current Admin policy.
-- Next check: verify runner-group policy through a supported administrator path before changing the operational assertion.
+- Closed by: protected read-only run `32582640853` independently revalidated repository ID `1259448985`, group `fanmind-restore-drill`, selected repository and exact three-workflow scope; canonical readers were reconciled in `restore-readiness-evidence-20260822`.
+- Follow-up: mutable runner policy must still be revalidated before every R4 write; do not repeat the organization transfer.
 
 ## FM-LOOP-011
 - Related: FM-AI-001 / Referral controls

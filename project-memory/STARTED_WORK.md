@@ -14,19 +14,19 @@ Canonical register for FanMind work that has started but is not yet fully comple
 ## FM-RST-001
 - Started: 2026-08-17
 - Updated: 2026-08-22
-- Status: RECONCILIATION_REQUIRED
+- Status: PARTIAL
 - Risk: R4
-- Scope: Complete the isolated real FanMind Restore drill without touching Production or Supabase Staging; current repository work is limited to the checkout CA-truststore defect proven by protected read-only run `32568632008`.
-- Branch/PR: `restore-checkout-ca-truststore-20260822` / #991.
+- Scope: Complete the isolated real FanMind Restore drill without touching Production or Supabase Staging; read-only Resource Readiness and Target Compatibility are freshly proven, while database/Storage/config/cleanup acceptance remains open.
+- Branch/PR: PR #991 merged as `b75f68ecc7999a9b492051aecc2421b9b597dd18`; `restore-readiness-evidence-20260822` reconciles the successful runtime evidence.
 - Work lock: `LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822` ACTIVE.
 - Dependencies: FM-DEP-001; current Org runner-group/workflow-allowlist/JIT policy; existing isolated host/target; exact Schema-2 Full Backup; protected environment.
 - Assumptions: the established empty isolated target and connection-disabled rollback quarantine remain unchanged; all mutable host, target, backup and TLS evidence must be revalidated before any later run or write.
-- Completed so far: PR #987 merged the bounded schema-ACL recovery; the disposable target was independently reset to the empty baseline while retaining the prior populated target as quarantine; PR #990 removed `GIT_SSL_NO_VERIFY`; Resource Readiness run `32568632008` passed dispatch and Host-1 re-attestation, then Host-2 runner ID `40` failed only in checkout and cleaned its one-job credentials/configuration.
-- Latest reconciled blocker: every self-hosted Restore job exported path-valued CA environment variables as present-but-empty. Git/cURL could not read an empty CA file path, so all three checkout fetch attempts failed before Resource Readiness or Target Compatibility executed. Independent local reproduction matched the live error and succeeded with Ubuntu's fixed system truststore.
-- Still open: exact-head CI/security/governance countercheck and merge of the bounded CA-truststore repair; only afterwards may a fresh protected read-only Resource Readiness run be separately prepared and approved. Database Restore, Storage, Server Config, Cleanup and final acceptance remain open.
-- Evidence so far: PRs #943/#987/#990, issue #944, issue #874, accepted Full Backup/Verification records, prior isolated Restore and target-reset checkpoints, run `32568632008`, jobs `97020817035`/`97020825268`/`97020836458`, runner cleanup output and `RESTORE_CHECKOUT_CA_TRUSTSTORE_RECONCILIATION_2026-08-22.md`.
-- Exact next step: finish the repository-only truststore repair, require exact-head CI and independent diff countercheck, then merge. Do not retry run `32568632008`, reuse runner ID `40`, create a JIT or dispatch any Restore workflow as part of this repair.
-- Owner action needed: none for repository code/tests/PR work. Any future protected run approval, JIT preparation, target mutation or Restore write remains a separate exact R4-controlled step.
+- Completed so far: PR #987 merged the bounded schema-ACL recovery; the disposable target was independently reset to the empty baseline while retaining the prior populated target as quarantine; PRs #990/#991 repaired checkout TLS/CA handling. Protected read-only run `32582640853` on exact #991 merge completed all three jobs successfully, proved checkout certificate verification, checksum-only Full Backup readiness and read-only PostgreSQL-17 target compatibility with TLS `verify-full`, then cleaned both one-job runners.
+- Latest reconciled blocker: no technical read-only blocker remains. The state machine is at `TARGET_COMPATIBLE`; the next transition is an isolated database write and is deliberately unauthorized under the current scope.
+- Still open: exact protected database Restore, receipt-bound DB postcheck, Storage Restore, server-config verification, disposable-target cleanup, independent countercheck and final acceptance.
+- Evidence so far: PRs #943/#987/#990/#991, issue #944, issue #874, accepted Full Backup/Verification records, independently reset empty target, run `32582640853`, jobs `97054217701`/`97054234003`/`97054248185`, Host-2 runner ID `42` cleanup and the 2026-08-22 TLS/log countercheck.
+- Exact next step: only after separate exact R4 authorization, revalidate mutable runner-group/host/target/backup/TLS evidence and execute the reviewed isolated database workflow on the exact authorized commit/artifact/target. Do not dispatch it from this documentation reconciliation.
+- Owner action needed: yes, but only for a future exact protected database-Restore authorization/approval. No owner action is needed for the current evidence documentation.
 
 ## FM-MOB-001
 - Started: before 2026-08-19

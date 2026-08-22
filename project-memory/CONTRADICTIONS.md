@@ -13,10 +13,10 @@ Statuses: `OPEN`, `RECONCILIATION_REQUIRED`, `RESOLVED`, `SUPERSEDED`.
 - Claim A: repository is currently public/user-owned and must first be transferred to a future organization before the organization Restore runner group can exist.
 - Source B: live GitHub repository metadata
 - Claim B: repository is `FanMind/FanMind`, owner type Organization `FanMind`.
-- Stronger/current evidence: live repository metadata wins for ownership; exact live runner-group Admin policy is separately not fully attestable through the current connector.
-- Status: RECONCILIATION_REQUIRED
-- Resolution/action: treat pre-transfer ownership wording as stale; do not repeat transfer. Before rewriting policy assertions or dispatching Restore, independently revalidate actual runner-group selected repository/workflow/JIT settings and then update canonical readers.
-- Evidence: `FANMIND_DEEP_AUDIT_2026-08-19.md`; current GitHub repo metadata.
+- Stronger/current evidence: live repository metadata plus the exact organization runner-group/repository/workflow-policy preflight used for successful protected read-only run `32582640853`.
+- Status: RESOLVED
+- Resolution/action: canonical readers now identify `FanMind/FanMind` and the exact three-workflow organization scope. Do not repeat transfer work. Treat the policy as mutable and revalidate it before every later R4 write.
+- Evidence: `FANMIND_DEEP_AUDIT_2026-08-19.md`; current GitHub repo metadata; run `32582640853`; jobs `97054217701`/`97054234003`/`97054248185`; controller preflight and runner cleanup.
 
 ## CTR-FM-002
 - Date: 2026-08-19

@@ -1,20 +1,20 @@
 {
   "schema_version": 1,
-  "updated": "2026-08-20",
+  "updated": "2026-08-22",
   "selection_rule": "Choose the lowest-priority-number unresolved action whose prerequisites are satisfied and that is safe under current standing authorization. If an earlier unresolved action is owner-required or DEFERRED_BY_OWNER, only later actions explicitly marked parallel_safe=true may be selected. Deferral never closes or downgrades the earlier gate.",
   "actions": [
     {
-      "id": "NBA-RESTORE-ADMIN-HOST",
+      "id": "NBA-RESTORE-DATABASE",
       "priority": 10,
       "task": "FM-RST-001",
       "gate": "restore",
-      "title": "Restore Admin-Policy und Host revalidieren",
+      "title": "Isolierten Datenbank-Restore geschützt ausführen",
       "requires_owner": true,
       "parallel_safe": false,
-      "deferred_owner_id": "FM-RST-OWNER-001",
+      "deferred_owner_id": "FM-RST-OWNER-002",
       "prerequisite_gates": ["memory_v6", "staging"],
       "done_states": ["ACCEPTED", "PRODUCTION_CONFIRMED"],
-      "instruction": "Resume the deferred runner-group administrator evidence with the owner, then run secret-free Host Toolchain Readiness and advance only with current evidence."
+      "instruction": "Proceed only after a new exact R4 authorization naming the reviewed commit, accepted Full Backup/source binding, empty isolated target, database-workflow confirmation and exactly two fresh sequential one-job JIT runners. Revalidate all mutable gates immediately before dispatch. Never target Production or Supabase Staging."
     },
     {
       "id": "NBA-SECURITY-READONLY",

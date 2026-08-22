@@ -137,12 +137,12 @@ Do not commit secrets. Keep `.env.production`, `.env.local`, API keys, Supabase 
   contract. Labels are scheduler selectors, not an authorization or
   host-readiness boundary. Every dispatch must fail in the GitHub-hosted
   validation job unless `FANMIND_RESTORE_RUNNER_SCOPE` equals
-  `organization-workflow-allowlist`. The required organization policy is not
-  currently present: do not set the variable or register a Restore runner
-  until the repository is organization-owned and the group restriction to the
-  three reviewed `main` Restore workflows has been independently verified.
-  The variable is only the operator assertion of that external fact, not an
-  API proof. A secret-free prerequisite job must execute
+  `organization-workflow-allowlist`. The repository is organization-owned as
+  `FanMind/FanMind`; the selected repository ID and exact three-workflow
+  restriction were independently revalidated for protected read-only run
+  `32582640853` on 2026-08-22. That live policy evidence is mutable and expires:
+  revalidate it before every later R4 write. The variable remains only the
+  operator assertion of that external fact, not an API proof. A secret-free prerequisite job must execute
   the root-owned, SHA-bound host gate before the protected job; both jobs need
   separate fresh one-job JIT runners. Its first checksum-only phase must never connect
   to PostgreSQL, decrypt a backup or invoke the restore runner. Only after

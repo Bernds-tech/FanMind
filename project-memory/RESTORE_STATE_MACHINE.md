@@ -21,9 +21,10 @@ No state may be skipped. A later state does not retroactively prove an earlier s
 
 ## Current state
 
-- Current highest proven state: `BACKUP_ACCEPTED`.
-- Evidence: PR #943 merge `14a1e2d0e100f2ec8cfa14486c96f128fb431878`; Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c`; checksum Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1`.
-- Operator-session host/runner/TLS/target setup exists, but it must be freshly revalidated before advancing to `HOST_REVALIDATED` / `RUNNER_POLICY_REVALIDATED`.
+- Current highest proven state: `TARGET_COMPATIBLE`.
+- Immutable foundation: PR #943 merge `14a1e2d0e100f2ec8cfa14486c96f128fb431878`; Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c`; checksum Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1`.
+- Fresh transition evidence: protected read-only run `32582640853` on exact commit `b75f68ecc7999a9b492051aecc2421b9b597dd18`; jobs `97054217701`, `97054234003` and `97054248185` all succeeded. Checkout certificate verification passed with the pinned Ubuntu truststore; resource checksum-only readiness and PostgreSQL-17 target compatibility with TLS `verify-full` passed; writes remained disabled.
+- Mutable host/runner/target/TLS facts must still be revalidated immediately before the separately authorized `TARGET_COMPATIBLE -> DB_RESTORED` transition.
 
 ## Transition contract
 

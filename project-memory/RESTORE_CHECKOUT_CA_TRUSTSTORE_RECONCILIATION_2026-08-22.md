@@ -4,13 +4,13 @@
 
 - Task: `FM-RST-001`
 - Risk: `R4`
-- Status: `RECONCILIATION_REQUIRED`
+- Status: `RESOLVED`
 - Branch: `restore-checkout-ca-truststore-20260822`
 - Pull request: `#991`
 - Base commit: `1735a5f552c0c20c180fb96be6fa9000cbffc360`
 - Active repair lock: `LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822`
 
-This checkpoint records the bounded repository defect found by the failed protected read-only Resource Readiness run. It does not advance the Restore state, authorize a database write or invalidate the independently established empty-target baseline.
+This checkpoint records the bounded repository defect found by the failed protected read-only Resource Readiness run and its later clean runtime closure. It does not authorize a database write or invalidate the independently established empty-target baseline.
 
 ## Live run evidence
 
@@ -58,15 +58,27 @@ Before the preinstalled Restore gate and before any later checkout, each self-ho
 
 Regression tests require the exact pinned values and one truststore validation block per self-hosted Restore job. The preinstalled gate digest, checkout SHA, JIT topology, target boundaries, write gates and Restore commands remain unchanged.
 
-## Acceptance boundary
+## Closure evidence
 
-Repository verification can prove the workflow and fail-closed policy shape, but cannot by itself prove the next protected runtime checkout. Before any database Restore is considered:
+- PR #991 passed its exact-head Project Memory, FanMind CI, supply-chain, CodeQL and browser checks and merged to `main` as `b75f68ecc7999a9b492051aecc2421b9b597dd18`.
+- Fresh protected read-only run `32582640853` checked out that exact commit. Git/cURL loaded 121 certificates from `/etc/ssl/certs/ca-certificates.crt` plus 365 from `/etc/ssl/certs`, negotiated TLS 1.3 and reported `server certificate verification OK`.
+- The dangerous prior marker `server certificate verification SKIPPED`, the empty-CA error and the CA-path/access-rights error were absent. Git/cURL separately reported `server certificate status verification SKIPPED`; that is the OCSP/status check and does not negate the explicit server-certificate verification success.
+- `RESTORE_DRILL_RESOURCE_READINESS=PASS`: isolated environment, separate target, encrypted Full Backup, checksum-only validation, no database connection, no decryption and writes disabled.
+- `RESTORE_TARGET_COMPATIBILITY=PASS`: PostgreSQL 17, three of three required roles, one of one required extensions (`pgcrypto`), dedicated restore superuser, read-only catalog connection, TLS `verify-full` and writes disabled.
+- Gate job `97054217701`, Host-1 job `97054234003` and protected Host-2 job `97054248185` all completed `success`; Host-2 one-job runner ID `42` removed `.credentials` and `.runner`, exited 0 and was absent from the runner list before controller acceptance.
+- No database Restore, target reset, Production write, Supabase-Staging write or other R4 mutation occurred.
 
-1. this branch must pass exact-head Project Memory, FanMind CI, supply-chain, CodeQL and browser checks;
-2. the final diff must remain limited to the CA truststore reconciliation and required memory/baseline records;
-3. the PR must merge to `main`;
-4. only then may a newly approved, separately prepared two-JIT read-only Resource Readiness run be considered;
-5. that future run must pass both resource and target compatibility and its checkout trace must independently prove normal certificate verification without CA-file errors or verification-skip markers.
+The state machine therefore advances through `RESOURCE_READY` to `TARGET_COMPATIBLE`. Mutable runner/host/target/TLS evidence still expires and must be revalidated before the next protected write.
+
+## Acceptance boundary fulfilled for read-only readiness
+
+The repository repair and its protected runtime checkout are now jointly proven:
+
+1. exact-head repository/security checks passed;
+2. the bounded repair merged to `main`;
+3. a newly approved, separately prepared two-JIT read-only Resource Readiness run completed;
+4. resource and target compatibility passed;
+5. the checkout trace independently proved normal certificate verification without CA-file errors or the dangerous certificate-verification-skip marker.
 
 No workflow dispatch or JIT creation is part of this repository repair. Run `32568632008`, job `97020836458` and JIT runner ID `40` must not be retried or reused.
 
@@ -82,4 +94,4 @@ No workflow dispatch or JIT creation is part of this repository repair. Run `325
 
 What observation would prove this repair insufficient?
 
-Any self-hosted Restore job with an empty, ambient, symlinked, runner-writable or non-root truststore path; any exact-head checkout with a CA-file error or skipped certificate verification; any checkout of a commit other than reviewed `main`; or any host/target/backup/TLS drift before the future read-only run keeps `FM-RST-001` in `RECONCILIATION_REQUIRED` and blocks all Restore writes.
+Any later self-hosted Restore job with an empty, ambient, symlinked, runner-writable or non-root truststore path; any checkout with a CA-file error or the exact dangerous `server certificate verification SKIPPED` marker; any checkout of a commit other than the newly authorized reviewed `main`; or any host/target/backup/TLS drift before the database run invalidates the mutable evidence and blocks all Restore writes pending reconciliation.
