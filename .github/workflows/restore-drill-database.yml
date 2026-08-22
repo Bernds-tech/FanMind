@@ -63,7 +63,7 @@ jobs:
       BASH_ENV: ''
       BASHOPTS: ''
       BASH_XTRACEFD: ''
-      CURL_CA_BUNDLE: ''
+      CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       ENV: ''
       GCONV_PATH: ''
       GIT_CONFIG_COUNT: '1'
@@ -74,8 +74,8 @@ jobs:
       GIT_CONFIG_VALUE_0: /dev/null
       GIT_CURL_VERBOSE: ''
       GIT_EXEC_PATH: ''
-      GIT_SSL_CAINFO: ''
-      GIT_SSL_CAPATH: ''
+      GIT_SSL_CAINFO: /etc/ssl/certs/ca-certificates.crt
+      GIT_SSL_CAPATH: /etc/ssl/certs
       GIT_TRACE: ''
       GIT_TRACE_CURL: ''
       GIT_TRACE_CURL_NO_DATA: ''
@@ -115,11 +115,11 @@ jobs:
       OPENSSL_ENGINES: ''
       OPENSSL_MODULES: ''
       PYTHONPATH: ''
-      REQUESTS_CA_BUNDLE: ''
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       PS4: ''
       SHELLOPTS: ''
-      SSL_CERT_DIR: ''
-      SSL_CERT_FILE: ''
+      SSL_CERT_DIR: /etc/ssl/certs
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
     steps:
       - name: Verify the preinstalled isolated restore host gate without Restore secrets
         shell: /usr/bin/bash --noprofile --norc -p -euo pipefail {0}
@@ -157,6 +157,24 @@ jobs:
         run: |
           umask 077
           [[ -z "${GIT_SSL_NO_VERIFY+x}" ]]
+          readonly RESTORE_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+          readonly RESTORE_CA_DIRECTORY=/etc/ssl/certs
+          [[ "$CURL_CA_BUNDLE" == "$RESTORE_CA_BUNDLE" ]]
+          [[ "$GIT_SSL_CAINFO" == "$RESTORE_CA_BUNDLE" ]]
+          [[ "$GIT_SSL_CAPATH" == "$RESTORE_CA_DIRECTORY" ]]
+          [[ "$REQUESTS_CA_BUNDLE" == "$RESTORE_CA_BUNDLE" ]]
+          [[ "$SSL_CERT_FILE" == "$RESTORE_CA_BUNDLE" ]]
+          [[ "$SSL_CERT_DIR" == "$RESTORE_CA_DIRECTORY" ]]
+          [[ -s "$RESTORE_CA_BUNDLE" && ! -L "$RESTORE_CA_BUNDLE" && ! -w "$RESTORE_CA_BUNDLE" ]]
+          [[ "$(/usr/bin/realpath -- "$RESTORE_CA_BUNDLE")" == "$RESTORE_CA_BUNDLE" ]]
+          read -r CA_OWNER CA_MODE CA_TYPE <<< "$(/usr/bin/stat -Lc '%u %a %F' -- "$RESTORE_CA_BUNDLE")"
+          [[ "$CA_OWNER" == 0 && "$CA_MODE" =~ ^[0-7]{3,4}$ && "$CA_TYPE" == 'regular file' ]]
+          (( (8#$CA_MODE & 07022) == 0 ))
+          [[ -d "$RESTORE_CA_DIRECTORY" && ! -L "$RESTORE_CA_DIRECTORY" && ! -w "$RESTORE_CA_DIRECTORY" ]]
+          [[ "$(/usr/bin/realpath -- "$RESTORE_CA_DIRECTORY")" == "$RESTORE_CA_DIRECTORY" ]]
+          read -r CA_DIR_OWNER CA_DIR_MODE CA_DIR_TYPE <<< "$(/usr/bin/stat -Lc '%u %a %F' -- "$RESTORE_CA_DIRECTORY")"
+          [[ "$CA_DIR_OWNER" == 0 && "$CA_DIR_MODE" =~ ^[0-7]{3,4}$ && "$CA_DIR_TYPE" == 'directory' ]]
+          (( (8#$CA_DIR_MODE & 07022) == 0 ))
           NODE_PATH=/opt/fanmind-restore/node-v24.19.0-linux-x64/bin/node
           GATE_PATH=/opt/fanmind-restore/restore-host-readiness.mjs
           [[ -f "$GATE_PATH" && ! -L "$GATE_PATH" ]]
@@ -222,7 +240,7 @@ jobs:
       BASH_ENV: ''
       BASHOPTS: ''
       BASH_XTRACEFD: ''
-      CURL_CA_BUNDLE: ''
+      CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       ENV: ''
       GCONV_PATH: ''
       GIT_CONFIG_COUNT: '1'
@@ -233,8 +251,8 @@ jobs:
       GIT_CONFIG_VALUE_0: /dev/null
       GIT_CURL_VERBOSE: ''
       GIT_EXEC_PATH: ''
-      GIT_SSL_CAINFO: ''
-      GIT_SSL_CAPATH: ''
+      GIT_SSL_CAINFO: /etc/ssl/certs/ca-certificates.crt
+      GIT_SSL_CAPATH: /etc/ssl/certs
       GIT_TRACE: ''
       GIT_TRACE_CURL: ''
       GIT_TRACE_CURL_NO_DATA: ''
@@ -274,11 +292,11 @@ jobs:
       OPENSSL_ENGINES: ''
       OPENSSL_MODULES: ''
       PYTHONPATH: ''
-      REQUESTS_CA_BUNDLE: ''
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       PS4: ''
       SHELLOPTS: ''
-      SSL_CERT_DIR: ''
-      SSL_CERT_FILE: ''
+      SSL_CERT_DIR: /etc/ssl/certs
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
     steps:
       - name: Re-attest the preinstalled gate before checkout or environment-secret use
         shell: /usr/bin/bash --noprofile --norc -p -euo pipefail {0}
@@ -316,6 +334,24 @@ jobs:
         run: |
           umask 077
           [[ -z "${GIT_SSL_NO_VERIFY+x}" ]]
+          readonly RESTORE_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+          readonly RESTORE_CA_DIRECTORY=/etc/ssl/certs
+          [[ "$CURL_CA_BUNDLE" == "$RESTORE_CA_BUNDLE" ]]
+          [[ "$GIT_SSL_CAINFO" == "$RESTORE_CA_BUNDLE" ]]
+          [[ "$GIT_SSL_CAPATH" == "$RESTORE_CA_DIRECTORY" ]]
+          [[ "$REQUESTS_CA_BUNDLE" == "$RESTORE_CA_BUNDLE" ]]
+          [[ "$SSL_CERT_FILE" == "$RESTORE_CA_BUNDLE" ]]
+          [[ "$SSL_CERT_DIR" == "$RESTORE_CA_DIRECTORY" ]]
+          [[ -s "$RESTORE_CA_BUNDLE" && ! -L "$RESTORE_CA_BUNDLE" && ! -w "$RESTORE_CA_BUNDLE" ]]
+          [[ "$(/usr/bin/realpath -- "$RESTORE_CA_BUNDLE")" == "$RESTORE_CA_BUNDLE" ]]
+          read -r CA_OWNER CA_MODE CA_TYPE <<< "$(/usr/bin/stat -Lc '%u %a %F' -- "$RESTORE_CA_BUNDLE")"
+          [[ "$CA_OWNER" == 0 && "$CA_MODE" =~ ^[0-7]{3,4}$ && "$CA_TYPE" == 'regular file' ]]
+          (( (8#$CA_MODE & 07022) == 0 ))
+          [[ -d "$RESTORE_CA_DIRECTORY" && ! -L "$RESTORE_CA_DIRECTORY" && ! -w "$RESTORE_CA_DIRECTORY" ]]
+          [[ "$(/usr/bin/realpath -- "$RESTORE_CA_DIRECTORY")" == "$RESTORE_CA_DIRECTORY" ]]
+          read -r CA_DIR_OWNER CA_DIR_MODE CA_DIR_TYPE <<< "$(/usr/bin/stat -Lc '%u %a %F' -- "$RESTORE_CA_DIRECTORY")"
+          [[ "$CA_DIR_OWNER" == 0 && "$CA_DIR_MODE" =~ ^[0-7]{3,4}$ && "$CA_DIR_TYPE" == 'directory' ]]
+          (( (8#$CA_DIR_MODE & 07022) == 0 ))
           NODE_PATH=/opt/fanmind-restore/node-v24.19.0-linux-x64/bin/node
           GATE_PATH=/opt/fanmind-restore/restore-host-readiness.mjs
           [[ -f "$GATE_PATH" && ! -L "$GATE_PATH" ]]

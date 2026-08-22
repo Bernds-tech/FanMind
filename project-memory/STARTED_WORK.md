@@ -13,20 +13,20 @@ Canonical register for FanMind work that has started but is not yet fully comple
 
 ## FM-RST-001
 - Started: 2026-08-17
-- Updated: 2026-08-20
+- Updated: 2026-08-22
 - Status: RECONCILIATION_REQUIRED
 - Risk: R4
-- Scope: Complete the isolated real FanMind restore drill without touching Production or Supabase Staging; current implementation work is limited to the proven Schema-2 schema-ACL recovery gap on the bare PostgreSQL target.
-- Branch/PR: `restore-schema-acl-recovery-20260820` / #987.
-- Work lock: `LOCK-FM-RST-001-SCHEMA-ACL-RECOVERY-20260820` ACTIVE.
+- Scope: Complete the isolated real FanMind Restore drill without touching Production or Supabase Staging; current repository work is limited to the checkout CA-truststore defect proven by protected read-only run `32568632008`.
+- Branch/PR: `restore-checkout-ca-truststore-20260822` / pending.
+- Work lock: `LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822` ACTIVE.
 - Dependencies: FM-DEP-001; current Org runner-group/workflow-allowlist/JIT policy; existing isolated host/target; exact Schema-2 Full Backup; protected environment.
-- Assumptions: the operator-session target remains disposable and isolated; all mutable host/runner evidence must be revalidated before any later write rerun.
-- Completed so far: ACL/default-ACL/Owner/Role/DB-container/Extension recovery contract merged/deployed; real PG17 two-cluster CI passed; new Schema-2 encrypted Full Backup validated and offsite; checksum verification passed; isolated Ubuntu/PG17.11/Node24.19/TLS/target/runner foundation established; the real database restore ran successfully on the isolated target; canonical TLS connection, role/container/extension preflight and full authorization capture now pass; archive ACL/DEFAULT ACL SQL source-vs-target is identical; PR #987 implements the bounded eight-tuple schema-ACL recovery with rollback and unchanged final receipt-bound authorization verification.
-- Latest reconciled blocker: receipt-bound authorization comparison fails only because the restored target has eight fewer schema grant tuples. Read-only Production/source evidence and isolated-target evidence localize all eight to `graphql` and `graphql_public`: each target schema retains only its two owner-default privileges while the source contract additionally has `USAGE` for `anon`, `authenticated`, `service_role`, and `postgres` with grant option. These source ACLs are represented as `pg_init_privs` baseline and are therefore not recreated by normal pg_dump/pg_restore on a bare PostgreSQL target.
-- Still open: exact-head CI/security/governance countercheck and merge of #987; then fresh protected isolated DB restore/postcheck rerun before Storage, Server Config, Cleanup and final acceptance.
-- Evidence so far: PR #943, issue #944, issue #874, Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c`, Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1`, restore workflow run `32126829563` attempt 5 / job `96376838764`, operator read-only diagnostics on 2026-08-20, current Production catalog read-only comparison and PR #987.
-- Exact next step: require the final #987 head to pass all applicable checks, countercheck the exact diff and merge only when green; after merge rerun only the protected isolated R4 Restore path. No manual GRANT repair and no Production/Supabase-Staging mutation.
-- Owner action needed: not for repository code/tests/PR work; protected Restore runner/target mutation remains R4-controlled and requires the existing external/admin gates to be current before rerun.
+- Assumptions: the established empty isolated target and connection-disabled rollback quarantine remain unchanged; all mutable host, target, backup and TLS evidence must be revalidated before any later run or write.
+- Completed so far: PR #987 merged the bounded schema-ACL recovery; the disposable target was independently reset to the empty baseline while retaining the prior populated target as quarantine; PR #990 removed `GIT_SSL_NO_VERIFY`; Resource Readiness run `32568632008` passed dispatch and Host-1 re-attestation, then Host-2 runner ID `40` failed only in checkout and cleaned its one-job credentials/configuration.
+- Latest reconciled blocker: every self-hosted Restore job exported path-valued CA environment variables as present-but-empty. Git/cURL could not read an empty CA file path, so all three checkout fetch attempts failed before Resource Readiness or Target Compatibility executed. Independent local reproduction matched the live error and succeeded with Ubuntu's fixed system truststore.
+- Still open: exact-head CI/security/governance countercheck and merge of the bounded CA-truststore repair; only afterwards may a fresh protected read-only Resource Readiness run be separately prepared and approved. Database Restore, Storage, Server Config, Cleanup and final acceptance remain open.
+- Evidence so far: PRs #943/#987/#990, issue #944, issue #874, accepted Full Backup/Verification records, prior isolated Restore and target-reset checkpoints, run `32568632008`, jobs `97020817035`/`97020825268`/`97020836458`, runner cleanup output and `RESTORE_CHECKOUT_CA_TRUSTSTORE_RECONCILIATION_2026-08-22.md`.
+- Exact next step: finish the repository-only truststore repair, require exact-head CI and independent diff countercheck, then merge. Do not retry run `32568632008`, reuse runner ID `40`, create a JIT or dispatch any Restore workflow as part of this repair.
+- Owner action needed: none for repository code/tests/PR work. Any future protected run approval, JIT preparation, target mutation or Restore write remains a separate exact R4-controlled step.
 
 ## FM-MOB-001
 - Started: before 2026-08-19

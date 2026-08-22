@@ -86,7 +86,11 @@ Do not create artificial browser RLS policies merely to silence INFO advisories 
 - New encrypted Schema-2 Full Backup `b74c1c60-1d61-4a39-9f0d-648ec003a12c` succeeded, validated and uploaded offsite.
 - Checksum-only Verification `006e6ab8-8f5c-43c1-ac68-6570e992a7a1` succeeded/passed.
 - Historical privilege-less backups are not valid Gate-2 recovery evidence.
-- Current highest proven Restore state: `BACKUP_ACCEPTED`.
+- Current accepted Restore progression remains `BACKUP_ACCEPTED`; later isolated restore/readiness work is valuable evidence but is still `RECONCILIATION_REQUIRED` and does not authorize the next write.
+- PR #987 merged the bounded schema-ACL recovery as `b6bc368915d50dd2903b83b87c7ca25eb0ed6e18`; the disposable target was later independently reset to the empty baseline and the prior populated database retained as connection-disabled quarantine.
+- PR #990 merged the `GIT_SSL_NO_VERIFY` checkout repair as `1735a5f552c0c20c180fb96be6fa9000cbffc360`.
+- Protected read-only run `32568632008` passed dispatch and Host-1 but protected job `97020836458` failed in `actions/checkout` because path-valued CA variables were present with empty values. Resource Readiness and Target Compatibility were skipped, one-job runner ID `40` cleaned itself, and no DB/Production/Supabase-Staging mutation occurred.
+- Active repository blocker: `RESTORE_CHECKOUT_CA_TRUSTSTORE_RECONCILIATION_2026-08-22.md`; no retry, new JIT or Restore dispatch belongs to that repository repair.
 
 ### Operator-session foundation — revalidate before use
 

@@ -5,10 +5,10 @@ This register contains started, partially completed or follow-up work that could
 ## FM-LOOP-001
 - Related: FM-RST-001
 - Status: OPEN
-- Updated: 2026-08-19
+- Updated: 2026-08-22
 - Gap: Recovery code/backup/host foundation is advanced, but the complete isolated DB/Storage/Server-config/Cleanup/Evidence drill is not accepted end-to-end.
 - Close when: exact artifact-bound isolated restore has passed current R4 quorum and independent countercheck, including cleanup and final evidence.
-- Next check: revalidate Organization runner-group/workflow allowlist/JIT policy, host/toolchain/TLS/target and exact Schema-2 backup before any write.
+- Next check: merge and exact-head-countercheck the CA-truststore workflow repair first. Only afterwards separately prepare a fresh two-JIT read-only Resource Readiness run and revalidate checkout TLS, runner-group/workflow allowlist, host/toolchain, target and exact Schema-2 backup before any write.
 
 ## FM-LOOP-002
 - Related: FM-MEM-005

@@ -25,3 +25,9 @@ Decisions are append-only. If a decision changes, add a new entry that explicitl
 - Status: DONE
 - Decision: Restore drills never target Production or shared Supabase Staging and should not spawn another restore server by default.
 - Reason: Maintain isolation and avoid restarting already completed infrastructure work.
+
+## FM-DEC-005
+- Date: 2026-08-22
+- Status: DONE
+- Decision: Self-hosted Restore workflow CA-path controls are pinned to `/etc/ssl/certs/ca-certificates.crt` and `/etc/ssl/certs`, validated as canonical root-owned non-runner-writable system truststore objects before checkout; `GIT_SSL_NO_VERIFY` remains unset.
+- Reason: Empty CA-path exports override truststore discovery and caused run `32568632008` to fail, while simply removing the variables would permit ambient runner values to influence the R4 checkout boundary.

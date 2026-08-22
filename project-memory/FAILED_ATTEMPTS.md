@@ -81,3 +81,13 @@ Record failed, unsafe, superseded or misleading approaches here. Do not store se
 - Cause: implementation and most CI evidence were present, but one required evidence class and mandatory V5 records were incomplete.
 - Decision: reject the cancelled run as evidence, reconcile the V5 registers/generated status, obtain a fresh exact-head complete check set, and only then merge/accept.
 - Do not repeat: never convert `cancelled`, `skipped`, stale-head or partial check evidence into `COUNTERCHECKED`/`ACCEPTED` merely because other gates are green.
+
+## FM-FAIL-009
+- Date: 2026-08-22
+- Status: DONE
+- Area: Restore checkout TLS truststore
+- Attempt: Neutralize path-valued CA environment variables in self-hosted Restore jobs by exporting them as empty strings.
+- Result: Protected read-only run `32568632008` passed its host gate but Git/cURL failed every checkout fetch with an unreadable empty CA-file path; Resource Readiness and Target Compatibility never executed.
+- Cause: the empty values were still present and therefore overrode normal system truststore discovery for Git/cURL.
+- Decision: pin all CA-path consumers to Ubuntu's fixed root-owned system CA bundle/directory and validate ownership, type, canonical path and non-writability before checkout. Keep `GIT_SSL_NO_VERIFY` entirely unset.
+- Do not repeat: never use an empty string as the safe value for `CURL_CA_BUNDLE`, `GIT_SSL_CAINFO`, `GIT_SSL_CAPATH`, `REQUESTS_CA_BUNDLE`, `SSL_CERT_DIR` or `SSL_CERT_FILE` in a Restore workflow.

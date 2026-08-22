@@ -11,18 +11,28 @@ Prevents two agents/sessions from independently working the same task.
 
 ## Active locks
 
-## LOCK-FM-RST-001-SCHEMA-ACL-RECOVERY-20260820
+## LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822
 - Task: FM-RST-001
 - Status: ACTIVE
+- Holder: ChatGPT Restore checkout CA-truststore reconciliation session 2026-08-22
+- Branch/PR: `restore-checkout-ca-truststore-20260822` / pending
+- Acquired: 2026-08-22 15:52 Europe/Vienna
+- Updated: 2026-08-22
+- Scope: pin the six path-valued CA environment controls in all self-hosted Restore jobs to Ubuntu's root-owned system truststore, validate that boundary before checkout, add regression tests and reconcile run `32568632008`; no workflow dispatch, JIT creation or runtime/database mutation.
+- Resume from: run `32568632008` passed dispatch and Host-1, then protected job `97020836458` failed in checkout with an empty CA-file path before Resource Readiness or Target Compatibility. Runner ID `40` completed one-job cleanup and must not be retried/reused.
+- Safety: repository code/tests/Project Memory only until exact-head reviewed PR acceptance; any later read-only run or isolated-target mutation remains separately R4-controlled and never targets Production or Supabase Staging.
+
+## Released locks
+
+## LOCK-FM-RST-001-SCHEMA-ACL-RECOVERY-20260820
+- Task: FM-RST-001
+- Status: SUPERSEDED
 - Holder: ChatGPT Restore schema-ACL recovery session 2026-08-20
 - Branch/PR: `restore-schema-acl-recovery-20260820` / #987
 - Acquired: 2026-08-20 16:10 Europe/Vienna
-- Updated: 2026-08-20
-- Scope: implement and verify the fail-closed recovery of the two Supabase schema ACL baselines (`graphql`, `graphql_public`) that the accepted Schema-2 authorization contract proves but the bare PostgreSQL restore did not materialize; no Production or Supabase Staging mutation.
-- Resume from: operator evidence proved the real database restore completed, canonical TLS connectivity works, authorization role/container/extension preflight passes, archive ACL SQL is identical, and the remaining authorization mismatch is exactly eight missing schema grant tuples: four on `graphql` and four on `graphql_public`.
-- Safety: repository code/tests/Project Memory only until reviewed PR acceptance; any later isolated-target mutation must use the protected R4 Restore path and never Production or Supabase Staging.
-
-## Released locks
+- Released: 2026-08-22 after reconciliation proved PR #987 merged as `b6bc368915d50dd2903b83b87c7ca25eb0ed6e18`; later target/readiness evidence superseded the implementation resume point.
+- Scope: bounded recovery of the eight proven missing schema grant tuples on `graphql` and `graphql_public`; no Production or Supabase Staging mutation.
+- Resume from: no repository implementation resume required. The current Restore blocker is the separately recorded checkout CA-truststore reconciliation.
 
 ## LOCK-FM-MOB-001-EAS-PROJECT-BINDING-20260821
 - Task: FM-MOB-001
