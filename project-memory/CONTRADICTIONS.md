@@ -16,7 +16,7 @@ Statuses: `OPEN`, `RECONCILIATION_REQUIRED`, `RESOLVED`, `SUPERSEDED`.
 - Stronger/current evidence: live repository metadata plus the exact organization runner-group/repository/workflow-policy preflight used for successful protected read-only run `32582640853`.
 - Status: RESOLVED
 - Resolution/action: canonical readers now identify `FanMind/FanMind` and the exact three-workflow organization scope. Do not repeat transfer work. Treat the policy as mutable and revalidate it before every later R4 write.
-- Evidence: `FANMIND_DEEP_AUDIT_2026-08-19.md`; current GitHub repo metadata; run `32582640853`; jobs `97054217701`/`97054234003`/`97054248185`; controller preflight and runner cleanup.
+- Evidence: `FANMIND_DEEP_AUDIT_2026-08-19.md`; current GitHub repo metadata; run `32582640853`; jobs `97054217701`/`97054234003`/`97054248185`; controller preflight and runner cleanup; PR #992 merge `cb04829c378285c24c3c53b5fab2d03177c19165`.
 
 ## CTR-FM-002
 - Date: 2026-08-19

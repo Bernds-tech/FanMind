@@ -94,6 +94,7 @@ Do not create artificial browser RLS policies merely to silence INFO advisories 
 - Fresh protected read-only run `32582640853` on that exact commit completed `success`: gate job `97054217701`, Host-1 job `97054234003` and protected Host-2 job `97054248185` all passed. Checkout loaded the pinned truststore, negotiated TLS 1.3 and reported `server certificate verification OK`; the earlier unsafe verification-skip marker and empty-CA failure were absent.
 - Resource Readiness proved isolated/separate targeting, encrypted Full Backup type, matching checksum-only verification, no DB connection, no decryption and writes disabled. Target Compatibility proved PostgreSQL 17, all three required roles, `pgcrypto` 1.3, the dedicated restore superuser, read-only catalog access, TLS `verify-full` and writes disabled.
 - Fresh one-job runners completed normal teardown; Host-2 runner ID `42` removed `.credentials`/`.runner`, exited 0 and disappeared from the live runner list before the controller accepted cleanup. No database Restore, target reset, Production write or Supabase-Staging write occurred.
+- Evidence PR #992 exact head `53308fa43b258e4570b67d675f38f16e15e3bb69` passed all applicable repository/security/browser gates and merged as `cb04829c378285c24c3c53b5fab2d03177c19165`; the evidence-reconciliation lock is released.
 
 ### Operator-session foundation — revalidate before use
 

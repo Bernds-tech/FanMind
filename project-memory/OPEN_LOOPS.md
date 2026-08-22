@@ -79,7 +79,7 @@ This register contains started, partially completed or follow-up work that could
 - Status: CLOSED
 - Updated: 2026-08-22
 - Gap: canonical restore documentation still contains pre-transfer `user-owned`/`future-org` wording although the current repository is Organization-owned `FanMind/FanMind`.
-- Closed by: protected read-only run `32582640853` independently revalidated repository ID `1259448985`, group `fanmind-restore-drill`, selected repository and exact three-workflow scope; canonical readers were reconciled in `restore-readiness-evidence-20260822`.
+- Closed by: protected read-only run `32582640853` independently revalidated repository ID `1259448985`, group `fanmind-restore-drill`, selected repository and exact three-workflow scope; canonical readers were reconciled by PR #992, merged as `cb04829c378285c24c3c53b5fab2d03177c19165`.
 - Follow-up: mutable runner policy must still be revalidated before every R4 write; do not repeat the organization transfer.
 
 ## FM-LOOP-011

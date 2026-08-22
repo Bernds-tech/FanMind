@@ -11,18 +11,20 @@ Prevents two agents/sessions from independently working the same task.
 
 ## Active locks
 
-## LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822
-- Task: FM-RST-001
-- Status: ACTIVE
-- Holder: ChatGPT Restore readiness evidence reconciliation session 2026-08-22
-- Branch/PR: `restore-readiness-evidence-20260822` / pending PR; predecessor #991 merged.
-- Acquired: 2026-08-22 15:52 Europe/Vienna
-- Updated: 2026-08-22
-- Scope: reconcile PR #991 and successful protected read-only run `32582640853` into canonical docs/Project Memory, close the stale ownership/runner-policy contradiction and preserve the exact next R4 boundary; no database/runtime/provider mutation.
-- Resume from: run `32582640853` and all three jobs succeeded on exact #991 merge; Host-2 runner ID `42` completed controller/API/remote cleanup. State machine is `TARGET_COMPATIBLE`.
-- Safety: repository documentation/Project Memory only. Database Restore, isolated-target write, Production write and Supabase-Staging write remain outside this lock and require separate exact R4 authorization.
+None.
 
 ## Released locks
+
+## LOCK-FM-RST-001-CHECKOUT-CA-TRUSTSTORE-20260822
+- Task: FM-RST-001
+- Status: RELEASED
+- Holder: ChatGPT Restore readiness evidence reconciliation session 2026-08-22
+- Branch/PR: `restore-readiness-evidence-20260822` / #992; predecessor #991 merged.
+- Acquired: 2026-08-22 15:52 Europe/Vienna
+- Released: 2026-08-22 after exact head `53308fa43b258e4570b67d675f38f16e15e3bb69` passed Project Memory Guard/Quality/Status, FanMind CI, Landing Language CI, CodeQL and both Browser E2E jobs, then squash-merged as `cb04829c378285c24c3c53b5fab2d03177c19165`.
+- Scope: reconcile PR #991 and successful protected read-only run `32582640853` into canonical docs/Project Memory, close the stale ownership/runner-policy contradiction and preserve the exact next R4 boundary; no database/runtime/provider mutation.
+- Resume from: no repository evidence-reconciliation resume is required. Restore remains `TARGET_COMPATIBLE`; the exact isolated database-Restore authorization is separately owner-deferred.
+- Safety: repository documentation/Project Memory only. Database Restore, isolated-target write, Production write and Supabase-Staging write remain outside this lock and require separate exact R4 authorization.
 
 ## LOCK-FM-RST-001-SCHEMA-ACL-RECOVERY-20260820
 - Task: FM-RST-001
