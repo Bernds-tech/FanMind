@@ -5,7 +5,7 @@ Update this file at the end of a substantial work session or whenever work is pa
 ## Current handoff
 - Updated: 2026-08-22 22:10 Europe/Vienna
 - Active focus: `FM-RST-001` is in side state `RECONCILIATION_REQUIRED`; highest accepted progression remains `TARGET_COMPATIBLE`. Exactly authorized database run `32594374666` was consumed and failed closed before the first target write. Repository-only reconciliation is active on `restore-failclosed-reconciliation-20260822`; no runtime/provider mutation is authorized.
-- Start here: run the complete Project Memory/Restore preflight, inspect current GitHub `main`, issue #944 comments `5382274967` and `5382336892`, run `32594374666`, Host-2 job `97082992861` and this reconciliation branch/PR. Current GitHub/runtime evidence overrides older memory prose.
+- Start here: run the complete Project Memory/Restore preflight, inspect current GitHub `main`, issue #944 comments `5382274967` and `5382336892`, run `32594374666`, Host-2 job `97082992861` and PR #995 and its exact head. Current GitHub/runtime evidence overrides older memory prose.
 - Accepted governance: `FM-MEM-005` V6 accepted; `FM-MEM-008` V8 accepted after final PR #980 head `704fec4b6264dd5a0dd83cc8e0029352672485d0` passed Guard/Quality/Status, FanMind CI, Landing, Supply Chain, CodeQL and Browser E2E run #915, then merged as `22eb6aed5da4fde47860bbe12b118d3780c8a4a0`.
 - Active IDs: `FM-RST-001`, `FM-MOB-001`, `FM-AI-001`, `FM-META-001`, `FM-SOC3-001`, `FM-SOC7-001`, `FM-SALES-001`, `FM-LEGAL-001`, `FM-SEC-001`.
 - Accepted foundation: `FM-STG-001`; Production operations baseline: `FM-OPS-001` verified; `sales_ready=false`; Phase 8 not started.
